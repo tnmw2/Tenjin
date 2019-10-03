@@ -1,10 +1,16 @@
-#include <iostream>
+#include "simulationheader.h"
 
-using namespace std;
+using namespace amrex;
 
-int main()
+int main (int argc, char* argv[])
 {
-    cout << "Hello World! Slight change" << endl;
+    amrex::Initialize(argc,argv);
+
+    //main_main();
+
+    amrex::Finalize();
+
+    std::cout << "Something is working" << std::endl;
+
     return 0;
 }
-
