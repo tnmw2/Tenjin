@@ -15,7 +15,7 @@ void TimeStep::boxTimeStepFunction(Box const& box, Array4<Real> const& prop_arr,
             for (int i = lo.x; i <= hi.x; ++i)
             {
 
-                prop_arr(i,j,k,SOUNDSPEED) = sqrt(prop_arr(i,j,k,P)*(parameters.adiabaticIndex)/prop_arr(i,j,k,RHO));
+                //prop_arr(i,j,k,SOUNDSPEED) = sqrt(prop_arr(i,j,k,P)*(parameters.adiabaticIndex)/prop_arr(i,j,k,RHO));
 
                 for(int n=0;n<AMREX_SPACEDIM;n++)
                 {
@@ -44,6 +44,7 @@ Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
 
         BoxAccessCellArray baca(bx,fab,prop_arr_phi);
 
+        U.getSoundSpeed(baca,parameters);
 
         boxTimeStepFunction(baca.box,baca.arr,prop_arr_time,parameters);
     }

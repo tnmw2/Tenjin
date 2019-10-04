@@ -76,3 +76,51 @@ void CellArray::operator=(CellArray& U)
 
     return;
 }
+
+CellArray& CellArray::operator*(Real d)
+{
+    data.mult(d, 0, data.nComp(), data.nGrow());
+
+    return *this;
+}
+
+CellArray& CellArray::operator+(CellArray& U)
+{
+    MultiFab::Add(data, U.data, 0, 0, data.nComp(), data.nGrow());
+
+    return *this;
+}
+
+
+void CellArray::getSoundSpeed(ParameterStruct& parameters)
+{
+    for(MFIter mfi(data); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        FArrayBox& fab = data[mfi];
+
+        Array4<Real> const& prop_arr = fab.array();
+
+        BoxAccessCellArray baca(bx,fab,prop_arr);
+
+        getSoundSpeed(baca,parameters);
+    }
+}
+
+void CellArray::getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters)
+{
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    for    		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for     (int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+                U.arr(i,j,k,SOUNDSPEED) = sqrt(U.arr(i,j,k,P)*(parameters.adiabaticIndex)/U.arr(i,j,k,RHO));
+            }
+        }
+    }
+}

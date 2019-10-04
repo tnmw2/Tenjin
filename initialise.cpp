@@ -27,6 +27,18 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
                     U.arr(i,j,k,VELOCITY)    = 0.0;
                     U.arr(i,j,k,P)           = 0.1;
                 }
+                /*if(i <= int_x0)
+                {
+                    U.arr(i,j,k,RHO)         = 1.0;
+                    U.arr(i,j,k,VELOCITY)    = -2.0;
+                    U.arr(i,j,k,P)           = 0.4;
+                }
+                else
+                {
+                    U.arr(i,j,k,RHO)         = 1.0;
+                    U.arr(i,j,k,VELOCITY)    = 2.0;
+                    U.arr(i,j,k,P)           = 0.4;
+                }*/
             }
         }
     }
@@ -57,7 +69,6 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.get("CFL", parameters.CFL);
 
     pp.get("gamma", parameters.adiabaticIndex);
-    pp.get("a", parameters.a);
     pp.getarr("dimL", parameters.dimL);
     pp.getarr("n_cells" , parameters.n_cells);
     pp.get("Ncomp", parameters.Ncomp);

@@ -37,7 +37,11 @@ void main_main ()
 
     CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost);
     CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost);
     CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost);
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
@@ -90,10 +94,9 @@ void main_main ()
             parameters.dt=initial.finalT-t;
         }
 
-
         U = U1;
 
-        HLLCadvance(U, U1, UStar, flux_arr, geom, parameters);
+        RKadvance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
 
     }
 

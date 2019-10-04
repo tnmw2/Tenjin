@@ -31,7 +31,13 @@ public:
     void conservativeToPrimitive(ParameterStruct& parameters);
     void conservativeToPrimitive(BoxAccessCellArray& U, ParameterStruct& parameters);
 
+    void getSoundSpeed(ParameterStruct& parameters);
+    void getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters);
+
+
     void operator=(CellArray& U);
+    CellArray& operator*(Real d);
+    CellArray& operator+(CellArray& U);
 
     MultiFab data;
 
