@@ -6,11 +6,17 @@ CONFIG -= qt
 SOURCES += main.cpp \
     timestep.cpp \
     cellarray.cpp \
-    initialise.cpp
+    initialise.cpp \
+    fluxarray.cpp \
+    boxaccesscellarray.cpp \
+    hllc.cpp \
+    print.cpp
 
 HEADERS += \
     simulationheader.h \
     timestep.h \
     cellarray.h \
-    amrexheader.h
+    amrexheader.h \
+    fluxarray.h \
+    structdefinitions.h
 

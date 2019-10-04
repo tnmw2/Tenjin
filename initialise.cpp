@@ -1,5 +1,38 @@
 #include "simulationheader.h"
 
+void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
+{
+
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+
+    int int_x0 = (parameters.x0/parameters.dimL[0])*parameters.n_cells[0];
+
+    for    		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for     (int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+                if(i <= int_x0)
+                {
+                    U.arr(i,j,k,RHO)         = 1.0;
+                    U.arr(i,j,k,VELOCITY)    = 0.0;
+                    U.arr(i,j,k,P)           = 1.0;
+                }
+                else
+                {
+                    U.arr(i,j,k,RHO)         = 0.125;
+                    U.arr(i,j,k,VELOCITY)    = 0.0;
+                    U.arr(i,j,k,P)           = 0.1;
+                }
+            }
+        }
+    }
+
+}
+
 void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 {
     ParmParse pp;
@@ -29,21 +62,24 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.getarr("n_cells" , parameters.n_cells);
     pp.get("Ncomp", parameters.Ncomp);
     pp.get("Nghost", parameters.Nghost);
+
+    pp.get("plotDirectory",initial.filename);
 }
 
-void setInitialConditions(MultiFab& phi, ParameterStruct& parameters, InitialStruct& initial)
+void setInitialConditions(CellArray& U, ParameterStruct& parameters)
 {
-    for(MFIter mfi(phi); mfi.isValid(); ++mfi)
+    for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
 
-        FArrayBox& fab = phi[mfi];
+        FArrayBox& fab = U.data[mfi];
 
         Array4<Real> const& prop_arr = fab.array();
 
-        initial_conditions(bx, prop_arr, parameters,initial);
+        BoxAccessCellArray baca(bx,fab,prop_arr);
 
-        primtiveToConservative(bx, prop_arr ,parameters);
+        initial_conditions(baca, parameters);
 
+        U.primitiveToConservative(baca, parameters);
     }
 }

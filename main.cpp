@@ -1,11 +1,11 @@
 #include "simulationheader.h"
-
+#include "timestep.h"
 using namespace amrex;
 
 
 void main_main ()
 {
-    Real strt_time = amrex::second();
+    Real start_time = amrex::second();
 
     int max_grid_size, nsteps_max, plot_int;
 
@@ -17,6 +17,8 @@ void main_main ()
     InitialStruct   initial;
 
     initialiseDataStructs(parameters,initial);
+
+    Print() << initial.filename << std::endl;
 
     IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
     IntVect dom_hi(AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
@@ -33,24 +35,15 @@ void main_main ()
 
     DistributionMapping dm(ba);
 
-    MultiFab phi_old(ba, dm, parameters.Ncomp, parameters.Nghost);
-    MultiFab phi_new(ba, dm, parameters.Ncomp, parameters.Nghost);
-    MultiFab phi_Star(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost);
+    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost);
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
-    /*  Components:
-     * 0 rho
-     * 1 rhou
-     * 2 E
-     * 3 u
-     * 4 p
-     */
+    Vector<BCRec> bc(U1.data.nComp());
 
-
-    Vector<BCRec> bc(phi_new.nComp());
-
-    for(int n = 0; n < phi_new.nComp(); ++n)
+    for(int n = 0; n < U1.data.nComp(); ++n)
     {
         for(int idim = 0; idim < AMREX_SPACEDIM; ++idim)
         {
@@ -59,27 +52,9 @@ void main_main ()
         }
     }
 
+    setInitialConditions(U1,parameters);
 
-    setInitialConditions(phi_new,parameters,initial);
-
-
-    /*
-
-    if (parameters.plot_int > 0)
-    {
-        int n = 0;
-
-        //WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, time, 0);
-
-        std::string pltfile = amrex::Concatenate("data/rho",n,1);
-        WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, 0.0, 0);
-        PrintTo1DGnuplotFile(phi_new, pltfile, RHO);
-        pltfile = amrex::Concatenate("data/u",n,1);
-        PrintTo1DGnuplotFile(phi_new, pltfile, VELOCITY);
-        pltfile = amrex::Concatenate("data/p",n,1);
-        PrintTo1DGnuplotFile(phi_new, pltfile, P);
-    }
-
+    PrintAllVarsTo1DGnuplotFile(U1.data,0,initial.filename);
 
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
@@ -102,12 +77,13 @@ void main_main ()
     for(Real t = 0.0 ; t<initial.finalT; t += parameters.dt, n++)
     {
 
-        FillDomainBoundary(phi_new, geom, bc);
-        phi_new.FillBoundary(geom.periodicity());
+        FillDomainBoundary(U1.data, geom, bc);
 
-        parameters.dt = getTimeStep(phi_new,timeStep,parameters);
+        U1.data.FillBoundary(geom.periodicity());
 
-        //amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
+        parameters.dt = timeStep.getTimeStep(U1,parameters);
+
+        amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
 
         if(t+parameters.dt>initial.finalT)
         {
@@ -115,31 +91,19 @@ void main_main ()
         }
 
 
+        U = U1;
 
-        MultiFab::Copy(phi_old, phi_new, 0, 0, parameters.Ncomp, parameters.Nghost);
-
-        advance(phi_old, phi_new, phi_Star, flux_arr, geom, parameters);
+        HLLCadvance(U, U1, UStar, flux_arr, geom, parameters);
 
     }
 
-    std::string pltfile = amrex::Concatenate("data/rho",1,1);
-    WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, initial.finalT, 0);
-    PrintTo1DGnuplotFile(phi_new, pltfile, RHO);
-    pltfile = amrex::Concatenate("data/u",1,1);
-    PrintTo1DGnuplotFile(phi_new, pltfile, VELOCITY);
-    pltfile = amrex::Concatenate("data/p",1,1);
-    PrintTo1DGnuplotFile(phi_new, pltfile, P);
+    PrintAllVarsTo1DGnuplotFile(U1.data,1,initial.filename);
 
-    pltfile = amrex::Concatenate("data/rhoU",1,1);
-    PrintTo1DGnuplotFile(phi_new, pltfile, RHOU);
-    pltfile = amrex::Concatenate("data/E",1,1);
-    PrintTo1DGnuplotFile(phi_new, pltfile, TOTAL_E);
 
-    */
 
     // Call the timer again and compute the maximum difference between the start time and stop time
     //   over all processors
-    Real stop_time = amrex::second() - strt_time;
+    Real stop_time = amrex::second() - start_time;
     const int IOProc = ParallelDescriptor::IOProcessorNumber();
     ParallelDescriptor::ReduceRealMax(stop_time,IOProc);
 

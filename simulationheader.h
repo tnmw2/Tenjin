@@ -7,53 +7,24 @@
 #include <string>
 #include <limits>
 #include <iostream>
+#include <ctime>
 
 #include "amrexheader.h"
-#include "timestep.h"
-#include "cellarray.h"
-
-
 
 using namespace amrex;
 
 
+#include "structdefinitions.h"
+#include "cellarray.h"
 
-struct InitialStruct
-{
-    Real startT;
-    Real finalT;
-};
+void HLLCadvance(CellArray& U,CellArray& U1,CellArray& UStar,Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters);
 
-struct ParameterStruct
-{
-    Vector<Real> dimL;
-    Vector<Real> dx;
-    Vector<int>  n_cells;
+void PrintAllVarsTo1DGnuplotFile(MultiFab& phi, int picture, std::__cxx11::string filename);
 
-    int Ncomp;
-    int Nghost;
-
-    int max_grid_size;
-    int plot_int;
-
-    Real phiL;
-    Real phiR;
-    Real CFL;
-    Real x0;
-    Real a;
-    Real adiabaticIndex;
-    Real dt;
-
-    ParameterStruct()
-    {
-        dimL 	= Vector<Real>(AMREX_SPACEDIM);
-        dx	 	= Vector<Real>(AMREX_SPACEDIM);
-        n_cells = Vector<int> (AMREX_SPACEDIM);
-    }
-};
 
 
 void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
+void setInitialConditions(CellArray& U, ParameterStruct& parameters);
 
 
 #endif // SIMULATIONHEADER
