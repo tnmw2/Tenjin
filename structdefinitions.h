@@ -5,7 +5,7 @@
 
 enum Variable
 {
-    RHO,
+    RHO=0,
     RHOU,
     TOTAL_E,
     VELOCITY,
@@ -46,6 +46,22 @@ struct ParameterStruct
         dimL 	= Vector<Real>(AMREX_SPACEDIM);
         dx	 	= Vector<Real>(AMREX_SPACEDIM);
         n_cells = Vector<int> (AMREX_SPACEDIM);
+    }
+};
+
+struct MaterialSpecifier
+{
+    Variable var;
+    int      mat;
+    int      row;
+    int      col;
+
+    MaterialSpecifier(Variable v=RHO, int m=0, int r=0, int c=0)
+    {
+        var=v;
+        mat=m;
+        row=r;
+        col=c;
     }
 };
 

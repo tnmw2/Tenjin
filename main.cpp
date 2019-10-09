@@ -35,13 +35,23 @@ void main_main ()
 
     DistributionMapping dm(ba);
 
-    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost);
-    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost);
+    std::map<Variable,int> accessPattern;
+
+    accessPattern.insert(std::pair<Variable,int>(RHO,0));
+    accessPattern.insert(std::pair<Variable,int>(RHOU,1));
+    accessPattern.insert(std::pair<Variable,int>(TOTAL_E,2));
+    accessPattern.insert(std::pair<Variable,int>(VELOCITY,3));
+    accessPattern.insert(std::pair<Variable,int>(P,4));
+    accessPattern.insert(std::pair<Variable,int>(SOUNDSPEED,5));
+
+
+    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 

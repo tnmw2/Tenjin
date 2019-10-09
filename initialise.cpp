@@ -17,27 +17,27 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
             {
                 if(i <= int_x0)
                 {
-                    U.arr(i,j,k,RHO)         = 1.0;
-                    U.arr(i,j,k,VELOCITY)    = 0.0;
-                    U.arr(i,j,k,P)           = 1.0;
+                    U(i,j,k,RHO)         = 1.0;
+                    U(i,j,k,VELOCITY)    = 0.0;
+                    U(i,j,k,P)           = 1.0;
                 }
                 else
                 {
-                    U.arr(i,j,k,RHO)         = 0.125;
-                    U.arr(i,j,k,VELOCITY)    = 0.0;
-                    U.arr(i,j,k,P)           = 0.1;
+                    U(i,j,k,RHO)         = 0.125;
+                    U(i,j,k,VELOCITY)    = 0.0;
+                    U(i,j,k,P)           = 0.1;
                 }
                 /*if(i <= int_x0)
                 {
-                    U.arr(i,j,k,RHO)         = 1.0;
-                    U.arr(i,j,k,VELOCITY)    = -2.0;
-                    U.arr(i,j,k,P)           = 0.4;
+                    U(i,j,k,RHO)         = 1.0;
+                    U(i,j,k,VELOCITY)    = -2.0;
+                    U(i,j,k,P)           = 0.4;
                 }
                 else
                 {
-                    U.arr(i,j,k,RHO)         = 1.0;
-                    U.arr(i,j,k,VELOCITY)    = 2.0;
-                    U.arr(i,j,k,P)           = 0.4;
+                    U(i,j,k,RHO)         = 1.0;
+                    U(i,j,k,VELOCITY)    = 2.0;
+                    U(i,j,k,P)           = 0.4;
                 }*/
             }
         }
@@ -87,7 +87,7 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters)
 
         Array4<Real> const& prop_arr = fab.array();
 
-        BoxAccessCellArray baca(bx,fab,prop_arr);
+        BoxAccessCellArray baca(bx,fab,prop_arr,U);
 
         initial_conditions(baca, parameters);
 

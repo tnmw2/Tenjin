@@ -7,7 +7,6 @@ SOURCES += main.cpp \
     timestep.cpp \
     cellarray.cpp \
     initialise.cpp \
-    fluxarray.cpp \
     boxaccesscellarray.cpp \
     hllc.cpp \
     print.cpp
@@ -17,6 +16,5 @@ HEADERS += \
     timestep.h \
     cellarray.h \
     amrexheader.h \
-    fluxarray.h \
     structdefinitions.h
 

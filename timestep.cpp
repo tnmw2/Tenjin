@@ -2,10 +2,10 @@
 
 TimeStep::TimeStep(BoxArray &ba, DistributionMapping &dm, const int Ncomp, const int Nghost) : data(ba,dm,Ncomp,Nghost){}
 
-void TimeStep::boxTimeStepFunction(Box const& box, Array4<Real> const& prop_arr, Array4<Real> const& prop_arr_time, ParameterStruct& parameters)
+void TimeStep::boxTimeStepFunction(BoxAccessCellArray& U, Array4<Real> const& prop_arr_time, ParameterStruct& parameters)
 {
-    const auto lo = lbound(box);
-    const auto hi = ubound(box);
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
 
 
     for 		(int k = lo.z; k <= hi.z; ++k)
@@ -19,7 +19,7 @@ void TimeStep::boxTimeStepFunction(Box const& box, Array4<Real> const& prop_arr,
 
                 for(int n=0;n<AMREX_SPACEDIM;n++)
                 {
-                    prop_arr_time(i,j,k,n) = parameters.dx[n]/(prop_arr(i,j,k,SOUNDSPEED) + fabs(prop_arr(i,j,k,VELOCITY+n)));
+                    prop_arr_time(i,j,k,n) = parameters.dx[n]/(U(i,j,k,SOUNDSPEED) + fabs(U(i,j,k,VELOCITY)));
                 }
 
             }
@@ -42,11 +42,11 @@ Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
         Array4<Real> const& prop_arr_time = time_fab.array();
 
 
-        BoxAccessCellArray baca(bx,fab,prop_arr_phi);
+        BoxAccessCellArray baca(bx,fab,prop_arr_phi,U);
 
         U.getSoundSpeed(baca,parameters);
 
-        boxTimeStepFunction(baca.box,baca.arr,prop_arr_time,parameters);
+        boxTimeStepFunction(baca,prop_arr_time,parameters);
     }
 
     Real dt = std::numeric_limits<Real>::max();

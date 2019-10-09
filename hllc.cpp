@@ -11,6 +11,9 @@ class Cell
     Real& p;
     Real& a;
 
+
+    Cell(BoxAccessCellArray& U, int i, int j, int k) : rho(U(RHO,0,0,0,i,j,k)), rhoU(U(RHOU,0,0,0,i,j,k)), E(U(TOTAL_E,0,0,0,i,j,k)), u(U(VELOCITY,0,0,0,i,j,k)), p(U(P,0,0,0,i,j,k)), a(U(SOUNDSPEED,0,0,0,i,j,k)){}
+
     Cell(Array4<Real> const& arr, int i, int j, int k) : rho(arr(i,j,k,RHO)), rhoU(arr(i,j,k,RHOU)), E(arr(i,j,k,TOTAL_E)), u(arr(i,j,k,VELOCITY)), p(arr(i,j,k,P)), a(arr(i,j,k,SOUNDSPEED)){}
 };
 
@@ -46,6 +49,73 @@ Real flux(int n, Cell& U)
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
     }
 
+}
+
+void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters)
+{
+    const auto lo = lbound(ULbox.box);
+    const auto hi = ubound(ULbox.box);
+
+    Real SR;
+    Real SL;
+    Real Sstar;
+
+
+    for 		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for 	(int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x +1; ++i)
+            {
+
+                Cell UL(URbox,i-1,j,k);
+                Cell UR(ULbox,i,j,k);
+                Cell UStar(UStarbox,i,j,k);
+
+
+                SR = std::max(std::abs(UL.u)+UL.a,std::abs(UR.u)+UR.a);
+                SL = -SR;
+
+
+                Sstar = getSstar(UL,UR,SL,SR,i,j,k);
+
+                if(SL>=0.0)
+                {
+                    for(int n = 0 ; n <= TOTAL_E; ++n)
+                    {
+                        fluxbox(i,j,k,n)	= flux(n,UL);
+                    }
+                }
+                else if(Sstar>=0.0)
+                {
+                    getStarState(UL,UStar,SL,Sstar,parameters);
+
+                    for(int n = 0 ; n <= TOTAL_E; ++n)
+                    {
+                        fluxbox(i,j,k,n)	= flux(n,UL)+SL*(UStarbox(i,j,k,n)-URbox(i-1,j,k,n));
+                    }
+                }
+                else if(SR>=0.0)
+                {
+                    getStarState(UR,UStar,SR,Sstar,parameters);
+
+                    for(int n = 0 ; n <= TOTAL_E; ++n)
+                    {
+                        fluxbox(i,j,k,n)	= flux(n,UR)+SR*(UStarbox(i,j,k,n)-ULbox(i-1,j,k,n));
+                    }
+                }
+                else
+                {
+                    for(int n = 0 ; n <= TOTAL_E; ++n)
+                    {
+                        fluxbox(i,j,k,n)	= flux(n,UR);
+                    }
+                }
+            }
+        }
+    }
+
+    return;
 }
 
 void calc_fluxes(Box const& box, Array4<Real> const& flux_prop_arr, Array4<Real> const& prop_arr_L, Array4<Real> const& prop_arr_R, Array4<Real> const& prop_arr_Star, ParameterStruct& parameters)
@@ -168,17 +238,17 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    r = (U.arr(i,j,k,n)-U.arr(i-1,j,k,n))/(U.arr(i+1,j,k,n)-U.arr(i,j,k,n));
+                    r = (U(i,j,k,n)-U(i-1,j,k,n))/(U(i+1,j,k,n)-U(i,j,k,n));
 
                     if(std::isinf(r) || std::isnan(r))
                     {
                         r = 0.0;
                     }
 
-                    grad.arr(i,j,k,n) = vanLeerlimiter(r)*0.5*(U.arr(i+1,j,k,n)-U.arr(i-1,j,k,n));
+                    grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U(i+1,j,k,n)-U(i-1,j,k,n));
 
-                    UL.arr(i,j,k,n) = U.arr(i,j,k,n) - 0.5*grad.arr(i,j,k,n);
-                    UR.arr(i,j,k,n) = U.arr(i,j,k,n) + 0.5*grad.arr(i,j,k,n);
+                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
+                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
 
                     //UL.arr(i,j,k,n) = U.arr(i,j,k,n);
                     //UR.arr(i,j,k,n) = U.arr(i,j,k,n);
@@ -211,10 +281,10 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         Array4<Real> const& prop_arr_R      = fab_R.array();
         Array4<Real> const& prop_arr_grad	= fab_grad.array();
 
-        BoxAccessCellArray Ubox(bx,fab_old,prop_arr);
-        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L);
-        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R);
-        BoxAccessCellArray gradbox(bx,fab_grad,prop_arr_grad);
+        BoxAccessCellArray Ubox(bx,fab_old,prop_arr,U);
+        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L,UL);
+        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R,UR);
+        BoxAccessCellArray gradbox(bx,fab_grad,prop_arr_grad,MUSCLgrad);
 
         MUSCLextrapolate(Ubox,ULbox,URbox,gradbox);
 
@@ -255,12 +325,17 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         Array4<Real> const& prop_arr_Star	= fab_Star.array();
         Array4<Real> const& flux_prop_arr_x = flux_fab_x.array();
 
-        BoxAccessCellArray Ubox(bx,fab_old,prop_arr);
-        BoxAccessCellArray U1box(bx,fab_new,prop_arr_new);
-        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L);
-        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R);
+        BoxAccessCellArray Ubox(bx,fab_old,prop_arr,U);
+        BoxAccessCellArray U1box(bx,fab_new,prop_arr_new,U1);
+        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L,UL);
+        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R,UR);
+        BoxAccessCellArray UStarbox(bx,fab_Star,prop_arr_Star,UStar);
+        BoxAccessCellArray fluxbox(bx,flux_fab_x,flux_prop_arr_x,U);
 
-        calc_fluxes	(bx, flux_prop_arr_x, prop_arr_L, prop_arr_R, prop_arr_Star, parameters);
+        calc_fluxes(fluxbox, ULbox, URbox, UStarbox, parameters);
+
+        //calc_fluxes	(bx, flux_prop_arr_x, prop_arr_L, prop_arr_R, prop_arr_Star, parameters);
+
         update		(bx, flux_prop_arr_x, prop_arr, prop_arr_new, parameters);
 
         U1.conservativeToPrimitive(U1box,parameters);

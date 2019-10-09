@@ -1,6 +1,6 @@
 #include "cellarray.h"
 
-CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost) : data(ba,dm,Ncomp,Nghost){}
+CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, std::map<Variable,int>& _accessPattern) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern){}
 
 void CellArray::conservativeToPrimitive(ParameterStruct& parameters)
 {
@@ -12,7 +12,7 @@ void CellArray::conservativeToPrimitive(ParameterStruct& parameters)
 
         Array4<Real> const& prop_arr = fab.array();
 
-        BoxAccessCellArray baca(bx,fab,prop_arr);
+        BoxAccessCellArray baca(bx,fab,prop_arr,(*this));
 
         conservativeToPrimitive(baca,parameters);
     }
@@ -28,7 +28,7 @@ void CellArray::primitiveToConservative(ParameterStruct& parameters)
 
         Array4<Real> const& prop_arr = fab.array();
 
-        BoxAccessCellArray baca(bx,fab,prop_arr);
+        BoxAccessCellArray baca(bx,fab,prop_arr,(*this));
 
         primitiveToConservative(baca,parameters);
     }
@@ -45,8 +45,8 @@ void CellArray::conservativeToPrimitive(BoxAccessCellArray& U, ParameterStruct& 
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                U.arr(i,j,k,VELOCITY) = U.arr(i,j,k,RHOU)/U.arr(i,j,k,RHO);
-                U.arr(i,j,k,P) = (U.arr(i,j,k,TOTAL_E)-0.5*U.arr(i,j,k,RHO)*U.arr(i,j,k,VELOCITY)*U.arr(i,j,k,VELOCITY))*(parameters.adiabaticIndex-1.0);
+                U(i,j,k,VELOCITY) = U(i,j,k,RHOU)/U(i,j,k,RHO);
+                U(i,j,k,P) = (U(i,j,k,TOTAL_E)-0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY))*(parameters.adiabaticIndex-1.0);
             }
         }
     }
@@ -63,8 +63,8 @@ void CellArray::primitiveToConservative(BoxAccessCellArray& U, ParameterStruct& 
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                U.arr(i,j,k,RHOU) 		= U.arr(i,j,k,RHO)*U.arr(i,j,k,VELOCITY);
-                U.arr(i,j,k,TOTAL_E)   	= U.arr(i,j,k,P)/(parameters.adiabaticIndex-1.0) + 0.5*U.arr(i,j,k,RHO)*U.arr(i,j,k,VELOCITY)*U.arr(i,j,k,VELOCITY);
+                U(i,j,k,RHOU) 		= U(i,j,k,RHO)*U(i,j,k,VELOCITY);
+                U(i,j,k,TOTAL_E)   	= U(i,j,k,P)/(parameters.adiabaticIndex-1.0) + 0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY);
             }
         }
     }
@@ -91,7 +91,6 @@ CellArray& CellArray::operator+(CellArray& U)
     return *this;
 }
 
-
 void CellArray::getSoundSpeed(ParameterStruct& parameters)
 {
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
@@ -102,7 +101,7 @@ void CellArray::getSoundSpeed(ParameterStruct& parameters)
 
         Array4<Real> const& prop_arr = fab.array();
 
-        BoxAccessCellArray baca(bx,fab,prop_arr);
+        BoxAccessCellArray baca(bx,fab,prop_arr,(*this));
 
         getSoundSpeed(baca,parameters);
     }
@@ -119,7 +118,7 @@ void CellArray::getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                U.arr(i,j,k,SOUNDSPEED) = sqrt(U.arr(i,j,k,P)*(parameters.adiabaticIndex)/U.arr(i,j,k,RHO));
+                U(MaterialSpecifier(SOUNDSPEED),i,j,k) = sqrt(U(MaterialSpecifier(P),i,j,k)*(parameters.adiabaticIndex)/U(MaterialSpecifier(RHO),i,j,k));
             }
         }
     }
