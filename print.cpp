@@ -1,6 +1,6 @@
 #include "simulationheader.h"
 
-void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var)
+void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var, int mat =0)
 {
     for( MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
@@ -22,7 +22,7 @@ void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var)
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    AllPrintToFile(filename) << i << " " << Ubox(i,j,k,var) << std::endl;
+                    AllPrintToFile(filename) << i << " " << Ubox(i,j,k,var,mat) << std::endl;
                 }
             }
         }
@@ -58,5 +58,15 @@ void PrintAllVarsTo1DGnuplotFile(CellArray& U, int picture, std::string filename
     pltfilevar = pltfilevarstub.append("/rhoU");
     const std::string pltfilerhoU = amrex::Concatenate(pltfilevar,picture,2);
     PrintTo1DGnuplotFile(U, pltfilerhoU, RHOU);
+
+    pltfilevarstub = filename;
+    pltfilevar = pltfilevarstub.append("/alpha0");
+    const std::string pltfilea0 = amrex::Concatenate(pltfilevar,picture,2);
+    PrintTo1DGnuplotFile(U, pltfilea0, ALPHA,0);
+
+    pltfilevarstub = filename;
+    pltfilevar = pltfilevarstub.append("/alpha1");
+    const std::string pltfilea1 = amrex::Concatenate(pltfilevar,picture,2);
+    PrintTo1DGnuplotFile(U, pltfilea1, ALPHA,1);
 
 }

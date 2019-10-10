@@ -47,6 +47,8 @@ public:
     void getSoundSpeed(ParameterStruct& parameters);
     void getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters);
 
+    Real getEffectiveInverseGruneisen(BoxAccessCellArray& U, ParameterStruct& parameters, int i, int j, int k);
+
 
     void operator=(CellArray& U);
     CellArray& operator*(Real d);

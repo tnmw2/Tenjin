@@ -15,30 +15,38 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                if(i <= int_x0)
+                /*if(i <= int_x0)
                 {
-                    U(i,j,k,RHO)         = 1.0;
+                    U(i,j,k,ALPHA)       = 0.999999;
+                    U(i,j,k,RHO_K)       = 1.0;
                     U(i,j,k,VELOCITY)    = 0.0;
                     U(i,j,k,P)           = 1.0;
                 }
                 else
                 {
-                    U(i,j,k,RHO)         = 0.125;
+                    U(i,j,k,ALPHA)       = 0.999999;
+                    U(i,j,k,RHO_K)       = 0.125;
                     U(i,j,k,VELOCITY)    = 0.0;
                     U(i,j,k,P)           = 0.1;
-                }
-                /*if(i <= int_x0)
+                }*/
+                if(i <= int_x0)
                 {
-                    U(i,j,k,RHO)         = 1.0;
-                    U(i,j,k,VELOCITY)    = -2.0;
-                    U(i,j,k,P)           = 0.4;
+                    U(i,j,k,ALPHA,0)     = 0.999999;
+                    U(i,j,k,ALPHA,1)     = 0.000001;
+                    U(i,j,k,RHO_K,0)     = 1.0;
+                    U(i,j,k,RHO_K,1)     = 0.125;
+                    U(i,j,k,VELOCITY)    = 0.0;
+                    U(i,j,k,P)           = 1.0;
                 }
                 else
                 {
-                    U(i,j,k,RHO)         = 1.0;
-                    U(i,j,k,VELOCITY)    = 2.0;
-                    U(i,j,k,P)           = 0.4;
-                }*/
+                    U(i,j,k,ALPHA,1)     = 0.999999;
+                    U(i,j,k,ALPHA,0)     = 0.000001;
+                    U(i,j,k,RHO_K,0)     = 1.0;
+                    U(i,j,k,RHO_K,1)     = 0.125;
+                    U(i,j,k,VELOCITY)    = 0.0;
+                    U(i,j,k,P)           = 0.1;
+                }
             }
         }
     }
@@ -74,10 +82,10 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     //pp.get("Ncomp", parameters.Ncomp);
     pp.get("Nghost", parameters.Nghost);
 
-    parameters.numberOfMaterials  = 1;
+    parameters.numberOfMaterials  = 2;
     int m = parameters.numberOfMaterials;
 
-    parameters.Ncomp = m+m+m+3+3+1+1+1+m+1+1; //4m+11
+    parameters.Ncomp = m+m+m+3+3+1+1+1+1+1; //4m+11
 
 
     pp.get("plotDirectory",initial.filename);
@@ -138,5 +146,10 @@ void makeAccessPattern(std::map<Variable,int>& accessPattern, ParameterStruct& p
     n+=1;
 
     accessPattern.insert(std::pair<Variable,int>(SOUNDSPEED,n));
+
+    n+=1;
+
+    accessPattern.insert(std::pair<Variable,int>(USTAR,n));
+
 
 }

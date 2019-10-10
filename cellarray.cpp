@@ -1,5 +1,16 @@
 #include "cellarray.h"
 
+Real CellArray::getEffectiveInverseGruneisen(BoxAccessCellArray& U, ParameterStruct& parameters, int i, int j, int k)
+{
+    Real tot = 0.0;
+
+    for(int m=0;m<parameters.numberOfMaterials;m++)
+    {
+        tot += U(i,j,k,ALPHA,m)/(parameters.adiabaticIndex-1.0);
+    }
+
+    return tot;
+}
 
 CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, std::map<Variable,int>& _accessPattern, ParameterStruct& parameters) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
 
@@ -46,8 +57,16 @@ void CellArray::conservativeToPrimitive(BoxAccessCellArray& U, ParameterStruct& 
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
+                U(i,j,k,RHO) = 0;
+
+                for(int m = 0; m < numberOfMaterials ; m++)
+                {
+                    U(i,j,k,RHO_K,m)	= U(i,j,k,ALPHARHO,m)/U(i,j,k,ALPHA,m);
+                    U(i,j,k,RHO)       += U(i,j,k,ALPHARHO,m);
+                }
+
                 U(i,j,k,VELOCITY) = U(i,j,k,RHOU)/U(i,j,k,RHO);
-                U(i,j,k,P) = (U(i,j,k,TOTAL_E)-0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY))*(parameters.adiabaticIndex-1.0);
+                U(i,j,k,P) = (U(i,j,k,TOTAL_E)-0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY))/(getEffectiveInverseGruneisen(U,parameters,i,j,k));
             }
         }
     }
@@ -64,8 +83,16 @@ void CellArray::primitiveToConservative(BoxAccessCellArray& U, ParameterStruct& 
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
+                U(i,j,k,RHO) = 0;
+
+                for(int m = 0; m < numberOfMaterials ; m++)
+                {
+                    U(i,j,k,ALPHARHO,m)	= U(i,j,k,ALPHA,m)*U(i,j,k,RHO_K,m);
+                    U(i,j,k,RHO)       += U(i,j,k,ALPHARHO,m);
+                }
+
                 U(i,j,k,RHOU) 		= U(i,j,k,RHO)*U(i,j,k,VELOCITY);
-                U(i,j,k,TOTAL_E)   	= U(i,j,k,P)/(parameters.adiabaticIndex-1.0) + 0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY);
+                U(i,j,k,TOTAL_E)   	= U(i,j,k,P)*getEffectiveInverseGruneisen(U,parameters,i,j,k) + 0.5*U(i,j,k,RHO)*U(i,j,k,VELOCITY)*U(i,j,k,VELOCITY); //U(i,j,k,P)/(parameters.adiabaticIndex-1.0)
             }
         }
     }
@@ -119,7 +146,18 @@ void CellArray::getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                U(i,j,k,SOUNDSPEED) = sqrt(U(i,j,k,P)*(parameters.adiabaticIndex)/U(i,j,k,RHO));
+                Real a = 0.0;
+                Real xiTot = 0.0;
+
+                for(int m=0; m<numberOfMaterials;m++)
+                {
+                    a     += ((U(i,j,k,P)*(parameters.adiabaticIndex)/U(i,j,k,RHO_K,m))*U(i,j,k,ALPHARHO,m)/(parameters.adiabaticIndex-1.0))/U(i,j,k,RHO);
+                    xiTot += U(i,j,k,ALPHA,m)/(parameters.adiabaticIndex-1.0);
+                }
+
+                U(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
+
+
             }
         }
     }

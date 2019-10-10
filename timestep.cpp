@@ -14,12 +14,9 @@ void TimeStep::boxTimeStepFunction(BoxAccessCellArray& U, Array4<Real> const& pr
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-
-                //prop_arr(i,j,k,SOUNDSPEED) = sqrt(prop_arr(i,j,k,P)*(parameters.adiabaticIndex)/prop_arr(i,j,k,RHO));
-
                 for(int n=0;n<AMREX_SPACEDIM;n++)
                 {
-                    prop_arr_time(i,j,k,n) = parameters.dx[n]/(U(i,j,k,SOUNDSPEED) + fabs(U(i,j,k,VELOCITY)));
+                    prop_arr_time(i,j,k,n) = parameters.dx[n]/(U(i,j,k,SOUNDSPEED) + fabs(U(i,j,k,VELOCITY,0,n)));
                 }
 
             }

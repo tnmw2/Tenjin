@@ -26,9 +26,10 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
         materials[m].alphaRho   = (&U(i,j,k,ALPHARHO,m));
         materials[m].rho        = (&U(i,j,k,RHO_K,m));
     }
-}
 
-//Cell::Cell(Array4<Real> const& arr, int i, int j, int k) : rho(&arr(i,j,k,RHO)), rhoU(&arr(i,j,k,RHOU)), E(&arr(i,j,k,TOTAL_E)), u(&arr(i,j,k,VELOCITY)), p(&arr(i,j,k,P)), a(&arr(i,j,k,SOUNDSPEED)){}
+    uStar     =   (&U(i,j,k,USTAR));
+
+}
 
 Real& Cell::operator()(Variable var, int mat, int row, int col)
 {
@@ -56,6 +57,8 @@ Real& Cell::operator()(MaterialSpecifier m)
     case P:         return *p;
         break;
     case SOUNDSPEED:return *a;
+        break;
+    case USTAR:     return *uStar;
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);

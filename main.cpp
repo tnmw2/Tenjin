@@ -39,13 +39,13 @@ void main_main ()
 
     makeAccessPattern(accessPattern,parameters);
 
-    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
-    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray U         (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray U1        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray U2        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray UL        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray UR        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray UStar     (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
+    CellArray MUSCLgrad (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
@@ -80,7 +80,6 @@ void main_main ()
     parameters.dx[2] = geom.CellSize()[2];
 
     int n = 0;
-
 
     for(Real t = 0.0 ; t<initial.finalT; t += parameters.dt, n++)
     {

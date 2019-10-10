@@ -20,7 +20,6 @@ Real& BoxAccessCellArray::operator()(Variable var, int mat, int row, int col, in
     return (*this)(temp,i,j,k);
 }
 
-
 Real& BoxAccessCellArray::operator()(MaterialSpecifier& m, int i, int j, int k)
 {
     switch(m.var)
@@ -42,6 +41,8 @@ Real& BoxAccessCellArray::operator()(MaterialSpecifier& m, int i, int j, int k)
     case P:         return arr(i,j,k,accessPattern[m.var]);
         break;
     case SOUNDSPEED:return arr(i,j,k,accessPattern[m.var]);
+        break;
+    case USTAR:     return arr(i,j,k,accessPattern[m.var]);
         break;
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);

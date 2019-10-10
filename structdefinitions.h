@@ -13,7 +13,8 @@ enum Variable
     TOTAL_E,
     VELOCITY,
     P,
-    SOUNDSPEED
+    SOUNDSPEED,
+    USTAR
 };
 
 enum Material_type

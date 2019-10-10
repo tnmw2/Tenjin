@@ -35,6 +35,7 @@ public:
     std::vector<Real*> u;
     Real* p;
     Real* a;
+    Real* uStar;
 
     static const int numberOfComponents = 3;
 
