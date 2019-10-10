@@ -1,6 +1,7 @@
 #include "cellarray.h"
 
-CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, std::map<Variable,int>& _accessPattern) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern){}
+
+CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, std::map<Variable,int>& _accessPattern, ParameterStruct& parameters) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
 
 void CellArray::conservativeToPrimitive(ParameterStruct& parameters)
 {
@@ -118,7 +119,7 @@ void CellArray::getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                U(MaterialSpecifier(SOUNDSPEED),i,j,k) = sqrt(U(MaterialSpecifier(P),i,j,k)*(parameters.adiabaticIndex)/U(MaterialSpecifier(RHO),i,j,k));
+                U(i,j,k,SOUNDSPEED) = sqrt(U(i,j,k,P)*(parameters.adiabaticIndex)/U(i,j,k,RHO));
             }
         }
     }

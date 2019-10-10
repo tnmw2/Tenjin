@@ -5,12 +5,21 @@
 
 enum Variable
 {
-    RHO=0,
+    ALPHA,
+    ALPHARHO,
+    RHO_K,
+    RHO,
     RHOU,
     TOTAL_E,
     VELOCITY,
     P,
     SOUNDSPEED
+};
+
+enum Material_type
+{
+    solid,
+    fluid
 };
 
 struct InitialStruct
@@ -29,6 +38,7 @@ struct ParameterStruct
 
     int Ncomp;
     int Nghost;
+    int numberOfMaterials;
 
     int max_grid_size;
     int plot_int;
@@ -40,6 +50,8 @@ struct ParameterStruct
     Real a;
     Real adiabaticIndex;
     Real dt;
+
+
 
     ParameterStruct()
     {

@@ -37,21 +37,15 @@ void main_main ()
 
     std::map<Variable,int> accessPattern;
 
-    accessPattern.insert(std::pair<Variable,int>(RHO,0));
-    accessPattern.insert(std::pair<Variable,int>(RHOU,1));
-    accessPattern.insert(std::pair<Variable,int>(TOTAL_E,2));
-    accessPattern.insert(std::pair<Variable,int>(VELOCITY,3));
-    accessPattern.insert(std::pair<Variable,int>(P,4));
-    accessPattern.insert(std::pair<Variable,int>(SOUNDSPEED,5));
+    makeAccessPattern(accessPattern,parameters);
 
-
-    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
-    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern);
+    CellArray U(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray U1(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray U2(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray UL(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray UR(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray UStar(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
+    CellArray MUSCLgrad(ba, dm, parameters.Ncomp, parameters.Nghost,accessPattern,parameters);
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
@@ -68,7 +62,7 @@ void main_main ()
 
     setInitialConditions(U1,parameters);
 
-    PrintAllVarsTo1DGnuplotFile(U1.data,0,initial.filename);
+    PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
 
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
@@ -110,7 +104,7 @@ void main_main ()
 
     }
 
-    PrintAllVarsTo1DGnuplotFile(U1.data,1,initial.filename);
+    PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
 
 
 

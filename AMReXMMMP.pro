@@ -9,12 +9,14 @@ SOURCES += main.cpp \
     initialise.cpp \
     boxaccesscellarray.cpp \
     hllc.cpp \
-    print.cpp
+    print.cpp \
+    cell.cpp
 
 HEADERS += \
     simulationheader.h \
     timestep.h \
     cellarray.h \
     amrexheader.h \
-    structdefinitions.h
+    structdefinitions.h \
+    cell.h
 

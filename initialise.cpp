@@ -71,8 +71,14 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.get("gamma", parameters.adiabaticIndex);
     pp.getarr("dimL", parameters.dimL);
     pp.getarr("n_cells" , parameters.n_cells);
-    pp.get("Ncomp", parameters.Ncomp);
+    //pp.get("Ncomp", parameters.Ncomp);
     pp.get("Nghost", parameters.Nghost);
+
+    parameters.numberOfMaterials  = 1;
+    int m = parameters.numberOfMaterials;
+
+    parameters.Ncomp = m+m+m+3+3+1+1+1+m+1+1; //4m+11
+
 
     pp.get("plotDirectory",initial.filename);
 }
@@ -93,4 +99,44 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters)
 
         U.primitiveToConservative(baca, parameters);
     }
+}
+
+void makeAccessPattern(std::map<Variable,int>& accessPattern, ParameterStruct& parameters)
+{
+    int n=0;
+
+    accessPattern.insert(std::pair<Variable,int>(ALPHA,n));
+
+    n+=parameters.numberOfMaterials;
+
+    accessPattern.insert(std::pair<Variable,int>(ALPHARHO,n));
+
+    n+=parameters.numberOfMaterials;
+
+    accessPattern.insert(std::pair<Variable,int>(RHO_K,n));
+
+    n+=parameters.numberOfMaterials;
+
+    accessPattern.insert(std::pair<Variable,int>(RHO,n));
+
+    n+=1;
+
+    accessPattern.insert(std::pair<Variable,int>(RHOU,n));
+
+    n+=3;
+
+    accessPattern.insert(std::pair<Variable,int>(VELOCITY,n));
+
+    n+=3;
+
+    accessPattern.insert(std::pair<Variable,int>(TOTAL_E,n));
+
+    n+=1;
+
+    accessPattern.insert(std::pair<Variable,int>(P,n));
+
+    n+=1;
+
+    accessPattern.insert(std::pair<Variable,int>(SOUNDSPEED,n));
+
 }
