@@ -1,11 +1,14 @@
 #include "simulationheader.h"
 
-
+/** Calculates the contact wave speed estimate.
+ */
 double getSstar(Cell& UL, Cell& UR, Real SL, Real SR, int i, int j, int k)
 {
     return (UR(P)-UL(P)+UL(RHOU)*(SL-UL(VELOCITY))-UR(RHOU)*(SR-UR(VELOCITY)))/(UL(RHO)*(SL-UL(VELOCITY)) -  UR(RHO)*(SR-UR(VELOCITY)));
 }
 
+/** Calculates the HLLC intermediate state.
+ */
 void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& parameters)
 {
     static const Real tolerance  = 1E-20;
@@ -30,11 +33,12 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
 
     UStar(VELOCITY)     = UStar(RHOU)/UStar(RHO);
-    UStar(P)            = (UStar(TOTAL_E)-0.5*UStar(RHO)*UStar(VELOCITY)*UStar(VELOCITY))*(parameters.adiabaticIndex-1.0);
 
     return;
 }
 
+/** Returns the equation flux of the conservative variables.
+ */
 Real flux(MaterialSpecifier n, Cell& U)
 {
     switch(n.var)
@@ -48,6 +52,8 @@ Real flux(MaterialSpecifier n, Cell& U)
 
 }
 
+/** Calculates the HLLC fluxes.
+ */
 void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters)
 {
     const auto lo = lbound(ULbox.box);
@@ -56,10 +62,6 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
     Real SR;
     Real SL;
     Real Sstar;
-
-    //std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA), MaterialSpecifier(ALPHARHO),MaterialSpecifier(RHOU),MaterialSpecifier(TOTAL_E)};
-
-    std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA,0),MaterialSpecifier(ALPHA,1), MaterialSpecifier(ALPHARHO,0),MaterialSpecifier(ALPHARHO,1),MaterialSpecifier(RHOU),MaterialSpecifier(TOTAL_E)};
 
     for 		(int k = lo.z; k <= hi.z; ++k)
     {
@@ -83,15 +85,15 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 {
                     getStarState(UL,UStar,SL,Sstar,parameters);
 
-                    for(auto n : varsThatNeedUpdating)
+                    for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
                         if(n.var == ALPHA)
                         {
-                             fluxbox(n,i,j,k)	= flux(n,UStar);
+                             fluxbox(i,j,k,n)	= flux(n,UStar);
                         }
                         else
                         {
-                            fluxbox(n,i,j,k)	= flux(n,UL);
+                            fluxbox(i,j,k,n)	= flux(n,UL);
                         }
                     }
                 }
@@ -99,15 +101,15 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 {
                     getStarState(UL,UStar,SL,Sstar,parameters);
 
-                    for(auto n : varsThatNeedUpdating)
+                    for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
                         if(n.var == ALPHA)
                         {
-                             fluxbox(n,i,j,k)	= flux(n,UStar);
+                             fluxbox(i,j,k,n)	= flux(n,UStar);
                         }
                         else
                         {
-                            fluxbox(n,i,j,k)	= flux(n,UL)+SL*(UStarbox(n,i,j,k)-URbox(n,i-1,j,k));
+                            fluxbox(i,j,k,n)	= flux(n,UL)+SL*(UStar(n)-UL(n));
                         }
                     }
 
@@ -116,15 +118,15 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 {
                     getStarState(UR,UStar,SR,Sstar,parameters);
 
-                    for(auto n : varsThatNeedUpdating)
+                    for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
                         if(n.var == ALPHA)
                         {
-                             fluxbox(n,i,j,k)	= flux(n,UStar);
+                             fluxbox(i,j,k,n)	= flux(n,UStar);
                         }
                         else
                         {
-                            fluxbox(n,i,j,k)	= flux(n,UR)+SR*(UStarbox(n,i,j,k)-ULbox(n,i-1,j,k));
+                            fluxbox(i,j,k,n)	= flux(n,UR)+SR*(UStar(n)-UR(n));
                         }
                     }
                 }
@@ -132,15 +134,15 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 {
                     getStarState(UR,UStar,SR,Sstar,parameters);
 
-                    for(auto n : varsThatNeedUpdating)
+                    for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
                         if(n.var == ALPHA)
                         {
-                             fluxbox(n,i,j,k)	= flux(n,UStar);
+                             fluxbox(i,j,k,n)	= flux(n,UStar);
                         }
                         else
                         {
-                            fluxbox(n,i,j,k)	= flux(n,UR);
+                            fluxbox(i,j,k,n)	= flux(n,UR);
                         }
                     }
                 }
@@ -151,16 +153,17 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
     return;
 }
 
+/** Update the conservative variables using the calculated fluxes.
+ *  The volume fraction alpha also needs a special
+ *  non-conservative update.
+ */
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters) //(Box const& box, Array4<Real> const& flux_prop_arr, Array4<Real> const& prop_arr, Array4<Real> const& prop_arr_new, ParameterStruct& parameters)
 {
 
     const auto lo = lbound(Ubox.box);
     const auto hi = ubound(Ubox.box);
 
-    //std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA), MaterialSpecifier(ALPHARHO),MaterialSpecifier(RHOU),MaterialSpecifier(TOTAL_E)};
-    std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA,0),MaterialSpecifier(ALPHA,1), MaterialSpecifier(ALPHARHO,0),MaterialSpecifier(ALPHARHO,1),MaterialSpecifier(RHOU),MaterialSpecifier(TOTAL_E)};
-
-    for    			(auto n : varsThatNeedUpdating)
+    for    			(auto n : Ubox.accessPattern.conservativeVariables)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -170,11 +173,11 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
                 {
                     if(n.var == ALPHA)
                     {
-                        U1box(n,i,j,k) = Ubox(n,i,j,k) + (parameters.dt/parameters.dx[0])*(fluxbox(n,i,j,k) - fluxbox(n,i+1,j,k) -Ubox(n,i,j,k)*(fluxbox(i,j,k,USTAR) - fluxbox(i+1,j,k,USTAR)));
+                        U1box(i,j,k,n) = Ubox(i,j,k,n) + (parameters.dt/parameters.dx[0])*(fluxbox(i,j,k,n) - fluxbox(i+1,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox(i+1,j,k,USTAR)));
                     }
                     else
                     {
-                        U1box(n,i,j,k) = Ubox(n,i,j,k) + (parameters.dt/parameters.dx[0])*(fluxbox(n,i,j,k) - fluxbox(n,i+1,j,k));
+                        U1box(i,j,k,n) = Ubox(i,j,k,n) + (parameters.dt/parameters.dx[0])*(fluxbox(i,j,k,n) - fluxbox(i+1,j,k,n));
                     }
                 }
             }
@@ -184,6 +187,8 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
 
 }
 
+/** van Leer slope limiter used in MUSCL extrapolation.
+ */
 Real vanLeerlimiter(Real r)
 {
     if(r<=0.0)
@@ -196,6 +201,8 @@ Real vanLeerlimiter(Real r)
     }
 }
 
+/** Performs MUSCL extrapolation on the primitive variables.
+ */
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad)
 {
     Real r;
@@ -203,10 +210,7 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    //std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA),MaterialSpecifier(RHO_K),MaterialSpecifier(VELOCITY),MaterialSpecifier(P)};
-    std::vector<MaterialSpecifier> varsThatNeedUpdating = {MaterialSpecifier(ALPHA,0),MaterialSpecifier(ALPHA,1),MaterialSpecifier(RHO_K,0),MaterialSpecifier(RHO_K,1),MaterialSpecifier(VELOCITY),MaterialSpecifier(P)};
-
-    for    			(auto n : varsThatNeedUpdating)
+    for    			(auto n : U.accessPattern.primitiveVariables)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -214,21 +218,17 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    r = (U(n,i,j,k)-U(n,i-1,j,k))/(U(n,i+1,j,k)-U(n,i,j,k));
+                    r = (U(i,j,k,n)-U(i-1,j,k,n))/(U(i+1,j,k,n)-U(i,j,k,n));
 
                     if(std::isinf(r) || std::isnan(r))
                     {
                         r = 0.0;
                     }
 
-                    grad(n,i,j,k) = vanLeerlimiter(r)*0.5*(U(n,i+1,j,k)-U(n,i-1,j,k));
+                    grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U(i+1,j,k,n)-U(i-1,j,k,n));
 
-                    UL(n,i,j,k) = U(n,i,j,k) - 0.5*grad(n,i,j,k);
-                    UR(n,i,j,k) = U(n,i,j,k) + 0.5*grad(n,i,j,k);
-
-                    //UL(n,i,j,k) = U(n,i,j,k);
-                    //UR(n,i,j,k) = U(n,i,j,k);
-
+                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
+                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
 
                 }
             }
@@ -238,37 +238,36 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     return;
 }
 
+/** Calculate the HLLC flux and update new array
+ */
 void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& UStar,Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc)
 {
+    /*-------------------------------------------------------------
+     * Perform MUSCL extrapolation.
+     * -----------------------------------------------------------*/
+
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
 
-        //access current array box
-        FArrayBox& fab_old      = U.data[mfi];
-        FArrayBox& fab_L        = UL.data[mfi];
-        FArrayBox& fab_R        = UR.data[mfi];
-        FArrayBox& fab_grad     = MUSCLgrad.data[mfi];
+        /*-------------------------------------------------------------
+         * Data can't be accessed straight from a Multifab so we make
+         * some wrappers to hold the FArrayBoxes that can access the
+         * data called BoxAccessCellArray.
+         * -----------------------------------------------------------*/
 
-
-        //access the array from the array box:
-        Array4<Real> const& prop_arr 		= fab_old.array();
-        Array4<Real> const& prop_arr_L      = fab_L.array();
-        Array4<Real> const& prop_arr_R      = fab_R.array();
-        Array4<Real> const& prop_arr_grad	= fab_grad.array();
-
-        BoxAccessCellArray Ubox(bx,fab_old,prop_arr,U);
-        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L,UL);
-        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R,UR);
-        BoxAccessCellArray gradbox(bx,fab_grad,prop_arr_grad,MUSCLgrad);
+        BoxAccessCellArray Ubox(mfi,bx,U);
+        BoxAccessCellArray ULbox(mfi,bx,UL);
+        BoxAccessCellArray URbox(mfi,bx,UR);
+        BoxAccessCellArray gradbox(mfi,bx,MUSCLgrad);
 
         MUSCLextrapolate(Ubox,ULbox,URbox,gradbox);
 
-        UL.primitiveToConservative(ULbox,parameters);
-        UR.primitiveToConservative(URbox,parameters);
+        ULbox.primitiveToConservative(parameters);
+        URbox.primitiveToConservative(parameters);
 
-        UL.getSoundSpeed(ULbox,parameters);
-        UR.getSoundSpeed(URbox,parameters);
+        ULbox.getSoundSpeed(parameters);
+        URbox.getSoundSpeed(parameters);
 
     }
 
@@ -278,37 +277,27 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
     UL.data.FillBoundary(geom.periodicity());
     UR.data.FillBoundary(geom.periodicity());
 
+    /*-------------------------------------------------------------
+     * Calulate HLLC flux and update the new array.
+     * -----------------------------------------------------------*/
+
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
 
-        //access current array box
-        FArrayBox& fab_old      = U.data[mfi];
-        FArrayBox& fab_new      = U1.data[mfi];
-        FArrayBox& fab_L        = UL.data[mfi];
-        FArrayBox& fab_R        = UR.data[mfi];
-        FArrayBox& fab_Star     = UStar.data[mfi];
         FArrayBox& flux_fab_x   = flux_arr[0][mfi];
 
-        //access the array from the array box:
-        Array4<Real> const& prop_arr 		= fab_old.array();
-        Array4<Real> const& prop_arr_new	= fab_new.array();
-        Array4<Real> const& prop_arr_L      = fab_L.array();
-        Array4<Real> const& prop_arr_R      = fab_R.array();
-        Array4<Real> const& prop_arr_Star	= fab_Star.array();
-        Array4<Real> const& flux_prop_arr_x = flux_fab_x.array();
-
-        BoxAccessCellArray Ubox(bx,fab_old,prop_arr,U);
-        BoxAccessCellArray U1box(bx,fab_new,prop_arr_new,U1);
-        BoxAccessCellArray ULbox(bx,fab_L,prop_arr_L,UL);
-        BoxAccessCellArray URbox(bx,fab_R,prop_arr_R,UR);
-        BoxAccessCellArray UStarbox(bx,fab_Star,prop_arr_Star,UStar);
-        BoxAccessCellArray fluxbox(bx,flux_fab_x,flux_prop_arr_x,U);
+        BoxAccessCellArray Ubox(mfi,bx,U);
+        BoxAccessCellArray U1box(mfi,bx,U1);
+        BoxAccessCellArray ULbox(mfi,bx,UL);
+        BoxAccessCellArray URbox(mfi,bx,UR);
+        BoxAccessCellArray UStarbox(mfi,bx,UStar);
+        BoxAccessCellArray fluxbox(bx,flux_fab_x,U);
 
         calc_fluxes (fluxbox, ULbox, URbox, UStarbox, parameters);
         update      (fluxbox, Ubox, U1box, parameters);
 
-        U1.conservativeToPrimitive(U1box,parameters);
+        U1box.conservativeToPrimitive(parameters);
     }
 
     FillDomainBoundary(U1.data, geom, bc);
@@ -318,7 +307,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
 }
 
-void RKadvance(CellArray& U,CellArray& U1,CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& UStar,Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc)
+/** 2nd Order Runge-Kutta time integration
+ */
+void advance(CellArray& U,CellArray& U1,CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& UStar,Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc)
 {
 
     HLLCadvance(U, U1, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters, bc);

@@ -3,65 +3,73 @@
 
 #include "amrexheader.h"
 #include "structdefinitions.h"
-
-class CellArray;
-
-class BoxAccessCellArray
-{
-public:
-
-    BoxAccessCellArray(const Box& bx, FArrayBox& fb, Array4<Real> const& prop_arr, CellArray &U);
-
-    const Box& box;
-
-    FArrayBox& fab;
-
-    Array4<Real> const& arr;
-
-    std::map<Variable,int>& accessPattern;
-
-    int numberOfMaterials;
-
-    Real& operator()(Variable var, int mat, int row, int col, int i, int j=0, int k=0);
-    Real& operator()(MaterialSpecifier& m, int i, int j=0, int k=0);
-    //Real& operator()(MaterialSpecifier  m, int i, int j=0, int k=0);
-    Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
-    Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
+#include "accesspattern.h"
 
 
-
-};
+/** \class CellArray
+ * A wrapper for a Multifab which allows for easy addition and multiplication.
+ * Also stores AccessPatterns and numbers of materials.
+ *
+ * \class BoxAccessCellArray
+ * A wrapper for a Box and an FArrayBox that can return data using an AccessPattern.conservativeVariables
+ * Contains functions to do things like convert primitive variables to conservative variables etc.
+ */
 
 class CellArray
 {
 public:
 
-    CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, std::map<Variable,int>& _accessPattern, ParameterStruct &parameters);
+    CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, AccessPattern& _accessPattern, ParameterStruct &parameters);
 
     void primitiveToConservative(ParameterStruct& parameters);
-    void primitiveToConservative(BoxAccessCellArray& U, ParameterStruct& parameters);
-
     void conservativeToPrimitive(ParameterStruct& parameters);
-    void conservativeToPrimitive(BoxAccessCellArray& U, ParameterStruct& parameters);
-
-    void getSoundSpeed(ParameterStruct& parameters);
-    void getSoundSpeed(BoxAccessCellArray& U, ParameterStruct& parameters);
-
-    Real getEffectiveInverseGruneisen(BoxAccessCellArray& U, ParameterStruct& parameters, int i, int j, int k);
+    void getSoundSpeed          (ParameterStruct& parameters);
 
 
-    void operator=(CellArray& U);
-    CellArray& operator*(Real d);
-    CellArray& operator+(CellArray& U);
+    void        operator=(CellArray& U);
+    CellArray&  operator*(Real d);
+    CellArray&  operator+(CellArray& U);
 
     MultiFab data;
 
-    std::map<Variable,int>& accessPattern;
+    AccessPattern& accessPattern;
 
     int numberOfMaterials;
 
 
 
 };
+
+class BoxAccessCellArray
+{
+public:
+
+    BoxAccessCellArray(const Box& bx, FArrayBox& fb, CellArray &U);
+
+    BoxAccessCellArray(MFIter& mfi, const Box &bx, CellArray &U);
+
+    const Box& box;
+
+    FArrayBox& fab;
+
+    AccessPattern& accessPattern;
+
+    int numberOfMaterials;
+
+    Real& operator()(int i, int j, int k, MaterialSpecifier& m);
+    Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
+    Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
+
+    void  conservativeToPrimitive(ParameterStruct& parameters);
+    void  primitiveToConservative(ParameterStruct& parameters);
+
+    Real getEffectiveInverseGruneisen(ParameterStruct& parameters, int i, int j, int k);
+
+    void getSoundSpeed(ParameterStruct& parameters);
+
+
+};
+
+
 
 #endif // CELLARRAY_H

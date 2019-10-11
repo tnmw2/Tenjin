@@ -5,6 +5,8 @@
 #include "structdefinitions.h"
 #include "cellarray.h"
 
+/** \class Calculates the timestep.
+ */
 class TimeStep
 {
 public:

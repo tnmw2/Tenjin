@@ -3,6 +3,10 @@
 
 #include "amrexheader.h"
 
+/** An enumeration of all the Variables used. This is passed
+ * to things like AccessPattern to return variables from a
+ * BoxAccessCellArray
+ */
 enum Variable
 {
     ALPHA,
@@ -17,20 +21,35 @@ enum Variable
     USTAR
 };
 
+/** Not yet used...
+ */
 enum Material_type
 {
     solid,
     fluid
 };
 
+/** Holds data about initial conditions etc.
+ */
 struct InitialStruct
 {
     Real startT;
     Real finalT;
 
+    Real rhoL;
+    Real rhoR;
+    Real uL;
+    Real uR;
+    Real pL;
+    Real pR;
+
     std::string filename;
 };
 
+/** Holds simulation data that needs to be passed around.
+ *  Contains the current timestep dt and the CFL number
+ *  for example.
+ */
 struct ParameterStruct
 {
     Vector<Real> dimL;
@@ -42,17 +61,12 @@ struct ParameterStruct
     int numberOfMaterials;
 
     int max_grid_size;
-    int plot_int;
 
-    Real phiL;
-    Real phiR;
     Real CFL;
     Real x0;
-    Real a;
-    Real adiabaticIndex;
     Real dt;
 
-
+    Vector<Real> adiabaticIndex;
 
     ParameterStruct()
     {
@@ -62,6 +76,11 @@ struct ParameterStruct
     }
 };
 
+/** A struct that can uniquely specify a thermodynamic varible.
+ *  mat - the material the variable relates to
+ *  row, col - used to get components of tensor variables like velocity
+ *             and (later) deformation tensor.
+ */
 struct MaterialSpecifier
 {
     Variable var;

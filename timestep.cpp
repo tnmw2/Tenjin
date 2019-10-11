@@ -2,6 +2,8 @@
 
 TimeStep::TimeStep(BoxArray &ba, DistributionMapping &dm, const int Ncomp, const int Nghost) : data(ba,dm,Ncomp,Nghost){}
 
+/** Calulates the Timestep in a given box.
+ */
 void TimeStep::boxTimeStepFunction(BoxAccessCellArray& U, Array4<Real> const& prop_arr_time, ParameterStruct& parameters)
 {
     const auto lo = lbound(U.box);
@@ -26,22 +28,24 @@ void TimeStep::boxTimeStepFunction(BoxAccessCellArray& U, Array4<Real> const& pr
     return;
 }
 
+/** Calulates the Timestep over the entire domain.
+ * Calls boxTimestepFunction to calculate the steps
+ * in each box before finding the minimumover the whole
+ * multifab.
+ */
 Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
 {
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
         const Box& bx   = mfi.validbox();
 
-        FArrayBox& fab  = U.data[mfi];
         FArrayBox& time_fab = data[mfi];
 
-        Array4<Real> const& prop_arr_phi  = fab.array();
         Array4<Real> const& prop_arr_time = time_fab.array();
 
+        BoxAccessCellArray baca(mfi,bx,U);
 
-        BoxAccessCellArray baca(bx,fab,prop_arr_phi,U);
-
-        U.getSoundSpeed(baca,parameters);
+        baca.getSoundSpeed(parameters);
 
         boxTimeStepFunction(baca,prop_arr_time,parameters);
     }
@@ -50,7 +54,9 @@ Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
 
     for(int n=0;n<AMREX_SPACEDIM;n++)
     {
-        dt = (data.min(n) < dt ? data.min(n) : dt);
+        Real temp = data.min(n);
+
+        dt = (temp < dt ? temp : dt);
     }
 
 

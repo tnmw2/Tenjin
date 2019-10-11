@@ -10,7 +10,8 @@ SOURCES += main.cpp \
     boxaccesscellarray.cpp \
     hllc.cpp \
     print.cpp \
-    cell.cpp
+    cell.cpp \
+    accesspattern.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -18,5 +19,6 @@ HEADERS += \
     cellarray.h \
     amrexheader.h \
     structdefinitions.h \
-    cell.h
+    cell.h \
+    accesspattern.h
 

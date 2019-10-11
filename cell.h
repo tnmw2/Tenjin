@@ -5,6 +5,16 @@
 #include "structdefinitions.h"
 #include "cellarray.h"
 
+/** \class Cell
+ * Because AMReX stores things as n,i,j,k, rather than i,j,k,n
+ * if we want to act on variables with the same index, then we
+ * first group them into a Cell class for ease.
+ *
+ * \class Material
+ * A sub-set of a cell which only contains information relating
+ * to one material
+ */
+
 class Material
 {
     public:

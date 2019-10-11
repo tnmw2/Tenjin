@@ -2,28 +2,30 @@
 #include "timestep.h"
 using namespace amrex;
 
-
 void main_main ()
 {
     Real start_time = amrex::second();
 
-    int max_grid_size, nsteps_max, plot_int;
-
-    Array<int,AMREX_SPACEDIM> is_periodic {AMREX_D_DECL(0,0,0)};  // non-periodic in all directions by default
-
     ParmParse pp;
+
+    /* -----------------------------------------------------
+     * parameters and initial are structs that hold and pass
+     * around simulation parameters.
+     * -----------------------------------------------------*/
 
     ParameterStruct parameters;
     InitialStruct   initial;
 
     initialiseDataStructs(parameters,initial);
 
-    Print() << initial.filename << std::endl;
+    /* ----------------------------------------------------
+     * Declare the domain and geometry required for Multifabs
+     * Also delcare a Distribution mapping (Only the standard
+     * one has been used, but I would like to know the benefits
+     * of using others)
+     * -----------------------------------------------------*/
 
-    IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
-    IntVect dom_hi(AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
-
-    Box domain(dom_lo, dom_hi);
+    Box domain(AMREX_D_DECL(0,0,0),AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
 
     BoxArray ba(domain);
 
@@ -31,13 +33,27 @@ void main_main ()
 
     RealBox real_box({AMREX_D_DECL(0.0,0.0,0.0)},{AMREX_D_DECL(parameters.dimL[0], parameters.dimL[1], parameters.dimL[2])});
 
-    Geometry geom(domain,real_box,CoordSys::cartesian,is_periodic);
+    Geometry geom(domain,real_box,CoordSys::cartesian,{AMREX_D_DECL(0,0,0)});
 
     DistributionMapping dm(ba);
 
-    std::map<Variable,int> accessPattern;
+    parameters.dx = {geom.CellSize()[0],geom.CellSize()[1],geom.CellSize()[2]};
 
-    makeAccessPattern(accessPattern,parameters);
+    /* ----------------------------------------------------
+     *  Because the number of components in a Multifab changes
+     * from simulation to simulation, we declare an
+     * AccessPattern which tells us how to get a specific
+     * variable from a Multifab.
+     * ------------------------------------------------------*/
+
+    AccessPattern accessPattern(parameters);
+
+    /* ----------------------------------------------------
+     * Declare Multifab wrappers with overloaded =,+,* for
+     * ease.
+     * Declare a timestep class that will calculate the
+     * timestep and have its own Multifab to store data.
+     * ----------------------------------------------------*/
 
     CellArray U         (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
     CellArray U1        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
@@ -49,35 +65,41 @@ void main_main ()
 
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
-    Vector<BCRec> bc(U1.data.nComp());
+    /* ----------------------------------------------------
+     * Declare transmissive boundary conditions and set up
+     * a flux vector
+     * ----------------------------------------------------*/
 
-    for(int n = 0; n < U1.data.nComp(); ++n)
-    {
-        for(int idim = 0; idim < AMREX_SPACEDIM; ++idim)
-        {
-            bc[n].setLo(idim, BCType::foextrap);
-            bc[n].setHi(idim, BCType::foextrap);
-        }
-    }
-
-    setInitialConditions(U1,parameters);
-
-    PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
-
+    Vector<BCRec> bc(parameters.Ncomp);
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
-    for(int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
     {
         BoxArray edge_ba = ba;
 
         edge_ba.surroundingNodes(dir);
 
         flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
+
+        for(int n = 0; n < parameters.Ncomp; ++n)
+        {
+            bc[n].setLo(dir, BCType::foextrap);
+            bc[n].setHi(dir, BCType::foextrap);
+        }
     }
 
-    parameters.dx[0] = geom.CellSize()[0];
-    parameters.dx[1] = geom.CellSize()[1];
-    parameters.dx[2] = geom.CellSize()[2];
+    /* ----------------------------------------------------
+     * Setup and Print the initial conditions
+     * ----------------------------------------------------*/
+
+
+    setInitialConditions(U1,parameters,initial);
+
+    PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
+
+    /* ----------------------------------------------------
+     * The main time loop
+     * ----------------------------------------------------*/
 
     int n = 0;
 
@@ -90,7 +112,10 @@ void main_main ()
 
         parameters.dt = timeStep.getTimeStep(U1,parameters);
 
-        amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
+        if(n%10==0)
+        {
+            amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
+        }
 
         if(t+parameters.dt>initial.finalT)
         {
@@ -99,22 +124,17 @@ void main_main ()
 
         U = U1;
 
-        RKadvance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
+        advance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
+
 
     }
 
     PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
 
-
-
-    // Call the timer again and compute the maximum difference between the start time and stop time
-    //   over all processors
     Real stop_time = amrex::second() - start_time;
     const int IOProc = ParallelDescriptor::IOProcessorNumber();
     ParallelDescriptor::ReduceRealMax(stop_time,IOProc);
-
-    // Tell the I/O Processor to write out the "run time"
-    amrex::Print() << "Run time = " << stop_time << std::endl;
+    Print() << "Run time = " << stop_time << std::endl;
 
 }
 

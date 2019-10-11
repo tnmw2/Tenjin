@@ -1,20 +1,21 @@
 #include "simulationheader.h"
 
-void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var, int mat =0)
+void PrintTo1DGnuplotFile(CellArray& U, std::string filename, std::string name, int picture, Variable var, int mat =0)
 {
+    std::string pltfilevarstub = filename;
+
+    std::string pltfilevar = pltfilevarstub.append(name);
+
+    const std::string pltfilefinal = amrex::Concatenate(pltfilevar,picture,2);
+
     for( MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& box = mfi.validbox();
 
-        FArrayBox& fab = U.data[mfi];
+        BoxAccessCellArray Ubox(mfi,box,U);
 
-        Array4<Real> const& prop_arr = fab.array();
-
-        const auto lo = lbound(box);
-        const auto hi = ubound(box);
-
-        BoxAccessCellArray Ubox(box,fab,prop_arr,U);
-
+        const auto lo = lbound(Ubox.box);
+        const auto hi = ubound(Ubox.box);
 
         for    		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -22,7 +23,7 @@ void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var, int 
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    AllPrintToFile(filename) << i << " " << Ubox(i,j,k,var,mat) << std::endl;
+                    AllPrintToFile(pltfilefinal) << i << " " << Ubox(i,j,k,var,mat) << std::endl;
                 }
             }
         }
@@ -32,41 +33,11 @@ void PrintTo1DGnuplotFile(CellArray& U, std::string filename, Variable var, int 
 void PrintAllVarsTo1DGnuplotFile(CellArray& U, int picture, std::string filename)
 {
 
-    std::string pltfilevarstub = filename;
-    std::string pltfilevar;
-
-    pltfilevar = pltfilevarstub.append("/rho");
-    const std::string pltfilerho = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfilerho, RHO);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/u");
-    const std::string pltfileu = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfileu, VELOCITY);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/p");
-    const std::string pltfilep = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfilep, P);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/E");
-    const std::string pltfileE = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfileE, TOTAL_E);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/rhoU");
-    const std::string pltfilerhoU = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfilerhoU, RHOU);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/alpha0");
-    const std::string pltfilea0 = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfilea0, ALPHA,0);
-
-    pltfilevarstub = filename;
-    pltfilevar = pltfilevarstub.append("/alpha1");
-    const std::string pltfilea1 = amrex::Concatenate(pltfilevar,picture,2);
-    PrintTo1DGnuplotFile(U, pltfilea1, ALPHA,1);
+    PrintTo1DGnuplotFile(U, filename,"/rho"     ,picture, RHO);
+    PrintTo1DGnuplotFile(U, filename,"/p"       ,picture, P);
+    PrintTo1DGnuplotFile(U, filename,"/u"       ,picture, VELOCITY);
+    PrintTo1DGnuplotFile(U, filename,"/E"       ,picture, TOTAL_E);
+    PrintTo1DGnuplotFile(U, filename,"/rhoU"    ,picture, RHOU);
+    PrintTo1DGnuplotFile(U, filename,"/alpha0"  ,picture, ALPHA,0);
 
 }

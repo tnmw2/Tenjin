@@ -1,6 +1,6 @@
 #include "simulationheader.h"
 
-void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
+void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
 
     const auto lo = lbound(U.box);
@@ -15,37 +15,43 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters)
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                /*if(i <= int_x0)
+                if(parameters.numberOfMaterials == 1)
                 {
-                    U(i,j,k,ALPHA)       = 0.999999;
-                    U(i,j,k,RHO_K)       = 1.0;
-                    U(i,j,k,VELOCITY)    = 0.0;
-                    U(i,j,k,P)           = 1.0;
+                    if(i <= int_x0)
+                    {
+                        U(i,j,k,ALPHA)     = 1.0;
+                        U(i,j,k,RHO_K)     = initial.rhoL;
+                        U(i,j,k,VELOCITY)  = initial.uL;
+                        U(i,j,k,P)         = initial.pL;
+                    }
+                    else
+                    {
+                        U(i,j,k,ALPHA)     = 1.0;
+                        U(i,j,k,RHO_K)     = initial.rhoR;
+                        U(i,j,k,VELOCITY)  = initial.uR;
+                        U(i,j,k,P)         = initial.pR;
+                    }
                 }
-                else
+                else if(parameters.numberOfMaterials == 2)
                 {
-                    U(i,j,k,ALPHA)       = 0.999999;
-                    U(i,j,k,RHO_K)       = 0.125;
-                    U(i,j,k,VELOCITY)    = 0.0;
-                    U(i,j,k,P)           = 0.1;
-                }*/
-                if(i <= int_x0)
-                {
-                    U(i,j,k,ALPHA,0)     = 0.999999;
-                    U(i,j,k,ALPHA,1)     = 0.000001;
-                    U(i,j,k,RHO_K,0)     = 1.0;
-                    U(i,j,k,RHO_K,1)     = 0.125;
-                    U(i,j,k,VELOCITY)    = 0.0;
-                    U(i,j,k,P)           = 1.0;
-                }
-                else
-                {
-                    U(i,j,k,ALPHA,1)     = 0.999999;
-                    U(i,j,k,ALPHA,0)     = 0.000001;
-                    U(i,j,k,RHO_K,0)     = 1.0;
-                    U(i,j,k,RHO_K,1)     = 0.125;
-                    U(i,j,k,VELOCITY)    = 0.0;
-                    U(i,j,k,P)           = 0.1;
+                    if(i <= int_x0)
+                    {
+                        U(i,j,k,ALPHA,0)     = 0.999999;
+                        U(i,j,k,ALPHA,1)     = 0.000001;
+                        U(i,j,k,RHO_K,0)     = initial.rhoL;
+                        U(i,j,k,RHO_K,1)     = initial.rhoR;
+                        U(i,j,k,VELOCITY)    = initial.uL;
+                        U(i,j,k,P)           = initial.pL;
+                    }
+                    else
+                    {
+                        U(i,j,k,ALPHA,1)     = 0.999999;
+                        U(i,j,k,ALPHA,0)     = 0.000001;
+                        U(i,j,k,RHO_K,0)     = initial.rhoL;
+                        U(i,j,k,RHO_K,1)     = initial.rhoR;
+                        U(i,j,k,VELOCITY)    = initial.uR;
+                        U(i,j,k,P)           = initial.pR;
+                    }
                 }
             }
         }
@@ -59,97 +65,49 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 
     pp.get("max_grid_size",parameters.max_grid_size);
 
-    parameters.plot_int = 1;
-    pp.query("plot_int",parameters.plot_int);
-
-    //pp.queryarr("is_periodic",is_periodic);
-
     pp.get("startT", initial.startT);
     pp.get("finalT", initial.finalT);
 
-    //Test Case specific variables:
+    pp.get("rhoL",  initial.rhoL);
+    pp.get("rhoR",  initial.rhoR);
+    pp.get("uL",    initial.uL);
+    pp.get("uR",    initial.uR);
+    pp.get("pL",    initial.pL);
+    pp.get("pR",    initial.pR);
 
-    pp.get("phiL", parameters.phiL);
-    pp.get("phiR", parameters.phiR);
+    pp.getarr("gamma",parameters.adiabaticIndex);
 
-    //initial discontinuity
     pp.get("x0",  parameters.x0);
     pp.get("CFL", parameters.CFL);
 
-    pp.get("gamma", parameters.adiabaticIndex);
+
+    pp.get("Nghost", parameters.Nghost);
+    pp.get("Nmat", parameters.numberOfMaterials);
+
     pp.getarr("dimL", parameters.dimL);
     pp.getarr("n_cells" , parameters.n_cells);
-    //pp.get("Ncomp", parameters.Ncomp);
-    pp.get("Nghost", parameters.Nghost);
 
-    parameters.numberOfMaterials  = 2;
+
     int m = parameters.numberOfMaterials;
 
-    parameters.Ncomp = m+m+m+3+3+1+1+1+1+1; //4m+11
+    parameters.Ncomp = m+m+m+3+3+1+1+1+1+1; //alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
 
 
     pp.get("plotDirectory",initial.filename);
 }
 
-void setInitialConditions(CellArray& U, ParameterStruct& parameters)
+void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
 
-        FArrayBox& fab = U.data[mfi];
+        BoxAccessCellArray baca(mfi,bx,U);
 
-        Array4<Real> const& prop_arr = fab.array();
+        initial_conditions(baca, parameters, initial);
 
-        BoxAccessCellArray baca(bx,fab,prop_arr,U);
-
-        initial_conditions(baca, parameters);
-
-        U.primitiveToConservative(baca, parameters);
+        baca.primitiveToConservative(parameters);
     }
 }
 
-void makeAccessPattern(std::map<Variable,int>& accessPattern, ParameterStruct& parameters)
-{
-    int n=0;
 
-    accessPattern.insert(std::pair<Variable,int>(ALPHA,n));
-
-    n+=parameters.numberOfMaterials;
-
-    accessPattern.insert(std::pair<Variable,int>(ALPHARHO,n));
-
-    n+=parameters.numberOfMaterials;
-
-    accessPattern.insert(std::pair<Variable,int>(RHO_K,n));
-
-    n+=parameters.numberOfMaterials;
-
-    accessPattern.insert(std::pair<Variable,int>(RHO,n));
-
-    n+=1;
-
-    accessPattern.insert(std::pair<Variable,int>(RHOU,n));
-
-    n+=3;
-
-    accessPattern.insert(std::pair<Variable,int>(VELOCITY,n));
-
-    n+=3;
-
-    accessPattern.insert(std::pair<Variable,int>(TOTAL_E,n));
-
-    n+=1;
-
-    accessPattern.insert(std::pair<Variable,int>(P,n));
-
-    n+=1;
-
-    accessPattern.insert(std::pair<Variable,int>(SOUNDSPEED,n));
-
-    n+=1;
-
-    accessPattern.insert(std::pair<Variable,int>(USTAR,n));
-
-
-}
