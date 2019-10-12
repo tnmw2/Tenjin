@@ -2,19 +2,17 @@
 
 Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
 {
-    rhoU.resize(numberOfComponents);
-    u.resize(numberOfComponents);
+    rhoU.resize(AMREX_SPACEDIM);
+    u.resize(AMREX_SPACEDIM);
 
     materials.resize(U.numberOfMaterials);
 
     rho     =   (&U(i,j,k,RHO));
-    rhoU[0] =   (&U(i,j,k,RHOU));
     E       =   (&U(i,j,k,TOTAL_E));
-    u[0]    =   (&U(i,j,k,VELOCITY));
     p       =   (&U(i,j,k,P));
     a       =   (&U(i,j,k,SOUNDSPEED));
 
-    for(int row = 0; row < numberOfComponents ; row++)
+    for(int row = 0; row < AMREX_SPACEDIM ; row++)
     {
         u[row]      = (&U(i,j,k,VELOCITY,0,row));
         rhoU[row]   = (&U(i,j,k,RHOU,0,row));

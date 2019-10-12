@@ -4,7 +4,6 @@ BoxAccessCellArray::BoxAccessCellArray(const Box& bx, FArrayBox& fb,  CellArray&
 
 BoxAccessCellArray::BoxAccessCellArray(MFIter& mfi, const Box& bx, CellArray &U) : box{bx}, fab{U.data[mfi]}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
 
-
 Real& BoxAccessCellArray::operator()(int i, int j, int k, Variable var, int mat, int row, int col)
 {
     MaterialSpecifier temp(var,mat,row,col);
@@ -51,6 +50,8 @@ void  BoxAccessCellArray::conservativeToPrimitive(ParameterStruct& parameters)
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
+    Real kineticEnergy;
+
     for    		(int k = lo.z; k <= hi.z; ++k)
     {
         for     (int j = lo.y; j <= hi.y; ++j)
@@ -65,8 +66,16 @@ void  BoxAccessCellArray::conservativeToPrimitive(ParameterStruct& parameters)
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
                 }
 
-                (*this)(i,j,k,VELOCITY) = (*this)(i,j,k,RHOU)/(*this)(i,j,k,RHO);
-                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY)*(*this)(i,j,k,VELOCITY))/(getEffectiveInverseGruneisen(parameters,i,j,k));
+                kineticEnergy = 0.0;
+
+                for(int row = 0; row < AMREX_SPACEDIM ; row++)
+                {
+                    (*this)(i,j,k,VELOCITY,0,row) = (*this)(i,j,k,RHOU,0,row)/(*this)(i,j,k,RHO);
+
+                    kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
+                }
+
+                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy)/(getEffectiveInverseGruneisen(parameters,i,j,k));
             }
         }
     }
@@ -76,6 +85,8 @@ void  BoxAccessCellArray::primitiveToConservative(ParameterStruct& parameters)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
+
+    Real kineticEnergy;
 
     for    		(int k = lo.z; k <= hi.z; ++k)
     {
@@ -91,8 +102,17 @@ void  BoxAccessCellArray::primitiveToConservative(ParameterStruct& parameters)
                     (*this)(i,j,k,RHO)          += (*this)(i,j,k,ALPHARHO,m);
                 }
 
-                (*this)(i,j,k,RHOU) 		= (*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY);
-                (*this)(i,j,k,TOTAL_E)   	= (*this)(i,j,k,P)*getEffectiveInverseGruneisen(parameters,i,j,k) + 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY)*(*this)(i,j,k,VELOCITY);
+                kineticEnergy = 0.0;
+
+                for(int row = 0; row < AMREX_SPACEDIM ; row++)
+                {
+                    (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
+
+                    kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
+                }
+
+
+                (*this)(i,j,k,TOTAL_E)   	= (*this)(i,j,k,P)*getEffectiveInverseGruneisen(parameters,i,j,k) + kineticEnergy;
             }
         }
     }
@@ -136,4 +156,44 @@ void BoxAccessCellArray::getSoundSpeed(ParameterStruct& parameters)
             }
         }
     }
+}
+
+Real& BoxAccessCellArray::left(Direction_enum d, int i, int j, int k, MaterialSpecifier& m)
+{
+    switch(d)
+    {
+    case x: return (*this)(i-1,j,k,m);
+        break;
+    case y: return (*this)(i,j-1,k,m);
+        break;
+    case z: return (*this)(i,j,k-1,m);
+        break;
+    default: Print() << "Bad Direction in Left function" << std::endl; exit(1);
+    }
+}
+
+Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, MaterialSpecifier& m)
+{
+    switch(d)
+    {
+    case x: return (*this)(i+1,j,k,m);
+        break;
+    case y: return (*this)(i,j+1,k,m);
+        break;
+    case z: return (*this)(i,j,k+1,m);
+        break;
+    default: Print() << "Bad Direction in Right function" << std::endl; exit(1);
+    }
+}
+
+Real& BoxAccessCellArray::left(Direction_enum d, int i, int j, int k, Variable var, int mat, int row, int col)
+{
+    MaterialSpecifier temp(var,mat,row,col);
+    return left(d,i,j,k,temp);
+}
+
+Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, Variable var, int mat, int row, int col)
+{
+    MaterialSpecifier temp(var,mat,row,col);
+    return right(d,i,j,k,temp);
 }

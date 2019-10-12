@@ -56,9 +56,16 @@ public:
 
     int numberOfMaterials;
 
+    Real& left (Direction_enum d, int i, int j, int k, MaterialSpecifier& m);
+    Real& right(Direction_enum d, int i, int j, int k, MaterialSpecifier& m);
+
+    Real& left (Direction_enum d, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
+    Real& right(Direction_enum d, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
+
     Real& operator()(int i, int j, int k, MaterialSpecifier& m);
     Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
+
 
     void  conservativeToPrimitive(ParameterStruct& parameters);
     void  primitiveToConservative(ParameterStruct& parameters);

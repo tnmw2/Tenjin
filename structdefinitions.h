@@ -29,6 +29,13 @@ enum Material_type
     fluid
 };
 
+enum Direction_enum
+{
+    x,
+    y,
+    z
+};
+
 /** Holds data about initial conditions etc.
  */
 struct InitialStruct
@@ -38,12 +45,18 @@ struct InitialStruct
 
     Real rhoL;
     Real rhoR;
-    Real uL;
-    Real uR;
+    Vector<Real> uL;
+    Vector<Real> uR;
     Real pL;
     Real pR;
 
     std::string filename;
+
+    InitialStruct()
+    {
+        uL = Vector<Real>(AMREX_SPACEDIM);
+        uR = Vector<Real>(AMREX_SPACEDIM);
+    }
 };
 
 /** Holds simulation data that needs to be passed around.
@@ -95,6 +108,15 @@ struct MaterialSpecifier
         row=r;
         col=c;
     }
+};
+
+
+enum Var_type
+{
+    PRIMITIVE,
+    CONSERVATIVE,
+    BOTH,
+    NEITHER
 };
 
 #endif // STRUCTDEFINITIONS

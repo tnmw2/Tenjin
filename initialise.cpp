@@ -17,19 +17,28 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
             {
                 if(parameters.numberOfMaterials == 1)
                 {
-                    if(i <= int_x0)
+                    if(i<int_x0)//if((i-parameters.n_cells[0]/2)*(i-parameters.n_cells[0]/2)+(j-parameters.n_cells[1]/2)*(j-parameters.n_cells[1]/2) <= (int_x0/1.5)*(int_x0/1.5))
                     {
                         U(i,j,k,ALPHA)     = 1.0;
                         U(i,j,k,RHO_K)     = initial.rhoL;
-                        U(i,j,k,VELOCITY)  = initial.uL;
                         U(i,j,k,P)         = initial.pL;
+
+                        for(int dir = 0; dir< AMREX_SPACEDIM ; dir++)
+                        {
+                            U(i,j,k,VELOCITY,0,dir)  = initial.uL[dir];
+                        }
+
                     }
                     else
                     {
                         U(i,j,k,ALPHA)     = 1.0;
                         U(i,j,k,RHO_K)     = initial.rhoR;
-                        U(i,j,k,VELOCITY)  = initial.uR;
                         U(i,j,k,P)         = initial.pR;
+
+                        for(int dir=0;dir<AMREX_SPACEDIM;dir++)
+                        {
+                            U(i,j,k,VELOCITY,0,dir)  = initial.uR[dir];
+                        }
                     }
                 }
                 else if(parameters.numberOfMaterials == 2)
@@ -40,8 +49,12 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         U(i,j,k,ALPHA,1)     = 0.000001;
                         U(i,j,k,RHO_K,0)     = initial.rhoL;
                         U(i,j,k,RHO_K,1)     = initial.rhoR;
-                        U(i,j,k,VELOCITY)    = initial.uL;
                         U(i,j,k,P)           = initial.pL;
+
+                        for(int dir=0; dir< AMREX_SPACEDIM ; dir++)
+                        {
+                            U(i,j,k,VELOCITY,0,dir)  = initial.uL[dir];
+                        }
                     }
                     else
                     {
@@ -49,8 +62,12 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         U(i,j,k,ALPHA,0)     = 0.000001;
                         U(i,j,k,RHO_K,0)     = initial.rhoL;
                         U(i,j,k,RHO_K,1)     = initial.rhoR;
-                        U(i,j,k,VELOCITY)    = initial.uR;
                         U(i,j,k,P)           = initial.pR;
+
+                        for(int dir=0;dir<AMREX_SPACEDIM;dir++)
+                        {
+                            U(i,j,k,VELOCITY,0,dir)  = initial.uR[dir];
+                        }
                     }
                 }
             }
@@ -70,8 +87,8 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 
     pp.get("rhoL",  initial.rhoL);
     pp.get("rhoR",  initial.rhoR);
-    pp.get("uL",    initial.uL);
-    pp.get("uR",    initial.uR);
+    pp.getarr("uL", initial.uL);
+    pp.getarr("uR", initial.uR);
     pp.get("pL",    initial.pL);
     pp.get("pR",    initial.pR);
 
@@ -90,7 +107,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 
     int m = parameters.numberOfMaterials;
 
-    parameters.Ncomp = m+m+m+3+3+1+1+1+1+1; //alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
+    parameters.Ncomp = m+m+m+AMREX_SPACEDIM+AMREX_SPACEDIM+1+1+1+1+1; //alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
 
 
     pp.get("plotDirectory",initial.filename);

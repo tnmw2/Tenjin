@@ -25,7 +25,10 @@ void main_main ()
      * of using others)
      * -----------------------------------------------------*/
 
-    Box domain(AMREX_D_DECL(0,0,0),AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
+    IntVect lo(AMREX_D_DECL(0,0,0));
+    IntVect hi(AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
+
+    Box domain(lo,hi);
 
     BoxArray ba(domain);
 
@@ -95,7 +98,8 @@ void main_main ()
 
     setInitialConditions(U1,parameters,initial);
 
-    PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
+    WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
+    //PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
 
     /* ----------------------------------------------------
      * The main time loop
@@ -112,7 +116,7 @@ void main_main ()
 
         parameters.dt = timeStep.getTimeStep(U1,parameters);
 
-        if(n%10==0)
+        if(n%1==0)
         {
             amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
         }
@@ -125,11 +129,10 @@ void main_main ()
         U = U1;
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
-
-
     }
 
-    PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
+    WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, 1);
+    //PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
 
     Real stop_time = amrex::second() - start_time;
     const int IOProc = ParallelDescriptor::IOProcessorNumber();
