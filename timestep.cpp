@@ -45,7 +45,7 @@ Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
 
         BoxAccessCellArray baca(mfi,bx,U);
 
-        baca.getSoundSpeed(parameters);
+        baca.getSoundSpeed();
 
         boxTimeStepFunction(baca,prop_arr_time,parameters);
     }

@@ -2,7 +2,7 @@
 
 CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
 
-void CellArray::conservativeToPrimitive(ParameterStruct& parameters)
+void CellArray::conservativeToPrimitive()
 {
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
@@ -10,11 +10,11 @@ void CellArray::conservativeToPrimitive(ParameterStruct& parameters)
 
         BoxAccessCellArray baca(mfi,bx,(*this));
 
-        baca.conservativeToPrimitive(parameters);
+        baca.conservativeToPrimitive();
     }
 }
 
-void CellArray::primitiveToConservative(ParameterStruct& parameters)
+void CellArray::primitiveToConservative()
 {
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
@@ -22,11 +22,11 @@ void CellArray::primitiveToConservative(ParameterStruct& parameters)
 
         BoxAccessCellArray baca(mfi,bx,(*this));
 
-        baca.primitiveToConservative(parameters);
+        baca.primitiveToConservative();
     }
 }
 
-void CellArray::getSoundSpeed(ParameterStruct& parameters)
+void CellArray::getSoundSpeed()
 {
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
@@ -34,7 +34,7 @@ void CellArray::getSoundSpeed(ParameterStruct& parameters)
 
         BoxAccessCellArray baca(mfi,bx,(*this));
 
-        baca.getSoundSpeed(parameters);
+        baca.getSoundSpeed();
     }
 }
 

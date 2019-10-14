@@ -18,7 +18,10 @@ enum Variable
     VELOCITY,
     P,
     SOUNDSPEED,
-    USTAR
+    USTAR,
+    RHO_MIX,
+    ALPHARHOLAMBDA,
+    LAMBDA
 };
 
 /** Not yet used...
@@ -35,6 +38,48 @@ enum Direction_enum
     y,
     z
 };
+
+
+/** A struct that can uniquely specify a thermodynamic varible.
+ *  mat - the material the variable relates to
+ *  row, col - used to get components of tensor variables like velocity
+ *             and (later) deformation tensor.
+ */
+struct MaterialSpecifier
+{
+    Variable var;
+    int      mat;
+    int      row;
+    int      col;
+
+    MaterialSpecifier(Variable v=RHO, int m=0, int r=0, int c=0)
+    {
+        var=v;
+        mat=m;
+        row=r;
+        col=c;
+    }
+};
+
+enum Var_type
+{
+    PRIMITIVE,
+    CONSERVATIVE,
+    BOTH,
+    NEITHER
+};
+
+class MieGruneisenEOS;
+
+struct MaterialDescriptor
+{
+    Material_type   phase;
+    bool            mixture;
+    int             mixtureIndex;
+
+    MieGruneisenEOS* EOS;
+};
+
 
 /** Holds data about initial conditions etc.
  */
@@ -72,6 +117,7 @@ struct ParameterStruct
     int Ncomp;
     int Nghost;
     int numberOfMaterials;
+    int numberOfMixtures;
 
     int max_grid_size;
 
@@ -80,6 +126,12 @@ struct ParameterStruct
     Real dt;
 
     Vector<Real> adiabaticIndex;
+    Vector<Real> CV;
+
+    Vector<Real> mixtureAdiabaticIndex;
+    Vector<Real> mixtureCV;
+
+    Vector<MaterialDescriptor>  materialInfo;
 
     ParameterStruct()
     {
@@ -89,35 +141,8 @@ struct ParameterStruct
     }
 };
 
-/** A struct that can uniquely specify a thermodynamic varible.
- *  mat - the material the variable relates to
- *  row, col - used to get components of tensor variables like velocity
- *             and (later) deformation tensor.
- */
-struct MaterialSpecifier
-{
-    Variable var;
-    int      mat;
-    int      row;
-    int      col;
-
-    MaterialSpecifier(Variable v=RHO, int m=0, int r=0, int c=0)
-    {
-        var=v;
-        mat=m;
-        row=r;
-        col=c;
-    }
-};
 
 
-enum Var_type
-{
-    PRIMITIVE,
-    CONSERVATIVE,
-    BOTH,
-    NEITHER
-};
 
 #endif // STRUCTDEFINITIONS
 

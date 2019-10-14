@@ -17,7 +17,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
             {
                 if(parameters.numberOfMaterials == 1)
                 {
-                    if(i<int_x0)//if((i-parameters.n_cells[0]/2)*(i-parameters.n_cells[0]/2)+(j-parameters.n_cells[1]/2)*(j-parameters.n_cells[1]/2) <= (int_x0/1.5)*(int_x0/1.5))
+                    if(i<int_x0)
                     {
                         U(i,j,k,ALPHA)     = 1.0;
                         U(i,j,k,RHO_K)     = initial.rhoL;
@@ -27,6 +27,14 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         {
                             U(i,j,k,VELOCITY,0,dir)  = initial.uL[dir];
                         }
+
+                        if(parameters.numberOfMixtures == 1)
+                        {
+                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
+                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
+                            U(i,j,k,LAMBDA ,0)    = 0.999999;
+                        }
+
 
                     }
                     else
@@ -39,6 +47,14 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         {
                             U(i,j,k,VELOCITY,0,dir)  = initial.uR[dir];
                         }
+
+                        if(parameters.numberOfMixtures == 1)
+                        {
+                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
+                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
+                            U(i,j,k,LAMBDA ,0)    = 0.000001;
+                        }
+
                     }
                 }
                 else if(parameters.numberOfMaterials == 2)
@@ -93,6 +109,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.get("pR",    initial.pR);
 
     pp.getarr("gamma",parameters.adiabaticIndex);
+    pp.getarr("CV",parameters.CV);
 
     pp.get("x0",  parameters.x0);
     pp.get("CFL", parameters.CFL);
@@ -100,17 +117,55 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 
     pp.get("Nghost", parameters.Nghost);
     pp.get("Nmat", parameters.numberOfMaterials);
+    pp.get("Nmix", parameters.numberOfMixtures);
+
+    if(parameters.numberOfMixtures > 0)
+    {
+        pp.getarr("mixGamma",   parameters.mixtureAdiabaticIndex);
+        pp.getarr("mixCV",      parameters.mixtureCV);
+    }
 
     pp.getarr("dimL", parameters.dimL);
     pp.getarr("n_cells" , parameters.n_cells);
 
+    pp.get("plotDirectory",initial.filename);
 
     int m = parameters.numberOfMaterials;
+    int mix = parameters.numberOfMixtures;
 
-    parameters.Ncomp = m+m+m+AMREX_SPACEDIM+AMREX_SPACEDIM+1+1+1+1+1; //alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
+    parameters.Ncomp = ((2+2)*mix)+m+m+m+AMREX_SPACEDIM+AMREX_SPACEDIM+1+1+1+1+1; //(rho_mix,alpharholambda,lambda),alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
+
+    parameters.materialInfo.resize(parameters.numberOfMaterials);
+
+    Vector<int> temp(parameters.numberOfMaterials);
+
+    pp.getarr("mixture",temp);
+
+    int counter = 0;
+
+    for(int m = 0; m<parameters.numberOfMaterials; m++)
+    {
+        parameters.materialInfo[m].mixture = (bool)temp[m];
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            parameters.materialInfo[m].EOS = new MixtureEOS();
+
+            Vector<Real> temp{parameters.adiabaticIndex[m],0.0,0.0,parameters.CV[m],parameters.mixtureAdiabaticIndex[counter],0.0,0.0,parameters.mixtureCV[counter]};
+
+            parameters.materialInfo[m].EOS->define(temp);
+
+            parameters.materialInfo[m].mixtureIndex = counter;
+            counter++;
+
+         }
+        else
+        {
+            parameters.materialInfo[m].EOS = new MieGruneisenEOS(parameters.adiabaticIndex[m],0.0,0.0,parameters.CV[m]);
+        }
+    }
 
 
-    pp.get("plotDirectory",initial.filename);
 }
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial)
@@ -123,7 +178,7 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStru
 
         initial_conditions(baca, parameters, initial);
 
-        baca.primitiveToConservative(parameters);
+        baca.primitiveToConservative();
     }
 }
 

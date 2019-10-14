@@ -23,6 +23,12 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
         materials[m].alpha      = (&U(i,j,k,ALPHA,m));
         materials[m].alphaRho   = (&U(i,j,k,ALPHARHO,m));
         materials[m].rho        = (&U(i,j,k,RHO_K,m));
+
+        if(U.accessPattern.materialInfo[m].mixture)
+        {
+            materials[m].lambda         = (&U(i,j,k,LAMBDA,m));
+            materials[m].alphaRhoLambda = (&U(i,j,k,ALPHARHOLAMBDA,m));
+        }
     }
 
     uStar     =   (&U(i,j,k,USTAR));
@@ -38,25 +44,29 @@ Real& Cell::operator()(MaterialSpecifier m)
 {
     switch(m.var)
     {
-    case ALPHA:     return *(materials[m.mat].alpha);
+    case ALPHA:             return *(materials[m.mat].alpha);
         break;
-    case ALPHARHO:  return *(materials[m.mat].alphaRho);
+    case ALPHARHO:          return *(materials[m.mat].alphaRho);
         break;
-    case RHO_K:     return *(materials[m.mat].rho);
+    case RHO_K:             return *(materials[m.mat].rho);
         break;
-    case RHO:       return *rho;
+    case RHO:               return *rho;
         break;
-    case RHOU:      return *(rhoU[m.row]);
+    case RHOU:              return *(rhoU[m.row]);
         break;
-    case TOTAL_E:   return *E;
+    case TOTAL_E:           return *E;
         break;
-    case VELOCITY:  return *(u[m.row]);
+    case VELOCITY:          return *(u[m.row]);
         break;
-    case P:         return *p;
+    case P:                 return *p;
         break;
-    case SOUNDSPEED:return *a;
+    case SOUNDSPEED:        return *a;
         break;
-    case USTAR:     return *uStar;
+    case USTAR:             return *uStar;
+        break;
+    case LAMBDA:            return *(materials[m.mat].lambda);
+        break;
+    case ALPHARHOLAMBDA:    return *(materials[m.mat].alphaRhoLambda);
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);

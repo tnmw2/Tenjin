@@ -21,9 +21,9 @@ public:
 
     CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, AccessPattern& _accessPattern, ParameterStruct &parameters);
 
-    void primitiveToConservative(ParameterStruct& parameters);
-    void conservativeToPrimitive(ParameterStruct& parameters);
-    void getSoundSpeed          (ParameterStruct& parameters);
+    void primitiveToConservative();
+    void conservativeToPrimitive();
+    void getSoundSpeed          ();
 
 
     void        operator=(CellArray& U);
@@ -67,12 +67,12 @@ public:
     Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
 
 
-    void  conservativeToPrimitive(ParameterStruct& parameters);
-    void  primitiveToConservative(ParameterStruct& parameters);
+    void  conservativeToPrimitive();
+    void  primitiveToConservative();
 
-    Real getEffectiveInverseGruneisen(ParameterStruct& parameters, int i, int j, int k);
+    Real getEffectiveInverseGruneisen(int i, int j, int k);
 
-    void getSoundSpeed(ParameterStruct& parameters);
+    void getSoundSpeed();
 
 
 };

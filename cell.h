@@ -31,6 +31,8 @@ class Material
     Real*	alpha;
     Real* 	rho;
     Real*	alphaRho;
+    Real*   lambda;
+    Real*   alphaRhoLambda;
 
 
 };

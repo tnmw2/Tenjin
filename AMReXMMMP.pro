@@ -11,7 +11,9 @@ SOURCES += main.cpp \
     hllc.cpp \
     print.cpp \
     cell.cpp \
-    accesspattern.cpp
+    accesspattern.cpp \
+    reactive.cpp \
+    equationofstate.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -20,5 +22,6 @@ HEADERS += \
     amrexheader.h \
     structdefinitions.h \
     cell.h \
-    accesspattern.h
+    accesspattern.h \
+    equationofstate.h
 

@@ -18,6 +18,9 @@
  * for easy looping.
  */
 
+/** A struct that contains the particular information of a material.
+ */
+
 class AccessPattern
 {
 public:
@@ -29,9 +32,10 @@ public:
 
     std::map<Variable,int> data;
 
-    Vector<MaterialSpecifier> conservativeVariables;
-    Vector<MaterialSpecifier> primitiveVariables;
-    Vector<std::string> variableNames;
+    Vector<MaterialSpecifier>   conservativeVariables;
+    Vector<MaterialSpecifier>   primitiveVariables;
+    Vector<std::string>         variableNames;
+    Vector<MaterialDescriptor>&  materialInfo;
 
 };
 

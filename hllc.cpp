@@ -22,7 +22,10 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
         UStar(ALPHA,m)          = U(ALPHA,m);
         UStar(ALPHARHO,m)       = multiplier*U(ALPHARHO,m);
 
-        UStar(RHO_K,m)          = UStar(ALPHARHO,m)/UStar(ALPHA,m);
+        if(parameters.materialInfo[m].mixture)
+        {
+            UStar(ALPHARHOLAMBDA,m) = multiplier*U(ALPHARHOLAMBDA,m);
+        }
 
         UStar(RHO)             += UStar(ALPHARHO,m);
 
@@ -58,9 +61,10 @@ Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
 {
     switch(n.var)
     {
-        case ALPHA:         return U(ALPHA,n.mat)*      U(VELOCITY,0,d);
-        case ALPHARHO:  	return U(ALPHARHO,n.mat)*   U(VELOCITY,0,d);
-        case RHOU: 			return U(RHOU,0,n.row)*     U(VELOCITY,0,d)+U(P)*delta(n.row,(int)d);
+        case ALPHA:         return U(ALPHA,n.mat)*          U(VELOCITY,0,d);
+        case ALPHARHO:  	return U(ALPHARHO,n.mat)*       U(VELOCITY,0,d);
+        case ALPHARHOLAMBDA:return U(ALPHARHOLAMBDA,n.mat)* U(VELOCITY,0,d);
+        case RHOU: 			return U(RHOU,0,n.row)*         U(VELOCITY,0,d)+U(P)*delta(n.row,(int)d);
         case TOTAL_E:	   	return U(VELOCITY,0,d)*(U(TOTAL_E)+U(P));
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
     }
@@ -112,12 +116,15 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 Cell UStar(UStarbox,i,j,k);
 
 
+
                 SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
                 SL = -SR;
 
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
                 fluxbox(i,j,k,USTAR) = Sstar;
+
+
 
                 if(SL>=0.0)
                 {
@@ -285,6 +292,8 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
     U1 = U;
 
+
+
     for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;
@@ -310,19 +319,24 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
             MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
 
-            ULbox.primitiveToConservative(parameters);
-            URbox.primitiveToConservative(parameters);
+            ULbox.primitiveToConservative();
+            URbox.primitiveToConservative();
 
-            ULbox.getSoundSpeed(parameters);
-            URbox.getSoundSpeed(parameters);
+            ULbox.getSoundSpeed();
+            URbox.getSoundSpeed();
 
         }
+
+
 
         FillDomainBoundary(UL.data, geom, bc);
         FillDomainBoundary(UR.data, geom, bc);
 
+
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
+
+
 
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
@@ -348,9 +362,11 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         }
 
 
+
     }
 
-    U1.conservativeToPrimitive(parameters);
+
+    U1.conservativeToPrimitive();
     FillDomainBoundary(U1.data, geom, bc);
     U1.data.FillBoundary(geom.periodicity());
 

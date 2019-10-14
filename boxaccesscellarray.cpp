@@ -1,4 +1,5 @@
 #include "cellarray.h"
+#include "simulationheader.h"
 
 BoxAccessCellArray::BoxAccessCellArray(const Box& bx, FArrayBox& fb,  CellArray& U) : box{bx}, fab{fb}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
 
@@ -20,32 +21,38 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 {
     switch(m.var)
     {
-    case ALPHA:     return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+    case ALPHA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
-    case ALPHARHO:  return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+    case ALPHARHO:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
-    case RHO_K:     return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+    case RHO_K:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
-    case RHO:       return (fab.array())(i, j, k, (accessPattern[m.var]));
+    case RHO:               return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case RHOU:      return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
+    case RHOU:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
         break;
-    case TOTAL_E:   return (fab.array())(i, j, k, (accessPattern[m.var]));
+    case TOTAL_E:           return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case VELOCITY:  return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
+    case VELOCITY:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
         break;
-    case P:         return (fab.array())(i, j, k, (accessPattern[m.var]));
+    case P:                 return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case SOUNDSPEED:return (fab.array())(i, j, k, (accessPattern[m.var]));
+    case SOUNDSPEED:        return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case USTAR:     return (fab.array())(i, j, k, (accessPattern[m.var]));
+    case USTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]));
+        break;
+    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex+m.row));
+        break;
+    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
     }
 }
 
-void  BoxAccessCellArray::conservativeToPrimitive(ParameterStruct& parameters)
+void  BoxAccessCellArray::conservativeToPrimitive()
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
@@ -64,6 +71,13 @@ void  BoxAccessCellArray::conservativeToPrimitive(ParameterStruct& parameters)
                 {
                     (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
+
+                    if(accessPattern.materialInfo[m].mixture)
+                    {
+                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
+
+                        accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m);
+                    }
                 }
 
                 kineticEnergy = 0.0;
@@ -75,13 +89,13 @@ void  BoxAccessCellArray::conservativeToPrimitive(ParameterStruct& parameters)
                     kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
                 }
 
-                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy)/(getEffectiveInverseGruneisen(parameters,i,j,k));
+                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy)/(getEffectiveInverseGruneisen(i,j,k));
             }
         }
     }
 }
 
-void  BoxAccessCellArray::primitiveToConservative(ParameterStruct& parameters)
+void  BoxAccessCellArray::primitiveToConservative()
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
@@ -100,6 +114,11 @@ void  BoxAccessCellArray::primitiveToConservative(ParameterStruct& parameters)
                 {
                     (*this)(i,j,k,ALPHARHO,m)	 = (*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
                     (*this)(i,j,k,RHO)          += (*this)(i,j,k,ALPHARHO,m);
+
+                    if(accessPattern.materialInfo[m].mixture)
+                    {
+                        (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
+                    }
                 }
 
                 kineticEnergy = 0.0;
@@ -112,25 +131,25 @@ void  BoxAccessCellArray::primitiveToConservative(ParameterStruct& parameters)
                 }
 
 
-                (*this)(i,j,k,TOTAL_E)   	= (*this)(i,j,k,P)*getEffectiveInverseGruneisen(parameters,i,j,k) + kineticEnergy;
+                (*this)(i,j,k,TOTAL_E)   	= (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + kineticEnergy;
             }
         }
     }
 }
 
-Real BoxAccessCellArray::getEffectiveInverseGruneisen(ParameterStruct& parameters, int i, int j, int k)
+Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
 {
     Real tot = 0.0;
 
-    for(int m=0;m<parameters.numberOfMaterials;m++)
+    for(int m=0;m<numberOfMaterials;m++)
     {
-        tot += (*this)(i,j,k,ALPHA,m)/(parameters.adiabaticIndex[m]-1.0);
+        tot += (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));// (*this)(i,j,k,ALPHA,m)/(0.4);//  (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)); // (*this)(i,j,k,ALPHA,m)/(accessPattern.materialInfo[m].EOS->GruneisenGamma);
     }
 
     return tot;
 }
 
-void BoxAccessCellArray::getSoundSpeed(ParameterStruct& parameters)
+void BoxAccessCellArray::getSoundSpeed()
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
@@ -142,15 +161,13 @@ void BoxAccessCellArray::getSoundSpeed(ParameterStruct& parameters)
             for (int i = lo.x; i <= hi.x; ++i)
             {
                 Real a = 0.0;
-                Real xiTot = 0.0;
 
                 for(int m=0; m<numberOfMaterials;m++)
                 {
-                    a     += (((*this)(i,j,k,P)*(parameters.adiabaticIndex[m])/(*this)(i,j,k,RHO_K,m))*(*this)(i,j,k,ALPHARHO,m)/(parameters.adiabaticIndex[m]-1.0))/(*this)(i,j,k,RHO);
-                    xiTot += (*this)(i,j,k,ALPHA,m)/(parameters.adiabaticIndex[m]-1.0);
+                    a     += accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m);// (((*this)(i,j,k,P)*(parameters.adiabaticIndex[m])/(*this)(i,j,k,RHO_K,m))*(*this)(i,j,k,ALPHARHO,m)/(parameters.adiabaticIndex[m]-1.0))/(*this)(i,j,k,RHO);
                 }
 
-                (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
+                (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/getEffectiveInverseGruneisen(i,j,k));
 
 
             }

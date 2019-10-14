@@ -98,14 +98,24 @@ void main_main ()
 
     setInitialConditions(U1,parameters,initial);
 
-    WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
+    {
+        const std::string& pltfile = Concatenate(initial.filename,0,5);
+
+        WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, 0.0, 0);
+    }
+
+
+    //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
     //PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
 
     /* ----------------------------------------------------
      * The main time loop
      * ----------------------------------------------------*/
 
+
     int n = 0;
+
+    int take_pic_counter = 0;
 
     for(Real t = 0.0 ; t<initial.finalT; t += parameters.dt, n++)
     {
@@ -129,10 +139,26 @@ void main_main ()
         U = U1;
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
+
+        //reactiveUpdate(U,U1,U2,parameters);
+
+
+        if(t > ((Real)take_pic_counter)*(initial.finalT)/100.0)
+        {
+            take_pic_counter++;
+            const std::string& pltfile = Concatenate(initial.filename,n,5);
+
+            WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, t, n);
+
+        }
+
     }
 
-    WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, 1);
+    //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, 1);
     //PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
+
+
+
 
     Real stop_time = amrex::second() - start_time;
     const int IOProc = ParallelDescriptor::IOProcessorNumber();
