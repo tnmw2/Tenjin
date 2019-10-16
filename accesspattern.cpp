@@ -49,7 +49,7 @@ AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(paramet
     addVariable(n,"p",              PRIMITIVE,      P);
     addVariable(n,"a",              NEITHER,        SOUNDSPEED);
     addVariable(n,"uStar",          NEITHER,        USTAR);
-    addVariable(n,"rhomix",         PRIMITIVE,      RHO_MIX,        parameters.numberOfMixtures,2);
+    addVariable(n,"rhomix",         NEITHER,        RHO_MIX,        parameters.numberOfMixtures,2);
     addVariable(n,"lambda",         PRIMITIVE,      LAMBDA,         parameters.numberOfMixtures);
     addVariable(n,"alpharholambda", CONSERVATIVE,   ALPHARHOLAMBDA, parameters.numberOfMixtures);
 

@@ -45,6 +45,8 @@ public:
     virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
     virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
+    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     void copy(MieGruneisenEOS& C);
 
@@ -78,6 +80,8 @@ public:
     virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
     virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
+    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     Real bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p);
     Real pressureFunction (BoxAccessCellArray& U, int i, int j, int k, int m, Real& p);

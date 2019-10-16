@@ -88,6 +88,7 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                     {
                         (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
 
+
                         accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
                     }
                 }
@@ -186,14 +187,16 @@ void BoxAccessCellArray::getSoundSpeed()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                Real a = 0.0;
+                Real a      = 0.0;
+                Real xiTot  = 0.0;
 
                 for(int m=0; m<numberOfMaterials;m++)
                 {
-                    a     += accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m);// (((*this)(i,j,k,P)*(parameters.adiabaticIndex[m])/(*this)(i,j,k,RHO_K,m))*(*this)(i,j,k,ALPHARHO,m)/(parameters.adiabaticIndex[m]-1.0))/(*this)(i,j,k,RHO);
+                    a     += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)*(*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,RHO);
+                    xiTot += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*(*this)(i,j,k,ALPHA,m);
                 }
 
-                (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/getEffectiveInverseGruneisen(i,j,k));
+                (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
 
 
             }

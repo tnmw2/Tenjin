@@ -19,7 +19,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 {
                     if(i<int_x0)
                     {
-                        U(i,j,k,ALPHA)     = 1.0;
+                        U(i,j,k,ALPHA)     = 0.999999;
                         U(i,j,k,RHO_K)     = initial.rhoL;
                         U(i,j,k,P)         = initial.pL;
 
@@ -31,7 +31,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         if(parameters.numberOfMixtures == 1)
                         {
                             U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
-                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoR;
+                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
                             U(i,j,k,LAMBDA ,0)    = 0.999999;
                         }
 
@@ -39,7 +39,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                     else
                     {
-                        U(i,j,k,ALPHA)     = 1.0;
+                        U(i,j,k,ALPHA)     = 0.999999;
                         U(i,j,k,RHO_K)     = initial.rhoR;
                         U(i,j,k,P)         = initial.pR;
 
@@ -50,9 +50,9 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                         if(parameters.numberOfMixtures == 1)
                         {
-                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
+                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoR;
                             U(i,j,k,RHO_MIX,0,1)  = initial.rhoR;
-                            U(i,j,k,LAMBDA ,0)    = 0.000001;
+                            U(i,j,k,LAMBDA ,0)    = 0.999999;
                         }
 
                     }

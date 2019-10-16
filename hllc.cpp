@@ -292,6 +292,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
     U1 = U;
 
+
     for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;
@@ -356,7 +357,6 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             calc_fluxes (fluxbox, ULbox, URbox, UStarbox, parameters,d);
             update      (fluxbox, Ubox, U1box, parameters,d);
 
-
         }
 
 
@@ -367,6 +367,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
     U1.conservativeToPrimitive();
     FillDomainBoundary(U1.data, geom, bc);
     U1.data.FillBoundary(geom.periodicity());
+
 
 
 }

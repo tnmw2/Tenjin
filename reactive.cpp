@@ -24,7 +24,7 @@ void updateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, Parameter
                 {
                     for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        T = U(i,j,k,P)/(U(i,j,k,RHO_MIX,m,0)*(parameters.adiabaticIndex[m]-1.0)*parameters.CV[m]);
+                        T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
 
                         if(T<=0.0)
                         {
@@ -38,7 +38,7 @@ void updateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, Parameter
                             temp = 0.0;
                         }
 
-                        //Print() << temp << std::endl;
+                        //Print() << T << std::endl;
 
                         U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+(parameters.dt)*temp;
 

@@ -143,11 +143,12 @@ void main_main ()
             parameters.dt=initial.finalT-t;
         }
 
+
         U = U1;
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, UStar, flux_arr, geom, parameters,bc);
 
-        //reactiveUpdate(U,U1,U2,parameters);
+        reactiveUpdate(U,U1,U2,parameters);
 
 
         if(t > ((Real)take_pic_counter)*(initial.finalT)/100.0)
@@ -159,20 +160,24 @@ void main_main ()
 
         }
 
+
+        if(U1.data.contains_nan())
+        {
+            Print() << "Nan found in U1" << std::endl;
+            exit(1);
+        }
+
         //break;
 
     }
 
+
+
     {
         const std::string& pltfile = Concatenate(initial.filename,n,5);
-
+        //PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
         WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, n);
     }
-
-    //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, 1);
-    //PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
-
-
 
 
     Real stop_time = amrex::second() - start_time;

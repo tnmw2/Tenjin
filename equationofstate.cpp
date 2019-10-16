@@ -60,9 +60,19 @@ void MieGruneisenEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m
 
 Real MieGruneisenEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return (   ( U(i,j,k,P)*(GruneisenGamma+1.0)/U(i,j,k,RHO_K,m) - pref/U(i,j,k,RHO_K,m)  )      *U(i,j,k,ALPHARHO,m)/(GruneisenGamma))/U(i,j,k,RHO);
+    return U(i,j,k,P)*(GruneisenGamma+1.0)/U(i,j,k,RHO_K,m) - pref/U(i,j,k,RHO_K,m);
 }
 
+Real MieGruneisenEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
+{
+    mixidx *= 1;
+    return U(i,j,k,P)/(U(i,j,k,RHO_K,m)*GruneisenGamma*CV);
+}
+
+Real MieGruneisenEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 1.0/GruneisenGamma;
+}
 
 MixtureEOS::MixtureEOS()
 {
@@ -75,19 +85,21 @@ MixtureEOS::MixtureEOS()
 
 Real MixtureEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U(i,j,k,ALPHARHOLAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
+    return U(i,j,k,LAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (1.0-U(i,j,k,LAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
+    //return U(i,j,k,ALPHARHOLAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
 }
 
 Real MixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,ALPHARHOLAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(second.coldCompressionPressure(U,i,j,k,m))*(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma);
+    return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,0))+(second.coldCompressionPressure(U,i,j,k,m))*(1.0-U(i,j,k,LAMBDA,m))*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,1));
+    //return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,ALPHARHOLAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(second.coldCompressionPressure(U,i,j,k,m))*(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma);
 }
 
 Real MixtureEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+    //return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
     //return U(i,j,k,ALPHA,m)/first.GruneisenGamma;
-    //return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
+    return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
 }
 
 void MixtureEOS::define(Vector<Real> &params)
@@ -115,7 +127,7 @@ void MixtureEOS::define(Vector<Real> &params)
 
 Real MixtureEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return (inverseGruneisen(U,i,j,k,m)/U(i,j,k,ALPHA,m))*(U(i,j,k,ALPHARHO,m)/U(i,j,k,RHO))*mixtureSoundSpeed(U,i,j,k,m);
+    return mixtureSoundSpeed(U,i,j,k,m);
 }
 
 Real MixtureEOS::mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k, int m)
@@ -124,13 +136,19 @@ Real MixtureEOS::mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k, i
      * Assumed constant pref terms
      ********************************/
 
-    double dedrho = (U(i,j,k,LAMBDA,m))*( (1.0/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma))*((1.0+first.GruneisenGamma)*(pref)/U(i,j,k,RHO_MIX,m,0) -U(i,j,k,P)/U(i,j,k,RHO_MIX,m,0)  )  )*std::pow(U(i,j,k,RHO_MIX,m,0)/U(i,j,k,RHO_K,m),2);
+    double dedrho = (U(i,j,k,LAMBDA,m))*((first.pref -U(i,j,k,P))/(first.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
 
-    dedrho += (1.0-U(i,j,k,LAMBDA,m))*( (1.0/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma))*((1.0+second.GruneisenGamma)*(pref)/U(i,j,k,RHO_MIX,m,1) -U(i,j,k,P)/U(i,j,k,RHO_MIX,m,1)  )  )*std::pow(U(i,j,k,RHO_MIX,m,1)/U(i,j,k,RHO_K,m),2);
+    dedrho +=   (1.0-U(i,j,k,LAMBDA,m))*((second.pref -U(i,j,k,P))/(second.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
 
     return (  U(i,j,k,P)/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m))  - dedrho )/(U(i,j,k,LAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(1.0-U(i,j,k,LAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma));
 
 }
+
+Real MixtureEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 1.0/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+}
+
 
 /******************************************************
  * Root Finding stuff
@@ -195,6 +213,11 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
         return;
     }
 
+    if(std::isnan(U(i,j,k,LAMBDA,m)))
+    {
+        Print() << "Nan in Lambda in root finding" << std::endl;
+    }
+
     if(U(i,j,k,LAMBDA,m)> 1.0-toleranceForSinglePhaseTreatment)
     {
         U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
@@ -212,7 +235,7 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 2.0;
+    Real B = 100000.0;
 
     Real p;
 
@@ -239,7 +262,7 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
         Print() << "Error in root Bisection " << std::endl;
 
         Print() << " A: " << A << " B: " << B << std::endl;
-        //Print() << U(i,j,k,LAMBDA,m) << " " << U(i,j,k,RHO_K,m)<< std::endl;
+        Print() << bisectionFunction(U,i,j,k,m,A,kineticEnergy,p) << " " << bisectionFunction(U,i,j,k,m,B,kineticEnergy,p)<< std::endl;
         exit(1);
     }
 
@@ -273,5 +296,17 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
         {
             Print() << "Root finding is taking a while" << std::endl;
         }
+    }
+}
+
+Real MixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
+{
+    if(mixidx == 0)
+    {
+        return U(i,j,k,P)/(U(i,j,k,RHO_MIX,m,mixidx)*first.GruneisenGamma*first.CV);
+    }
+    else
+    {
+        return U(i,j,k,P)/(U(i,j,k,RHO_MIX,m,mixidx)*second.GruneisenGamma*second.CV);
     }
 }
