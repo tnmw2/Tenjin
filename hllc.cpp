@@ -292,8 +292,6 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
     U1 = U;
 
-
-
     for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;

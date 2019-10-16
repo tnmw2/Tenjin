@@ -31,7 +31,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         if(parameters.numberOfMixtures == 1)
                         {
                             U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
-                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
+                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoR;
                             U(i,j,k,LAMBDA ,0)    = 0.999999;
                         }
 
@@ -51,7 +51,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         if(parameters.numberOfMixtures == 1)
                         {
                             U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
-                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
+                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoR;
                             U(i,j,k,LAMBDA ,0)    = 0.000001;
                         }
 
@@ -111,19 +111,27 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.getarr("gamma",parameters.adiabaticIndex);
     pp.getarr("CV",parameters.CV);
 
+    Vector<Real> pref;
+    Vector<Real> eref;
+    Vector<Real> mixpref;
+    Vector<Real> mixeref;
+
+    pp.getarr("pref",pref);
+    pp.getarr("eref",eref);
+
+
     pp.get("x0",  parameters.x0);
     pp.get("CFL", parameters.CFL);
-
 
     pp.get("Nghost", parameters.Nghost);
     pp.get("Nmat", parameters.numberOfMaterials);
     pp.get("Nmix", parameters.numberOfMixtures);
 
-    if(parameters.numberOfMixtures > 0)
-    {
-        pp.getarr("mixGamma",   parameters.mixtureAdiabaticIndex);
-        pp.getarr("mixCV",      parameters.mixtureCV);
-    }
+    pp.getarr("mixGamma",   parameters.mixtureAdiabaticIndex);
+    pp.getarr("mixCV",      parameters.mixtureCV);
+    pp.getarr("mixpref",    mixpref);
+    pp.getarr("mixeref",    mixeref);
+
 
     pp.getarr("dimL", parameters.dimL);
     pp.getarr("n_cells" , parameters.n_cells);
@@ -151,7 +159,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
         {
             parameters.materialInfo[m].EOS = new MixtureEOS();
 
-            Vector<Real> temp{parameters.adiabaticIndex[m],0.0,0.0,parameters.CV[m],parameters.mixtureAdiabaticIndex[counter],0.0,0.0,parameters.mixtureCV[counter]};
+            Vector<Real> temp{parameters.adiabaticIndex[m],pref[m],eref[m],parameters.CV[m],parameters.mixtureAdiabaticIndex[counter],mixpref[counter],mixeref[counter],parameters.mixtureCV[counter]};
 
             parameters.materialInfo[m].EOS->define(temp);
 
@@ -161,7 +169,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
          }
         else
         {
-            parameters.materialInfo[m].EOS = new MieGruneisenEOS(parameters.adiabaticIndex[m],0.0,0.0,parameters.CV[m]);
+            parameters.materialInfo[m].EOS = new MieGruneisenEOS(parameters.adiabaticIndex[m],pref[m],eref[m],parameters.CV[m]);
         }
     }
 

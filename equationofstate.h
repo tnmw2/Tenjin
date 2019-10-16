@@ -43,7 +43,7 @@ public:
     virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
     virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     void copy(MieGruneisenEOS& C);
@@ -76,7 +76,7 @@ public:
     virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
     virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     Real bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p);

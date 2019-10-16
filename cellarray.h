@@ -70,7 +70,9 @@ public:
     void  conservativeToPrimitive();
     void  primitiveToConservative();
 
-    Real getEffectiveInverseGruneisen(int i, int j, int k);
+    Real getEffectiveInverseGruneisen           (int i, int j, int k);
+    Real getEffectiveNonThermalPressure         (int i, int j, int k);
+    Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k);
 
     void getSoundSpeed();
 

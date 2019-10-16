@@ -71,13 +71,6 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                 {
                     (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
-
-                    if(accessPattern.materialInfo[m].mixture)
-                    {
-                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
-
-                        accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m);
-                    }
                 }
 
                 kineticEnergy = 0.0;
@@ -89,7 +82,17 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                     kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
                 }
 
-                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy)/(getEffectiveInverseGruneisen(i,j,k));
+                for(int m = 0; m < numberOfMaterials ; m++)
+                {
+                    if(accessPattern.materialInfo[m].mixture)
+                    {
+                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
+
+                        accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
+                    }
+                }
+
+                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k)+ getEffectiveNonThermalPressure(i,j,k))/(getEffectiveInverseGruneisen(i,j,k));
             }
         }
     }
@@ -130,8 +133,7 @@ void  BoxAccessCellArray::primitiveToConservative()
                     kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
                 }
 
-
-                (*this)(i,j,k,TOTAL_E)   	= (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + kineticEnergy;
+                (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;
             }
         }
     }
@@ -144,6 +146,30 @@ Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
     for(int m=0;m<numberOfMaterials;m++)
     {
         tot += (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));// (*this)(i,j,k,ALPHA,m)/(0.4);//  (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)); // (*this)(i,j,k,ALPHA,m)/(accessPattern.materialInfo[m].EOS->GruneisenGamma);
+    }
+
+    return tot;
+}
+
+Real BoxAccessCellArray::getEffectiveNonThermalInternalEnergy(int i, int j, int k)
+{
+    Real tot = 0.0;
+
+    for(int m=0;m<numberOfMaterials;m++)
+    {
+        tot += (accessPattern.materialInfo[m].EOS->coldCompressionInternalEnergy((*this),i,j,k,m));
+    }
+
+    return tot;
+}
+
+Real BoxAccessCellArray::getEffectiveNonThermalPressure(int i, int j, int k)
+{
+    Real tot = 0.0;
+
+    for(int m=0;m<numberOfMaterials;m++)
+    {
+        tot += accessPattern.materialInfo[m].EOS->coldCompressionPressure((*this),i,j,k,m);
     }
 
     return tot;

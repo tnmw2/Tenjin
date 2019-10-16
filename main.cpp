@@ -105,6 +105,13 @@ void main_main ()
     }
 
 
+    U2          = U1;
+    UL          = U1;
+    UR          = U1;
+    UStar       = U1;
+    MUSCLgrad   = U1;
+
+
     //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
     //PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
 
@@ -152,6 +159,14 @@ void main_main ()
 
         }
 
+        //break;
+
+    }
+
+    {
+        const std::string& pltfile = Concatenate(initial.filename,n,5);
+
+        WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, n);
     }
 
     //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, 1);
