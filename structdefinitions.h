@@ -85,23 +85,22 @@ struct MaterialDescriptor
  */
 struct InitialStruct
 {
+    int numberOfStates;
+
     Real startT;
     Real finalT;
 
-    Real rhoL;
-    Real rhoR;
-    Vector<Real> uL;
-    Vector<Real> uR;
-    Real pL;
-    Real pR;
+    Vector<Real> rho;
+    Vector<Real> u;
+    Vector<Real> v;
+    Vector<Real> p;
+    Vector<int> alpha;
+    Vector<int> lambda;
+    Vector<Real> interfaces;
 
     std::string filename;
 
-    InitialStruct()
-    {
-        uL = Vector<Real>(AMREX_SPACEDIM);
-        uR = Vector<Real>(AMREX_SPACEDIM);
-    }
+    InitialStruct(){}
 };
 
 /** Holds simulation data that needs to be passed around.

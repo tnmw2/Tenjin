@@ -199,7 +199,8 @@ Real MixtureEOS::bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, i
 void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy)
 {
     static const Real toleranceForSinglePhaseTreatment = 1E-3;
-    static const Real toleranceForConvergence = 1E-6;
+    static const Real toleranceForConvergence = 1E-7;
+    static const Real toleranceForBeingNearRoot = 1E-4;
 
     /****************************************************
      * NB: Changed these if clauses as they were giving NaNs
@@ -235,20 +236,20 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 100000.0;
+    Real B = 1000000.0;
 
     Real p;
 
     Real mid = 0.5*(A+B);
 
-    if(     std::abs(bisectionFunction(U,i,j,k,m,A,kineticEnergy,p))<= toleranceForConvergence)
+    if(std::abs(bisectionFunction(U,i,j,k,m,A,kineticEnergy,p))<= toleranceForBeingNearRoot)
     {
         U(i,j,k,RHO_MIX,m,0) = A;
         U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
 
         return;
     }
-    else if(std::abs(bisectionFunction(U,i,j,k,m,B,kineticEnergy,p))<= toleranceForConvergence)
+    else if(std::abs(bisectionFunction(U,i,j,k,m,B,kineticEnergy,p))<= toleranceForBeingNearRoot)
     {
         U(i,j,k,RHO_MIX,m,0) = B;
         U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));

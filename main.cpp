@@ -104,6 +104,8 @@ void main_main ()
         WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, 0.0, 0);
     }
 
+    //exit(0);
+
 
     U2          = U1;
     UL          = U1;
@@ -151,7 +153,7 @@ void main_main ()
         reactiveUpdate(U,U1,U2,parameters);
 
 
-        if(t > ((Real)take_pic_counter)*(initial.finalT)/100.0)
+        if(t > ((Real)take_pic_counter)*(initial.finalT)/200.0)
         {
             take_pic_counter++;
             const std::string& pltfile = Concatenate(initial.filename,n,5);

@@ -38,8 +38,6 @@ void updateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, Parameter
                             temp = 0.0;
                         }
 
-                        //Print() << T << std::endl;
-
                         U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+(parameters.dt)*temp;
 
                     }
@@ -74,41 +72,44 @@ void RKreactiveUpdate(CellArray& U, CellArray& U1, ParameterStruct& parameters)
  */
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters)
 {
-    U = U1;
-
-    RKreactiveUpdate(U,U1,parameters);
-    RKreactiveUpdate(U1,U2,parameters);
-
-    //U1 = ((U1*(1.0/2.0))+(U2*(1.0/2.0)));
-
-    for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
+    if(parameters.numberOfMixtures > 0)
     {
-        const Box& bx = mfi.validbox();
+        U = U1;
 
-        BoxAccessCellArray Ubox(mfi,bx,U);
-        BoxAccessCellArray U1box(mfi,bx,U1);
-        BoxAccessCellArray U2box(mfi,bx,U2);
+        RKreactiveUpdate(U,U1,parameters);
+        RKreactiveUpdate(U1,U2,parameters);
 
-        const auto lo = lbound(bx);
-        const auto hi = ubound(bx);
+        //U1 = ((U1*(1.0/2.0))+(U2*(1.0/2.0)));
 
-        for                 (int m = 0;    m < parameters.numberOfMaterials; m++)
+        for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
         {
-            if(U1box.accessPattern.materialInfo[m].mixture)
+            const Box& bx = mfi.validbox();
+
+            BoxAccessCellArray Ubox(mfi,bx,U);
+            BoxAccessCellArray U1box(mfi,bx,U1);
+            BoxAccessCellArray U2box(mfi,bx,U2);
+
+            const auto lo = lbound(bx);
+            const auto hi = ubound(bx);
+
+            for                 (int m = 0;    m < parameters.numberOfMaterials; m++)
             {
-                for    		(int k = lo.z; k <= hi.z; ++k)
+                if(U1box.accessPattern.materialInfo[m].mixture)
                 {
-                    for     (int j = lo.y; j <= hi.y; ++j)
+                    for    		(int k = lo.z; k <= hi.z; ++k)
                     {
-                        for (int i = lo.x; i <= hi.x; ++i)
+                        for     (int j = lo.y; j <= hi.y; ++j)
                         {
-                            U1box(i,j,k,ALPHARHO,m) = ((Ubox(i,j,k,ALPHARHO,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHO,m)*(1.0/2.0)));
+                            for (int i = lo.x; i <= hi.x; ++i)
+                            {
+                                U1box(i,j,k,ALPHARHO,m) = ((Ubox(i,j,k,ALPHARHO,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHO,m)*(1.0/2.0)));
+                            }
                         }
                     }
                 }
             }
-        }
 
-        U1box.conservativeToPrimitive();
+            U1box.conservativeToPrimitive();
+        }
     }
 }

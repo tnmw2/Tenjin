@@ -6,90 +6,64 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
+    Vector<int> boundary;
 
-    int int_x0 = (parameters.x0/parameters.dimL[0])*parameters.n_cells[0];
+    boundary.push_back(0);
 
-    for    		(int k = lo.z; k <= hi.z; ++k)
+    for(int s = 0; s < initial.numberOfStates-1; s++)
     {
-        for     (int j = lo.y; j <= hi.y; ++j)
+        boundary.push_back((int)((initial.interfaces[s]/parameters.dimL[0])*parameters.n_cells[0]));
+    }
+
+    boundary.push_back(parameters.n_cells[0]);
+
+    for                 (int k = lo.z; k <= hi.z; ++k)
+    {
+        for             (int j = lo.y; j <= hi.y; ++j)
         {
-            for (int i = lo.x; i <= hi.x; ++i)
+            for         (int i = lo.x; i <= hi.x; ++i)
             {
-                if(parameters.numberOfMaterials == 1)
+                for     (int s = 0; s < initial.numberOfStates; s++)
                 {
-                    if(i<int_x0)
+                    if(boundary[s] <= i && i < boundary[s+1])
                     {
-                        U(i,j,k,ALPHA)     = 0.999999;
-                        U(i,j,k,RHO_K)     = initial.rhoL;
-                        U(i,j,k,P)         = initial.pL;
-
-                        for(int dir = 0; dir< AMREX_SPACEDIM ; dir++)
+                        for (int m = 0; m < parameters.numberOfMaterials; m++)
                         {
-                            U(i,j,k,VELOCITY,0,dir)  = initial.uL[dir];
-                        }
+                            if(initial.alpha[s] == m)
+                            {
+                                U(i,j,k,ALPHA,m)     = 1.0 - std::max(1E-6,((Real)(parameters.numberOfMaterials-1))*1E-6);
+                            }
+                            else
+                            {
+                                U(i,j,k,ALPHA,m)     = 1E-6;
+                            }
 
-                        if(parameters.numberOfMixtures == 1)
-                        {
-                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoL;
-                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoL;
-                            U(i,j,k,LAMBDA ,0)    = 0.999999;
-                        }
+                            U(i,j,k,RHO_K,m)    = initial.rho[s];
+                            U(i,j,k,P)          = initial.p[s];
 
+                            U(i,j,k,VELOCITY,0,0)  = initial.u[s];
+                            U(i,j,k,VELOCITY,0,1)  = initial.v[s];
+                            U(i,j,k,VELOCITY,0,2)  = 0.0;
 
-                    }
-                    else
-                    {
-                        U(i,j,k,ALPHA)     = 0.999999;
-                        U(i,j,k,RHO_K)     = initial.rhoR;
-                        U(i,j,k,P)         = initial.pR;
-
-                        for(int dir=0;dir<AMREX_SPACEDIM;dir++)
-                        {
-                            U(i,j,k,VELOCITY,0,dir)  = initial.uR[dir];
-                        }
-
-                        if(parameters.numberOfMixtures == 1)
-                        {
-                            U(i,j,k,RHO_MIX,0,0)  = initial.rhoR;
-                            U(i,j,k,RHO_MIX,0,1)  = initial.rhoR;
-                            U(i,j,k,LAMBDA ,0)    = 0.999999;
-                        }
-
-                    }
-                }
-                else if(parameters.numberOfMaterials == 2)
-                {
-                    if(i <= int_x0)
-                    {
-                        U(i,j,k,ALPHA,0)     = 0.999999;
-                        U(i,j,k,ALPHA,1)     = 0.000001;
-                        U(i,j,k,RHO_K,0)     = initial.rhoL;
-                        U(i,j,k,RHO_K,1)     = initial.rhoR;
-                        U(i,j,k,P)           = initial.pL;
-
-                        for(int dir=0; dir< AMREX_SPACEDIM ; dir++)
-                        {
-                            U(i,j,k,VELOCITY,0,dir)  = initial.uL[dir];
-                        }
-                    }
-                    else
-                    {
-                        U(i,j,k,ALPHA,1)     = 0.999999;
-                        U(i,j,k,ALPHA,0)     = 0.000001;
-                        U(i,j,k,RHO_K,0)     = initial.rhoL;
-                        U(i,j,k,RHO_K,1)     = initial.rhoR;
-                        U(i,j,k,P)           = initial.pR;
-
-                        for(int dir=0;dir<AMREX_SPACEDIM;dir++)
-                        {
-                            U(i,j,k,VELOCITY,0,dir)  = initial.uR[dir];
+                            if(U.accessPattern.materialInfo[m].mixture)
+                            {
+                                U(i,j,k,RHO_MIX,m,0)    = initial.rho[s];
+                                U(i,j,k,RHO_MIX,m,1)    = initial.rho[s];
+                                if(initial.lambda[s])
+                                {
+                                    U(i,j,k,LAMBDA,m)   = 0.999999;
+                                }
+                                else
+                                {
+                                    U(i,j,k,LAMBDA,m)   = 0.0;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-
 }
 
 void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
@@ -101,13 +75,16 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.get("startT", initial.startT);
     pp.get("finalT", initial.finalT);
 
-    pp.get("rhoL",  initial.rhoL);
-    pp.get("rhoR",  initial.rhoR);
-    pp.getarr("uL", initial.uL);
-    pp.getarr("uR", initial.uR);
-    pp.get("pL",    initial.pL);
-    pp.get("pR",    initial.pR);
+    pp.get("Nstates",initial.numberOfStates);
 
+    pp.getarr("interfaces",initial.interfaces);
+
+    pp.getarr("rho",    initial.rho);
+    pp.getarr("u",      initial.u);
+    pp.getarr("v",      initial.v);
+    pp.getarr("p",      initial.p);
+    pp.getarr("alpha",  initial.alpha);
+    pp.getarr("lambda", initial.lambda);
     pp.getarr("gamma",parameters.adiabaticIndex);
     pp.getarr("CV",parameters.CV);
 
@@ -120,7 +97,6 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.getarr("eref",eref);
 
 
-    pp.get("x0",  parameters.x0);
     pp.get("CFL", parameters.CFL);
 
     pp.get("Nghost", parameters.Nghost);
