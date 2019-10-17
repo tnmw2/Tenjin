@@ -21,7 +21,8 @@ enum Variable
     USTAR,
     RHO_MIX,
     ALPHARHOLAMBDA,
-    LAMBDA
+    LAMBDA,
+    SIGMA
 };
 
 /** Not yet used...
@@ -93,6 +94,7 @@ struct InitialStruct
     Vector<Real> rho;
     Vector<Real> u;
     Vector<Real> v;
+    Vector<Real> w;
     Vector<Real> p;
     Vector<int> alpha;
     Vector<int> lambda;

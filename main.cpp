@@ -107,11 +107,11 @@ void main_main ()
     //exit(0);
 
 
-    U2          = U1;
+    /*U2          = U1;
     UL          = U1;
     UR          = U1;
     UStar       = U1;
-    MUSCLgrad   = U1;
+    MUSCLgrad   = U1;*/
 
 
     //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
@@ -121,6 +121,7 @@ void main_main ()
      * The main time loop
      * ----------------------------------------------------*/
 
+    //exit(0);
 
     int n = 0;
 
@@ -153,7 +154,7 @@ void main_main ()
         reactiveUpdate(U,U1,U2,parameters);
 
 
-        if(t > ((Real)take_pic_counter)*(initial.finalT)/200.0)
+        if(t > ((Real)take_pic_counter)*(initial.finalT)/100.0)
         {
             take_pic_counter++;
             const std::string& pltfile = Concatenate(initial.filename,n,5);

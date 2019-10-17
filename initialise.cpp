@@ -43,7 +43,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                             U(i,j,k,VELOCITY,0,0)  = initial.u[s];
                             U(i,j,k,VELOCITY,0,1)  = initial.v[s];
-                            U(i,j,k,VELOCITY,0,2)  = 0.0;
+                            U(i,j,k,VELOCITY,0,2)  = initial.w[s];
 
                             if(U.accessPattern.materialInfo[m].mixture)
                             {
@@ -82,6 +82,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     pp.getarr("rho",    initial.rho);
     pp.getarr("u",      initial.u);
     pp.getarr("v",      initial.v);
+    pp.getarr("w",      initial.w);
     pp.getarr("p",      initial.p);
     pp.getarr("alpha",  initial.alpha);
     pp.getarr("lambda", initial.lambda);
@@ -117,7 +118,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
     int m = parameters.numberOfMaterials;
     int mix = parameters.numberOfMixtures;
 
-    parameters.Ncomp = ((2+2)*mix)+m+m+m+AMREX_SPACEDIM+AMREX_SPACEDIM+1+1+1+1+1; //(rho_mix,alpharholambda,lambda),alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar
+    parameters.Ncomp = ((2+2)*mix)+m+m+m+3+3+1+1+1+1+1+9; //(rho_mix,alpharholambda,lambda),alpha,alpharho,rho_k,u,rhou,E,p,soundspeed,ustar, sigma
 
     parameters.materialInfo.resize(parameters.numberOfMaterials);
 

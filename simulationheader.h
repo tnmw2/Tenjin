@@ -12,6 +12,8 @@
 #include <map>
 #include <vector>
 
+#include "tensor.h"
+
 
 #include "amrexheader.h"
 

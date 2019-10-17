@@ -21,6 +21,7 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
     {
         UStar(ALPHA,m)          = U(ALPHA,m);
         UStar(ALPHARHO,m)       = multiplier*U(ALPHARHO,m);
+        UStar(RHO_K,m)          = UStar(ALPHARHO,m)/UStar(ALPHA,m);
 
         if(parameters.materialInfo[m].mixture)
         {
@@ -31,7 +32,7 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
     }
 
-    for(int row = 0; row < AMREX_SPACEDIM; row++)
+    for(int row = 0; row < U.numberOfComponents; row++)
     {
         if(row == d)
         {
@@ -50,9 +51,18 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
     return;
 }
 
-Real delta(int i, int j)
+/** Takes the dot product of the velocity with a column of the stress tensor.
+ */
+double vdotsigma(Cell& U, int d)
 {
-    return (Real)(i==j);
+    double result=0.0;
+
+    for(int i=0;i<U.numberOfComponents;i++)
+    {
+        result+=U(VELOCITY,0,i)*U(SIGMA,0,i,d);
+    }
+
+    return result;
 }
 
 /** Returns the equation flux of the conservative variables.
@@ -64,8 +74,8 @@ Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
         case ALPHA:         return U(ALPHA,n.mat)*          U(VELOCITY,0,d);
         case ALPHARHO:  	return U(ALPHARHO,n.mat)*       U(VELOCITY,0,d);
         case ALPHARHOLAMBDA:return U(ALPHARHOLAMBDA,n.mat)* U(VELOCITY,0,d);
-        case RHOU: 			return U(RHOU,0,n.row)*         U(VELOCITY,0,d)+U(P)*delta(n.row,(int)d);
-        case TOTAL_E:	   	return U(VELOCITY,0,d)*(U(TOTAL_E)+U(P));
+        case RHOU: 			return U(RHOU,0,n.row)*         U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
+        case TOTAL_E:	   	return U(TOTAL_E)*              U(VELOCITY,0,d)-vdotsigma(U,d);
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
     }
 
@@ -123,8 +133,6 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
                 fluxbox(i,j,k,USTAR) = Sstar;
-
-
 
                 if(SL>=0.0)
                 {
@@ -326,15 +334,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
         }
 
-
-
         FillDomainBoundary(UL.data, geom, bc);
         FillDomainBoundary(UR.data, geom, bc);
 
 
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
-
 
 
         /*-------------------------------------------------------------
@@ -352,9 +357,10 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             BoxAccessCellArray ULbox(mfi,bx,UL);
             BoxAccessCellArray URbox(mfi,bx,UR);
             BoxAccessCellArray UStarbox(mfi,bx,UStar);
-            BoxAccessCellArray fluxbox(bx,flux_fab,U);
+            BoxAccessCellArray fluxbox(bx,flux_fab,U); 
 
             calc_fluxes (fluxbox, ULbox, URbox, UStarbox, parameters,d);
+
             update      (fluxbox, Ubox, U1box, parameters,d);
 
         }

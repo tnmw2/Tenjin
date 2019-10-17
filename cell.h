@@ -46,6 +46,8 @@ public:
     Real* E;
     std::vector<Real*> u;
     Real* p;
+    Vector<Real*> sigma;
+
     Real* a;
     Real* uStar;
 

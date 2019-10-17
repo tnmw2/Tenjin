@@ -43,8 +43,8 @@ AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(paramet
     addVariable(n,"alphaRho",       CONSERVATIVE,   ALPHARHO,       parameters.numberOfMaterials);
     addVariable(n,"rho_k",          PRIMITIVE,      RHO_K,          parameters.numberOfMaterials);
     addVariable(n,"rho",            NEITHER,        RHO);
-    addVariable(n,"rhoU",           CONSERVATIVE,   RHOU,           1,AMREX_SPACEDIM);
-    addVariable(n,"u",              PRIMITIVE,      VELOCITY,       1,AMREX_SPACEDIM);
+    addVariable(n,"rhoU",           CONSERVATIVE,   RHOU,           1,3);
+    addVariable(n,"u",              PRIMITIVE,      VELOCITY,       1,3);
     addVariable(n,"E",              CONSERVATIVE,   TOTAL_E);
     addVariable(n,"p",              PRIMITIVE,      P);
     addVariable(n,"a",              NEITHER,        SOUNDSPEED);
@@ -52,7 +52,7 @@ AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(paramet
     addVariable(n,"rhomix",         NEITHER,        RHO_MIX,        parameters.numberOfMixtures,2);
     addVariable(n,"lambda",         PRIMITIVE,      LAMBDA,         parameters.numberOfMixtures);
     addVariable(n,"alpharholambda", CONSERVATIVE,   ALPHARHOLAMBDA, parameters.numberOfMixtures);
-
+    addVariable(n,"sigma",          NEITHER,        SIGMA,          1,3,3);
 
 }
 

@@ -13,7 +13,8 @@ SOURCES += main.cpp \
     cell.cpp \
     accesspattern.cpp \
     reactive.cpp \
-    equationofstate.cpp
+    equationofstate.cpp \
+    tensor.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -23,5 +24,6 @@ HEADERS += \
     structdefinitions.h \
     cell.h \
     accesspattern.h \
-    equationofstate.h
+    equationofstate.h \
+    tensor.h
 

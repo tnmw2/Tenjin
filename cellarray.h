@@ -56,6 +56,8 @@ public:
 
     int numberOfMaterials;
 
+    static const int numberOfComponents = 3;
+
     Real& left (Direction_enum d, int i, int j, int k, MaterialSpecifier& m);
     Real& right(Direction_enum d, int i, int j, int k, MaterialSpecifier& m);
 
@@ -69,6 +71,8 @@ public:
 
     void  conservativeToPrimitive();
     void  primitiveToConservative();
+
+    void stressTensor                           (int i, int j, int k);
 
     Real getEffectiveInverseGruneisen           (int i, int j, int k);
     Real getEffectiveNonThermalPressure         (int i, int j, int k);

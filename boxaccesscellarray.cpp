@@ -1,4 +1,3 @@
-#include "cellarray.h"
 #include "simulationheader.h"
 
 BoxAccessCellArray::BoxAccessCellArray(const Box& bx, FArrayBox& fb,  CellArray& U) : box{bx}, fab{fb}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
@@ -47,6 +46,7 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
+    case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
     }
@@ -75,7 +75,7 @@ void  BoxAccessCellArray::conservativeToPrimitive()
 
                 kineticEnergy = 0.0;
 
-                for(int row = 0; row < AMREX_SPACEDIM ; row++)
+                for(int row = 0; row < numberOfComponents ; row++)
                 {
                     (*this)(i,j,k,VELOCITY,0,row) = (*this)(i,j,k,RHOU,0,row)/(*this)(i,j,k,RHO);
 
@@ -94,6 +94,8 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                 }
 
                 (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k)+ getEffectiveNonThermalPressure(i,j,k))/(getEffectiveInverseGruneisen(i,j,k));
+
+                stressTensor(i,j,k);
             }
         }
     }
@@ -127,7 +129,7 @@ void  BoxAccessCellArray::primitiveToConservative()
 
                 kineticEnergy = 0.0;
 
-                for(int row = 0; row < AMREX_SPACEDIM ; row++)
+                for(int row = 0; row < numberOfComponents ; row++)
                 {
                     (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
 
@@ -135,10 +137,36 @@ void  BoxAccessCellArray::primitiveToConservative()
                 }
 
                 (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;
+
+                stressTensor(i,j,k);
             }
         }
     }
 }
+
+void BoxAccessCellArray::stressTensor(int i, int j, int k)
+{
+        /*double TotalShearModulus = 0.0;
+
+        for(int m=0;m<numberOfMaterials;m++)
+        {
+            //This is valid because mixtures will have zero shear modulus
+            TotalShearModulus += componentShearModulus(parameters,m)*alpha[m]/parameters.GruneisenGamma[m];
+        }
+
+
+        getDeviatoricHenckyStrain();*/
+
+        for(int row=0;row<numberOfComponents;row++)
+        {
+            for(int col=0;col<numberOfComponents;col++)
+            {
+                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col);//+ 2.0*TotalShearModulus*devH[i*numberOfComponents+j]/getEffectiveInverseGruneisen(parameters);
+            }
+        }
+
+        return;
+    }
 
 Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
 {

@@ -2,8 +2,9 @@
 
 Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
 {
-    rhoU.resize(AMREX_SPACEDIM);
-    u.resize(AMREX_SPACEDIM);
+    rhoU.resize(numberOfComponents);
+    u.resize(numberOfComponents);
+    sigma.resize(numberOfComponents*numberOfComponents);
 
     materials.resize(U.numberOfMaterials);
 
@@ -12,10 +13,15 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
     p       =   (&U(i,j,k,P));
     a       =   (&U(i,j,k,SOUNDSPEED));
 
-    for(int row = 0; row < AMREX_SPACEDIM ; row++)
+    for(int row = 0; row < U.numberOfComponents ; row++)
     {
         u[row]      = (&U(i,j,k,VELOCITY,0,row));
         rhoU[row]   = (&U(i,j,k,RHOU,0,row));
+
+        for(int col = 0; col < U.numberOfComponents ; col++)
+        {
+            sigma[row*numberOfComponents+col] = (&U(i,j,k,SIGMA,0,row,col));
+        }
     }
 
     for(int m=0;m<U.numberOfMaterials;m++)
@@ -68,6 +74,7 @@ Real& Cell::operator()(MaterialSpecifier m)
         break;
     case ALPHARHOLAMBDA:    return *(materials[m.mat].alphaRhoLambda);
         break;
+    case SIGMA:             return *(sigma[m.row*numberOfComponents+m.col]);
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
     }
