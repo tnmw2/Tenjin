@@ -47,6 +47,15 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
     case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
+        break;
+    case V_TENSOR:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
+        break;
+    case VSTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
+        break;
+    case DEVH:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
+        break;
+    case HJ2:               return (fab.array())(i, j, k, (accessPattern[m.var]));
+        break;
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
     }
@@ -72,6 +81,8 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                     (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
                 }
+
+                getHenckyJ2(i,j,k);
 
                 kineticEnergy = 0.0;
 
@@ -127,6 +138,8 @@ void  BoxAccessCellArray::primitiveToConservative()
                     }
                 }
 
+                getHenckyJ2(i,j,k);
+
                 kineticEnergy = 0.0;
 
                 for(int row = 0; row < numberOfComponents ; row++)
@@ -146,22 +159,20 @@ void  BoxAccessCellArray::primitiveToConservative()
 
 void BoxAccessCellArray::stressTensor(int i, int j, int k)
 {
-        /*double TotalShearModulus = 0.0;
+        Real TotalShearModulus = 0.0;
 
         for(int m=0;m<numberOfMaterials;m++)
         {
-            //This is valid because mixtures will have zero shear modulus
-            TotalShearModulus += componentShearModulus(parameters,m)*alpha[m]/parameters.GruneisenGamma[m];
+            TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
         }
 
-
-        getDeviatoricHenckyStrain();*/
+        TotalShearModulus = TotalShearModulus/getEffectiveInverseGruneisen(i,j,k);
 
         for(int row=0;row<numberOfComponents;row++)
         {
             for(int col=0;col<numberOfComponents;col++)
             {
-                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col);//+ 2.0*TotalShearModulus*devH[i*numberOfComponents+j]/getEffectiveInverseGruneisen(parameters);
+                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col) + 2.0*TotalShearModulus*(*this)(i,j,k,DEVH,0,row,col);
             }
         }
 
@@ -186,7 +197,7 @@ Real BoxAccessCellArray::getEffectiveNonThermalInternalEnergy(int i, int j, int 
 
     for(int m=0;m<numberOfMaterials;m++)
     {
-        tot += (accessPattern.materialInfo[m].EOS->coldCompressionInternalEnergy((*this),i,j,k,m));
+        tot += (accessPattern.materialInfo[m].EOS->coldCompressionInternalEnergy((*this),i,j,k,m)+accessPattern.materialInfo[m].EOS->shearInternalEnergy((*this),i,j,k,m));
     }
 
     return tot;
@@ -198,7 +209,7 @@ Real BoxAccessCellArray::getEffectiveNonThermalPressure(int i, int j, int k)
 
     for(int m=0;m<numberOfMaterials;m++)
     {
-        tot += accessPattern.materialInfo[m].EOS->coldCompressionPressure((*this),i,j,k,m);
+        tot += accessPattern.materialInfo[m].EOS->coldCompressionPressure((*this),i,j,k,m)+accessPattern.materialInfo[m].EOS->shearPressure((*this),i,j,k,m);
     }
 
     return tot;
@@ -230,6 +241,57 @@ void BoxAccessCellArray::getSoundSpeed()
             }
         }
     }
+}
+
+Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
+{
+    Real b      = 0.0;
+
+    for(int m=0;m<numberOfMaterials;m++)
+    {
+        b       += accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)/((*this)(i,j,k,RHO_K,m));
+    }
+
+    return sqrt(b/getEffectiveInverseGruneisen(i,j,k));
+}
+
+void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
+{
+    double tempdevH[numberOfComponents*numberOfComponents];
+
+    getDeviatoricHenckyStrain(i,j,k);
+
+    amrexToArray(i,j,k,DEVH,0,tempdevH);
+
+    double product[numberOfComponents*numberOfComponents];
+
+    (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevH,product,numberOfComponents));
+
+    return;
+}
+
+void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k)
+{
+
+    double temp[numberOfComponents*numberOfComponents];
+    double tempV[numberOfComponents*numberOfComponents];
+
+    amrexToArray(i,j,k,V_TENSOR,0,tempV);
+
+    squareMatrixMultiplyTranspose(tempV,tempV,temp);
+
+    invert(temp,tempV);
+
+    for(int row=0;row<numberOfComponents;row++)
+    {
+        for(int col=0;col<numberOfComponents;col++)
+        {
+            (*this)(i,j,k,DEVH,0,row,col) = 0.5*0.5*(temp[row*numberOfComponents+col]-tempV[row*numberOfComponents+col]);
+        }
+    }
+
+    return;
+
 }
 
 Real& BoxAccessCellArray::left(Direction_enum d, int i, int j, int k, MaterialSpecifier& m)
@@ -270,4 +332,46 @@ Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, Variable 
 {
     MaterialSpecifier temp(var,mat,row,col);
     return right(d,i,j,k,temp);
+}
+
+void BoxAccessCellArray::amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx, int ny)
+{
+    for(int row = 0; row<nx ;row++)
+    {
+        for(int col = 0; col<ny ; col++)
+        {
+            copy[row*nx+col] = (*this)(i,j,k,var,m,row,col);
+        }
+    }
+}
+
+void BoxAccessCellArray::normaliseV()
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    double temp[numberOfComponents*numberOfComponents];
+
+    for    		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for     (int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+                amrexToArray(i,j,k,V_TENSOR,0,temp);
+
+                Real norm = std::pow(det(temp,numberOfComponents),-1.0/3.0);
+
+                for(int row=0;row<numberOfComponents;row++)
+                {
+                    for(int col=0;col<numberOfComponents;col++)
+                    {
+                        (*this)(i,j,k,V_TENSOR,0,row,col) *= norm;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
 }

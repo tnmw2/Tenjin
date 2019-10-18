@@ -22,7 +22,11 @@ enum Variable
     RHO_MIX,
     ALPHARHOLAMBDA,
     LAMBDA,
-    SIGMA
+    SIGMA,
+    V_TENSOR,
+    VSTAR,
+    DEVH,
+    HJ2
 };
 
 /** Not yet used...
@@ -37,7 +41,9 @@ enum Direction_enum
 {
     x,
     y,
-    z
+    z,
+    LEFT,
+    RIGHT
 };
 
 
@@ -114,6 +120,8 @@ struct ParameterStruct
     Vector<Real> dimL;
     Vector<Real> dx;
     Vector<int>  n_cells;
+
+    bool SOLID;
 
     int Ncomp;
     int Nghost;

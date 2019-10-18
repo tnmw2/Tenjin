@@ -79,6 +79,13 @@ public:
     Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k);
 
     void getSoundSpeed();
+    Real transverseWaveSpeed(int i, int j, int k);
+
+    void amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx=3, int ny=3);
+
+    void getHenckyJ2(int i, int j, int k);
+    void getDeviatoricHenckyStrain(int i, int j, int k);
+    void normaliseV();
 
 
 };

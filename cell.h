@@ -42,11 +42,13 @@ class Cell
 public:
 
     Real* rho;
-    std::vector<Real*> rhoU;
+    Vector<Real*> rhoU;
     Real* E;
-    std::vector<Real*> u;
+    Vector<Real*> u;
     Real* p;
     Vector<Real*> sigma;
+    Vector<Real*> V;
+    Vector<Real*> VStar;
 
     Real* a;
     Real* uStar;
@@ -55,11 +57,21 @@ public:
 
     std::vector<Material> materials;
 
+    AccessPattern& accessPattern;
+
     Cell(BoxAccessCellArray& U, int i, int j, int k);
-    Cell(){}
+    //Cell(){}
 
     Real& operator()(Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(MaterialSpecifier m);
+
+    void  operator= (Cell& U);
+
+    BoxAccessCellArray* parent;
+
+    int parent_i;
+    int parent_j;
+    int parent_k;
 };
 
 #endif // CELL_H

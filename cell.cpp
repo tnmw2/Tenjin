@@ -1,10 +1,12 @@
 #include "cell.h"
 
-Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
+Cell::Cell(BoxAccessCellArray& U, int i, int j, int k) : accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
 {
     rhoU.resize(numberOfComponents);
     u.resize(numberOfComponents);
     sigma.resize(numberOfComponents*numberOfComponents);
+    V.resize(numberOfComponents*numberOfComponents);
+    VStar.resize(numberOfComponents*numberOfComponents);
 
     materials.resize(U.numberOfMaterials);
 
@@ -20,7 +22,9 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k)
 
         for(int col = 0; col < U.numberOfComponents ; col++)
         {
-            sigma[row*numberOfComponents+col] = (&U(i,j,k,SIGMA,0,row,col));
+            sigma   [row*numberOfComponents+col] = (&U(i,j,k,SIGMA,0,row,col));
+            V       [row*numberOfComponents+col] = (&U(i,j,k,V_TENSOR,0,row,col));
+            VStar   [row*numberOfComponents+col] = (&U(i,j,k,VSTAR,0,row,col));
         }
     }
 
@@ -75,7 +79,49 @@ Real& Cell::operator()(MaterialSpecifier m)
     case ALPHARHOLAMBDA:    return *(materials[m.mat].alphaRhoLambda);
         break;
     case SIGMA:             return *(sigma[m.row*numberOfComponents+m.col]);
+        break;
+    case V_TENSOR:          return *(V[m.row*numberOfComponents+m.col]);
+        break;
+    case VSTAR:             return *(VStar[m.row*numberOfComponents+m.col]);
+        break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
     }
 }
+
+void Cell::operator= (Cell& U)
+{
+    (*this)(RHO)        =   U(RHO);
+    (*this)(TOTAL_E)    =   U(TOTAL_E);
+    (*this)(P)          =   U(P);
+    (*this)(SOUNDSPEED) =   U(SOUNDSPEED);
+
+    for(int row = 0; row < U.numberOfComponents ; row++)
+    {
+        (*this)(VELOCITY,0,row)   = U(VELOCITY,0,row);
+        (*this)(RHOU,0,row)       = U(RHOU,0,row);
+
+        for(int col = 0; col < U.numberOfComponents ; col++)
+        {
+            (*this)(SIGMA,0,row,col)    = U(SIGMA,0,row,col);
+            (*this)(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
+            (*this)(VSTAR,0,row,col)    = U(VSTAR,0,row,col);
+        }
+    }
+
+    for(int m=0;m<materials.size();m++)
+    {
+        (*this)(ALPHA,m)     = U(ALPHA,m);
+        (*this)(ALPHARHO,m)  = U(ALPHARHO,m);
+        (*this)(RHO_K,m)     = U(RHO_K,m);
+
+        if(U.accessPattern.materialInfo[m].mixture)
+        {
+            (*this)(LAMBDA,m)           = U(LAMBDA,m);
+            (*this)(ALPHARHOLAMBDA,m)   = U(ALPHARHOLAMBDA,m);
+        }
+    }
+
+    (*this)(USTAR)     = U(USTAR);
+}
+
