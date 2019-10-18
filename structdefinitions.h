@@ -88,29 +88,6 @@ struct MaterialDescriptor
 };
 
 
-/** Holds data about initial conditions etc.
- */
-struct InitialStruct
-{
-    int numberOfStates;
-
-    Real startT;
-    Real finalT;
-
-    Vector<Real> rho;
-    Vector<Real> u;
-    Vector<Real> v;
-    Vector<Real> w;
-    Vector<Real> p;
-    Vector<int> alpha;
-    Vector<int> lambda;
-    Vector<Real> interfaces;
-
-    std::string filename;
-
-    InitialStruct(){}
-};
-
 /** Holds simulation data that needs to be passed around.
  *  Contains the current timestep dt and the CFL number
  *  for example.
@@ -121,7 +98,7 @@ struct ParameterStruct
     Vector<Real> dx;
     Vector<int>  n_cells;
 
-    bool SOLID;
+    int SOLID;
 
     int Ncomp;
     int Nghost;
@@ -134,11 +111,11 @@ struct ParameterStruct
     Real x0;
     Real dt;
 
-    Vector<Real> adiabaticIndex;
+    /*Vector<Real> adiabaticIndex;
     Vector<Real> CV;
 
     Vector<Real> mixtureAdiabaticIndex;
-    Vector<Real> mixtureCV;
+    Vector<Real> mixtureCV;*/
 
     Vector<MaterialDescriptor>  materialInfo;
 
@@ -150,6 +127,53 @@ struct ParameterStruct
     }
 };
 
+/** Holds data about initial conditions etc.
+ */
+struct InitialStruct
+{
+    int numberOfStates;
+    int numberOfPictures;
+
+    Real startT;
+    Real finalT;
+
+    Vector<Real> u;
+    Vector<Real> v;
+    Vector<Real> w;
+    Vector<Real> p;
+    Vector<Vector<Real> > F;
+    Vector<Vector<Real> > rho;
+    Vector<Vector<Real> > alpha;
+    Vector<Vector<Real> > lambda;
+    Vector<Real> interfaces;
+
+    std::string filename;
+
+    InitialStruct(){}
+
+    void resize(ParameterStruct& parameters)
+    {
+        u.resize(numberOfStates);
+        v.resize(numberOfStates);
+        w.resize(numberOfStates);
+        p.resize(numberOfStates);
+        F.resize(numberOfStates);
+        rho.resize(numberOfStates);
+        alpha.resize(numberOfStates);
+        lambda.resize(numberOfStates);
+
+        for(int i=0;i<numberOfStates;i++)
+        {
+            F[i].resize(9);
+            rho[i].resize(parameters.numberOfMaterials);
+            alpha[i].resize(parameters.numberOfMaterials);
+            lambda[i].resize(parameters.numberOfMaterials);
+        }
+
+
+
+    }
+};
 
 
 

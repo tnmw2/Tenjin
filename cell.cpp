@@ -1,12 +1,16 @@
 #include "cell.h"
 
-Cell::Cell(BoxAccessCellArray& U, int i, int j, int k) : accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
+Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : phase(_phase), accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
 {
     rhoU.resize(numberOfComponents);
     u.resize(numberOfComponents);
     sigma.resize(numberOfComponents*numberOfComponents);
-    V.resize(numberOfComponents*numberOfComponents);
-    VStar.resize(numberOfComponents*numberOfComponents);
+
+    if(phase == solid)
+    {
+        V.resize(numberOfComponents*numberOfComponents);
+        VStar.resize(numberOfComponents*numberOfComponents);
+    }
 
     materials.resize(U.numberOfMaterials);
 
@@ -23,8 +27,12 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k) : accessPattern(U.accessP
         for(int col = 0; col < U.numberOfComponents ; col++)
         {
             sigma   [row*numberOfComponents+col] = (&U(i,j,k,SIGMA,0,row,col));
-            V       [row*numberOfComponents+col] = (&U(i,j,k,V_TENSOR,0,row,col));
-            VStar   [row*numberOfComponents+col] = (&U(i,j,k,VSTAR,0,row,col));
+
+            if(phase == solid)
+            {
+                V       [row*numberOfComponents+col] = (&U(i,j,k,V_TENSOR,0,row,col));
+                VStar   [row*numberOfComponents+col] = (&U(i,j,k,VSTAR,0,row,col));
+            }
         }
     }
 
@@ -104,8 +112,12 @@ void Cell::operator= (Cell& U)
         for(int col = 0; col < U.numberOfComponents ; col++)
         {
             (*this)(SIGMA,0,row,col)    = U(SIGMA,0,row,col);
-            (*this)(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
-            (*this)(VSTAR,0,row,col)    = U(VSTAR,0,row,col);
+
+            if(phase == solid)
+            {
+                (*this)(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
+                (*this)(VSTAR,0,row,col)    = U(VSTAR,0,row,col);
+            }
         }
     }
 

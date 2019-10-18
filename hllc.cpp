@@ -45,15 +45,18 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
         UStar(VELOCITY,0,row)     = UStar(RHOU,0,row)/UStar(RHO);
 
-        for(int col=0;col<U.numberOfComponents; col++)
+        if(parameters.SOLID)
         {
-            if(row == d)
+            for(int col=0;col<U.numberOfComponents; col++)
             {
-                UStar(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
-            }
-            else
-            {
-                UStar(V_TENSOR,0,row,col) = multiplier*U(V_TENSOR,0,row,col);
+                if(row == d)
+                {
+                    UStar(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
+                }
+                else
+                {
+                    UStar(V_TENSOR,0,row,col) = multiplier*U(V_TENSOR,0,row,col);
+                }
             }
         }
     }
@@ -175,13 +178,13 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
             for (int i = lo.x; i <= hi.x+extra[x]; ++i)
             {
 
-                Cell UL(URbox,i-extra[x],j-extra[y],k-extra[z]);
-                Cell UR(ULbox,i,j,k);
+                Cell UL(URbox,i-extra[x],j-extra[y],k-extra[z],solid);
+                Cell UR(ULbox,i,j,k,solid);
 
-                Cell ULStar(ULStarbox,i,j,k);
-                Cell URStar(URStarbox,i,j,k);
+                Cell ULStar(ULStarbox,i,j,k,solid);
+                Cell URStar(URStarbox,i,j,k,solid);
 
-                Cell UStarStar(UStarStarbox,i,j,k);
+                Cell UStarStar(UStarStarbox,i,j,k,solid);
 
 
                 SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
@@ -382,9 +385,9 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
             for (int i = lo.x; i <= hi.x+extra[x]; ++i)
             {
 
-                Cell UL(URbox,i-extra[x],j-extra[y],k-extra[z]);
-                Cell UR(ULbox,i,j,k);
-                Cell UStar(UStarbox,i,j,k);
+                Cell UL(URbox,i-extra[x],j-extra[y],k-extra[z],fluid);
+                Cell UR(ULbox,i,j,k,fluid);
+                Cell UStar(UStarbox,i,j,k,fluid);
 
 
 
@@ -625,10 +628,16 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             BoxAccessCellArray UStarStarbox(mfi,bx,UStarStar);
             BoxAccessCellArray fluxbox(bx,flux_fab,U); 
 
-            //calc_fluxes (fluxbox, ULbox, URbox, UStarbox, parameters,d);
-            calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d);
+            if(parameters.SOLID)
+            {
+                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d);
+            }
+            else
+            {
+                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
+            }
 
-            update      (fluxbox, Ubox, U1box, parameters,d);
+            update(fluxbox, Ubox, U1box, parameters,d);
 
         }
 

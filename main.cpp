@@ -16,7 +16,7 @@ void main_main ()
     ParameterStruct parameters;
     InitialStruct   initial;
 
-    initialiseDataStructs(parameters,initial);
+    libConfigInitialiseDataStructs(parameters,initial);
 
     /* ----------------------------------------------------
      * Declare the domain and geometry required for Multifabs
@@ -98,6 +98,7 @@ void main_main ()
      * ----------------------------------------------------*/
 
 
+
     setInitialConditions(U1,parameters,initial);
 
     {
@@ -148,6 +149,11 @@ void main_main ()
             parameters.dt=initial.finalT-t;
         }
 
+        if(n<20)
+        {
+            parameters.dt*=0.2;
+        }
+
 
         U = U1;
 
@@ -155,8 +161,12 @@ void main_main ()
 
         reactiveUpdate(U,U1,U2,parameters);
 
+        if(parameters.SOLID)
+        {
+            U1.cleanUpV();
+        }
 
-        if(t > ((Real)take_pic_counter)*(initial.finalT)/100.0)
+        if(t > ((Real)take_pic_counter)*(initial.finalT)/((Real)initial.numberOfPictures))
         {
             take_pic_counter++;
             const std::string& pltfile = Concatenate(initial.filename,n,5);

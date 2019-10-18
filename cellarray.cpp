@@ -38,6 +38,18 @@ void CellArray::getSoundSpeed()
     }
 }
 
+void CellArray::cleanUpV()
+{
+    for(MFIter mfi(data); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        BoxAccessCellArray baca(mfi,bx,(*this));
+
+        baca.cleanUpV();
+    }
+}
+
 void CellArray::operator=(CellArray& U)
 {
     MultiFab::Copy(data, U.data, 0, 0, data.nComp(), data.nGrow());

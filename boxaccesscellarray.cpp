@@ -161,18 +161,38 @@ void BoxAccessCellArray::stressTensor(int i, int j, int k)
 {
         Real TotalShearModulus = 0.0;
 
+        int checkSolid = 0;
+
         for(int m=0;m<numberOfMaterials;m++)
         {
+            if(accessPattern.materialInfo[m].phase == solid)
+            {
+                checkSolid = 1;
+            }
+
             TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
         }
 
         TotalShearModulus = TotalShearModulus/getEffectiveInverseGruneisen(i,j,k);
 
-        for(int row=0;row<numberOfComponents;row++)
+        if(checkSolid)
         {
-            for(int col=0;col<numberOfComponents;col++)
+            for(int row=0;row<numberOfComponents;row++)
             {
-                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col) + 2.0*TotalShearModulus*(*this)(i,j,k,DEVH,0,row,col);
+                for(int col=0;col<numberOfComponents;col++)
+                {
+                    (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col) + 2.0*TotalShearModulus*(*this)(i,j,k,DEVH,0,row,col);
+                }
+            }
+        }
+        else
+        {
+            for(int row=0;row<numberOfComponents;row++)
+            {
+                for(int col=0;col<numberOfComponents;col++)
+                {
+                    (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col);
+                }
             }
         }
 
@@ -257,15 +277,33 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
 
 void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
 {
-    double tempdevH[numberOfComponents*numberOfComponents];
+    /*Real totalAlpha = 0.0;
 
-    getDeviatoricHenckyStrain(i,j,k);
+    for(int m=0; m<numberOfMaterials;m++)
+    {
+        if(accessPattern.materialInfo[m].phase == solid)
+        {
+            totalAlpha += (*this)(i,j,k,ALPHA,m);
+        }
+    }*/
 
-    amrexToArray(i,j,k,DEVH,0,tempdevH);
+    for(int m=0; m<numberOfMaterials;m++)
+    {
+        if(accessPattern.materialInfo[m].phase == solid)
+        {
+            double tempdevH[numberOfComponents*numberOfComponents];
 
-    double product[numberOfComponents*numberOfComponents];
+            getDeviatoricHenckyStrain(i,j,k);
 
-    (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevH,product,numberOfComponents));
+            amrexToArray(i,j,k,DEVH,0,tempdevH);
+
+            double product[numberOfComponents*numberOfComponents];
+
+            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevH,product,numberOfComponents)); //totalAlpha
+
+            return;
+        }
+    }
 
     return;
 }
@@ -367,6 +405,60 @@ void BoxAccessCellArray::normaliseV()
                     for(int col=0;col<numberOfComponents;col++)
                     {
                         (*this)(i,j,k,V_TENSOR,0,row,col) *= norm;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
+void BoxAccessCellArray::cleanUpV()
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    double tempV[numberOfComponents*numberOfComponents];
+    double temp [numberOfComponents*numberOfComponents];
+    Real norm;
+    Real totalSolid;
+    Real totalAlpha;
+
+    for    		   (int k = lo.z; k <= hi.z; ++k)
+    {
+        for        (int j = lo.y; j <= hi.y; ++j)
+        {
+            for    (int i = lo.x; i <= hi.x; ++i)
+            {
+                totalAlpha = 0.0;
+                totalSolid = 0.0;
+
+                for(int m = 0; m < numberOfMaterials; m++)
+                {
+                    totalAlpha += (*this)(i,j,k,ALPHA,m);
+
+                    if(accessPattern.materialInfo[m].phase == solid)
+                    {
+                        totalSolid += (*this)(i,j,k,ALPHA,m);
+                    }
+                }
+
+                //Print() << totalAlpha << std::endl;
+
+                amrexToArray(i,j,k,V_TENSOR,0,tempV);
+
+                squareMatrixMultiplyTranspose(tempV,tempV,temp);
+
+                matrixSquareRoot(tempV,temp);
+
+                norm = std::pow(det(tempV),-1.0/3.0);
+
+                for(int row=0;row<numberOfComponents;row++)
+                {
+                    for(int col=0;col<numberOfComponents;col++)
+                    {
+                        (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
                     }
                 }
             }

@@ -11,15 +11,14 @@
 #include <utility>
 #include <map>
 #include <vector>
+#include <libconfig.h++>
 
 #include "tensor.h"
-
-
 #include "amrexheader.h"
 
 using namespace amrex;
 
-#include <libconfig.h++>
+
 #include "structdefinitions.h"
 #include "accesspattern.h"
 #include "equationofstate.h"
@@ -32,7 +31,8 @@ void advance(CellArray& U, CellArray& U1, CellArray &U2, CellArray &MUSCLgrad, C
 
 void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename);
 
-void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
+void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
+//void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial);
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters);

@@ -1,39 +1,24 @@
 ﻿#include "simulationheader.h"
 
+/** Convert a c++ string to a char array for file I/O operations
+ */
+void stringtochar(std::string string,char* file)
+{
+    int i=0;
+    for(; string[i] ; i++)
+    {
+        file[i]=string[i];
+    }
+    file[i]='\0';
+
+    return;
+}
+
 void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
 
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
-
-
-    std::vector<double> F1{1.0,0.0,0.0,-0.01,0.95,0.02,-0.015,0.0,0.9};
-    std::vector<double> F2{1.0,0.0,0.0,0.015,0.95,0.0,-0.01,0.0,0.9};
-
-    std::vector<double> V1;
-    std::vector<double> V2;
-
-    V1.resize(9);
-    V2.resize(9);
-
-    getStretchTensor(&V1[0],&F1[0]);
-    getStretchTensor(&V2[0],&F2[0]);
-
-    double norm1 = std::pow(det(&V1[0],U.numberOfComponents),-1.0/3.0);
-    double norm2 = std::pow(det(&V2[0],U.numberOfComponents),-1.0/3.0);
-
-    for(int row=0;row<U.numberOfComponents;row++)
-    {
-        for(int col=0;col<U.numberOfComponents;col++)
-        {
-            V1[row*U.numberOfComponents+col] *= norm1;
-            V2[row*U.numberOfComponents+col] *= norm2;
-        }
-    }
-
-    std::vector< std::vector<double> > Vs{V1,V2};
-    std::vector< std::vector<double> > Fs{F1,F2};
-
 
     Vector<int> boundary;
 
@@ -46,63 +31,70 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
     boundary.push_back(parameters.n_cells[0]);
 
-    for                 (int k = lo.z; k <= hi.z; ++k)
+    for(int s = 0; s < initial.numberOfStates; s++)
     {
-        for             (int j = lo.y; j <= hi.y; ++j)
+        std::vector<double> V;
+
+        if(parameters.SOLID)
         {
-            for         (int i = lo.x; i <= hi.x; ++i)
+            V.resize(9);
+
+            getStretchTensor(&V[0],&initial.F[s][0]);
+
+            double norm1 = std::pow(det(&V[0]),-1.0/3.0);
+
+            for(int row=0;row<U.numberOfComponents;row++)
             {
-                for     (int s = 0; s < initial.numberOfStates; s++)
+                for(int col=0;col<U.numberOfComponents;col++)
+                {
+                    V[row*U.numberOfComponents+col] *= norm1;
+                }
+            }
+        }
+
+        for                 (int k = lo.z; k <= hi.z; ++k)
+        {
+            for             (int j = lo.y; j <= hi.y; ++j)
+            {
+                for         (int i = lo.x; i <= hi.x; ++i)
                 {
                     if(boundary[s] <= i && i < boundary[s+1])
                     {
                         for (int m = 0; m < parameters.numberOfMaterials; m++)
                         {
-                            if(initial.alpha[s] == m)
-                            {
-                                U(i,j,k,ALPHA,m)     = 1.0 - std::max(1E-6,((Real)(parameters.numberOfMaterials-1))*1E-6);
-                            }
-                            else
-                            {
-                                U(i,j,k,ALPHA,m)     = 1E-6;
-                            }
-
-                            U(i,j,k,RHO_K,m)    = initial.rho[s];
-                            U(i,j,k,P)          = initial.p[s];
-
-                            U(i,j,k,VELOCITY,0,0)  = initial.u[s];
-                            U(i,j,k,VELOCITY,0,1)  = initial.v[s];
-                            U(i,j,k,VELOCITY,0,2)  = initial.w[s];
+                            U(i,j,k,ALPHA,m)    = initial.alpha[s][m];
+                            U(i,j,k,RHO_K,m)    = initial.rho[s][m];
 
                             if(U.accessPattern.materialInfo[m].mixture)
                             {
-                                U(i,j,k,RHO_MIX,m,0)    = initial.rho[s];
-                                U(i,j,k,RHO_MIX,m,1)    = initial.rho[s];
-                                if(initial.lambda[s])
-                                {
-                                    U(i,j,k,LAMBDA,m)   = 0.999999;
-                                }
-                                else
-                                {
-                                    U(i,j,k,LAMBDA,m)   = 0.0;
-                                }
+                                U(i,j,k,RHO_MIX,m,0)    = initial.rho[s][m];
+                                U(i,j,k,RHO_MIX,m,1)    = initial.rho[s][m];
+
+                                U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
                             }
 
-                            U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&(Fs[s][0]));
-                        }
-
-
-                        for(int row = 0; row<U.numberOfComponents; row++)
-                        {
-                            for(int col = 0; col<U.numberOfComponents; col++)
+                            if(parameters.materialInfo[m].phase == solid)
                             {
-                                //U(i,j,k,V_TENSOR,0,row,col) = delta<Real>(row,col);
-
-                                U(i,j,k,V_TENSOR,0,row,col) = Vs[s][row*U.numberOfComponents+col];
-
+                                U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][0]);
                             }
                         }
 
+                        U(i,j,k,P)             = initial.p[s];
+
+                        U(i,j,k,VELOCITY,0,0)  = initial.u[s];
+                        U(i,j,k,VELOCITY,0,1)  = initial.v[s];
+                        U(i,j,k,VELOCITY,0,2)  = initial.w[s];
+
+                        if(parameters.SOLID)
+                        {
+                            for(int row = 0; row<U.numberOfComponents; row++)
+                            {
+                                for(int col = 0; col<U.numberOfComponents; col++)
+                                {
+                                    U(i,j,k,V_TENSOR,0,row,col) = V[row*U.numberOfComponents+col];
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -112,7 +104,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
     //U.normaliseV();
 }
 
-void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
+/*void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
 {
     ParmParse pp;
 
@@ -213,7 +205,7 @@ void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
             }
         }
     }
-}
+}*/
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
@@ -229,4 +221,216 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStru
     }
 }
 
+void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& parameters, int m)
+{
+    using namespace libconfig;
 
+    std::string EOSstring;
+    std::string material1string;
+
+    materialname[m].lookupValue("material",material1string);
+
+    materialname[m].lookupValue("mixture" ,parameters.materialInfo[m].mixture);
+
+    materialname[m].lookupValue("EOS",EOSstring);
+
+    Vector<Real> temp;
+
+    temp.push_back(materialname[m]["adiabaticIndex"]);
+    temp.push_back(materialname[m]["pref"]);
+    temp.push_back(materialname[m]["eref"]);
+    temp.push_back(materialname[m]["CV"]);
+
+    if(EOSstring == "RomenskiiSolid")
+    {
+        parameters.materialInfo[m].EOS = new RomenskiiSolidEOS();
+
+        temp.push_back(materialname[m]["rho0"]);
+        temp.push_back(materialname[m]["K0"]);
+        temp.push_back(materialname[m]["EOSalpha"]);
+        temp.push_back(materialname[m]["EOSbeta"]);
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            std::cout << "Error: solid can't be a mixture (atm)" << std::endl;
+            exit(1);
+        }
+    }
+    else if(EOSstring == "MieGruneisen")
+    {
+        if(parameters.materialInfo[m].mixture)
+        {
+            parameters.materialInfo[m].EOS = new MixtureEOS();
+
+            parameters.materialInfo[m].mixtureIndex = 0;
+
+
+            temp.push_back(materialname[m]["adiabaticIndexmix"]);
+            temp.push_back(materialname[m]["prefmix"]);
+            temp.push_back(materialname[m]["erefmix"]);
+            temp.push_back(materialname[m]["CVmix"]);
+        }
+        else
+        {
+            parameters.materialInfo[m].EOS = new MieGruneisenEOS();
+        }
+    }
+    else
+    {
+        std::cout << "No valid EOS selected for material " << m << std::endl;
+        exit(1);
+    }
+
+    if(material1string == "solid")
+    {
+        parameters.materialInfo[m].phase = solid;
+
+        temp.push_back(materialname[m]["G0"]);
+
+    }
+    else if(material1string == "fluid")
+    {
+        parameters.materialInfo[m].phase = fluid;
+    }
+
+    parameters.materialInfo[m].EOS->define(temp);
+
+    return;
+}
+
+void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStruct& initial, int s)
+{
+    using namespace libconfig;
+
+    for(int m=0;m<parameters.numberOfMaterials;m++)
+    {
+        initial.alpha[s][m] = state[s]["material"][m]["alpha"];
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            initial.lambda[s][m] = state[s]["material"][m]["lambda"];
+            initial.rho[s][m] = state[s]["material"][m]["rhoa"];
+        }
+        else if(parameters.materialInfo[m].phase == fluid)
+        {
+            initial.rho[s][m] = state[s]["material"][m]["rho"];
+        }
+        else
+        {
+            for(int i=0;i<9;i++)
+            {
+                initial.F[s][i] = state[s]["material"][m]["F"][i];
+            }
+        }
+    }
+
+    initial.p[s] = state[s]["p"];
+    initial.u[s] = state[s]["u"];
+    initial.v[s] = state[s]["v"];
+    initial.w[s] = state[s]["w"];
+
+    return;
+}
+
+void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
+{
+    using namespace libconfig;
+
+    try
+    {
+        ParmParse pp;
+
+        std::string settingsFileString;
+
+        pp.get("SettingsFile",settingsFileString);
+
+        char settingsFile[settingsFileString.length()+1];
+
+        stringtochar(settingsFileString,settingsFile);
+
+        Config cfg;
+
+        std::cout << "File: " << settingsFile << std::endl;
+
+        try
+        {
+            cfg.readFile(settingsFile);
+        }
+        catch(ParseException except)
+        {
+            std::cout << "Incorrect Settings file" << std::endl;
+            exit(1);
+        }
+
+        /*****************************************************
+         * General Simulation Parameters
+         ****************************************************/
+
+        pp.get("max_grid_size", parameters.max_grid_size);
+        pp.get("Nghost",        parameters.Nghost);
+
+        pp.get("plotDirectory", initial.filename);
+
+        cfg.lookupValue("finalTime",initial.finalT);
+
+        cfg.lookupValue("numberOfxCells",parameters.n_cells[0]);
+        cfg.lookupValue("numberOfyCells",parameters.n_cells[1]);
+        cfg.lookupValue("numberOfzCells",parameters.n_cells[2]);
+
+        cfg.lookupValue("xdomainLength",parameters.dimL[0]);
+        cfg.lookupValue("ydomainLength",parameters.dimL[1]);
+        cfg.lookupValue("zdomainLength",parameters.dimL[2]);
+
+        cfg.lookupValue("CFL",parameters.CFL);
+
+        cfg.lookupValue("materials",    parameters.numberOfMaterials);
+        cfg.lookupValue("mixtures",     parameters.numberOfMixtures);
+        cfg.lookupValue("states",       initial.numberOfStates);
+
+        initial.interfaces.resize(1);
+
+        cfg.lookupValue("interface",initial.interfaces[0]);
+
+        cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
+
+        cfg.lookupValue("SOLID",parameters.SOLID);
+
+        int m = parameters.numberOfMaterials;
+        int mix = parameters.numberOfMixtures;
+
+        parameters.Ncomp = ((2+2)*mix)+m+m+m+3+3+1+1+1+1+1+9+(9+9+9+1)*parameters.SOLID;
+
+        /**********************************************************
+         * Material Parameters
+         **********************************************************/
+
+
+        parameters.materialInfo.resize(parameters.numberOfMaterials);
+        initial.resize(parameters);
+
+
+        Setting& root = cfg.getRoot();
+
+        Setting* materials = &root["listOfMaterials"];
+
+        for(int m=0;m<parameters.numberOfMaterials;m++)
+        {
+            getMaterialParameters(*materials,parameters,m);
+        }
+
+        Setting* states = &root["listOfStates"];
+
+        for(int s=0;s<initial.numberOfStates;s++)
+        {
+            getState(*states,parameters,initial,s);
+        }
+
+
+    }
+    catch( SettingException except)
+    {
+        std::cout << except.getPath() << std::endl;
+    }
+
+    return;
+}

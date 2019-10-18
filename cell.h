@@ -53,14 +53,16 @@ public:
     Real* a;
     Real* uStar;
 
+    Material_type phase;
+
     static const int numberOfComponents = 3;
 
     std::vector<Material> materials;
 
     AccessPattern& accessPattern;
 
-    Cell(BoxAccessCellArray& U, int i, int j, int k);
-    //Cell(){}
+    Cell(BoxAccessCellArray& U, int i, int j, int k,Material_type _phase);
+
 
     Real& operator()(Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(MaterialSpecifier m);

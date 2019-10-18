@@ -53,10 +53,14 @@ AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(paramet
     addVariable(n,"lambda",         PRIMITIVE,      LAMBDA,         parameters.numberOfMixtures);
     addVariable(n,"alpharholambda", CONSERVATIVE,   ALPHARHOLAMBDA, parameters.numberOfMixtures);
     addVariable(n,"sigma",          NEITHER,        SIGMA,          1,3,3);
-    addVariable(n,"V",              BOTH,           V_TENSOR,       1,3,3);
-    addVariable(n,"VStar",          NEITHER,        VSTAR,          1,3,3);
-    addVariable(n,"devH",           NEITHER,        DEVH,           1,3,3);
-    addVariable(n,"HenckyJ2",       NEITHER,        HJ2);
+
+    if(parameters.SOLID)
+    {
+        addVariable(n,"V",              BOTH,           V_TENSOR,       1,3,3);
+        addVariable(n,"VStar",          NEITHER,        VSTAR,          1,3,3);
+        addVariable(n,"devH",           NEITHER,        DEVH,           1,3,3);
+        addVariable(n,"HenckyJ2",       NEITHER,        HJ2);
+    }
 
 }
 
