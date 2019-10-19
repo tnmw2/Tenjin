@@ -37,6 +37,11 @@ template<typename T> T delta(int i, int j)
     return (T)(i==j);
 }
 
+template <typename I,typename O> O sgn(I val)
+{
+    return O((I(0) < val) - (val < I(0)));
+}
+
 
 
 #endif // TENSOR_H

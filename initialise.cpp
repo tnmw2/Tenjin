@@ -394,6 +394,10 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
 
         cfg.lookupValue("SOLID",parameters.SOLID);
+        cfg.lookupValue("THINC",parameters.THINC);
+
+        cfg.lookupValue("THINCbeta",parameters.THINCbeta);
+
 
         int m = parameters.numberOfMaterials;
         int mix = parameters.numberOfMixtures;

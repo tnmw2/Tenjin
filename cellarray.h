@@ -64,6 +64,9 @@ public:
     Real& left (Direction_enum d, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
     Real& right(Direction_enum d, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
 
+    Real& neighbour(int di, int dj, int dk, int i, int j, int k, MaterialSpecifier& m);
+    Real& neighbour(int di, int dj, int dk, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
+
     Real& operator()(int i, int j, int k, MaterialSpecifier& m);
     Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);

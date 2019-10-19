@@ -99,6 +99,7 @@ struct ParameterStruct
     Vector<int>  n_cells;
 
     int SOLID;
+    int THINC;
 
     int Ncomp;
     int Nghost;
@@ -110,6 +111,7 @@ struct ParameterStruct
     Real CFL;
     Real x0;
     Real dt;
+    Real THINCbeta;
 
     /*Vector<Real> adiabaticIndex;
     Vector<Real> CV;

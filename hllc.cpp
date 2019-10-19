@@ -562,7 +562,7 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
 
 /** Calculate the HLLC flux and update new array
  */
-void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc)
+void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc, THINCArray& THINC)
 {
     Direction_enum d;
 
@@ -586,12 +586,25 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
              * data called BoxAccessCellArray.
              * -----------------------------------------------------------*/
 
-            BoxAccessCellArray Ubox(mfi,bx,U);
-            BoxAccessCellArray ULbox(mfi,bx,UL);
-            BoxAccessCellArray URbox(mfi,bx,UR);
-            BoxAccessCellArray gradbox(mfi,bx,MUSCLgrad);
+            BoxAccessCellArray  Ubox(mfi,bx,U);
+            BoxAccessCellArray  ULbox(mfi,bx,UL);
+            BoxAccessCellArray  URbox(mfi,bx,UR);
+            BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
+
 
             MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+
+            if(parameters.THINC)
+            {
+                BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
+                BoxAccessCellArray URTHINC(mfi,bx,URStar);
+
+                BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
+
+                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
+            }
+
+
 
             ULbox.primitiveToConservative();
             URbox.primitiveToConservative();
@@ -656,12 +669,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
 /** 2nd Order Runge-Kutta time integration
  */
-void advance(CellArray& U,CellArray& U1,CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar,Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc)
+void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc, THINCArray &THINC)
 {
 
-    HLLCadvance(U,  U1, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc);
+    HLLCadvance(U,  U1, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
-    HLLCadvance(U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc);
+    HLLCadvance(U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 

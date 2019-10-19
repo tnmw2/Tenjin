@@ -68,6 +68,8 @@ void main_main ()
     CellArray UStarStar (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
     CellArray MUSCLgrad (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
 
+    THINCArray THINCArr (ba, dm,                   parameters.Nghost,                parameters);
+
     TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
 
     /* ----------------------------------------------------
@@ -157,7 +159,7 @@ void main_main ()
 
         U = U1;
 
-        advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc);
+        advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
 
         reactiveUpdate(U,U1,U2,parameters);
 

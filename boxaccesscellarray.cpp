@@ -372,6 +372,18 @@ Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, Variable 
     return right(d,i,j,k,temp);
 }
 
+Real& BoxAccessCellArray::neighbour(int di, int dj, int dk, int i, int j, int k, Variable var, int mat, int row, int col)
+{
+    MaterialSpecifier temp(var,mat,row,col);
+
+    return neighbour(di,dj,dk,i,j,k,temp);
+}
+
+Real& BoxAccessCellArray::neighbour(int di, int dj, int dk, int i, int j, int k, MaterialSpecifier& m)
+{
+    return (*this)(i+di,j+dj,k+dk,m);
+}
+
 void BoxAccessCellArray::amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx, int ny)
 {
     for(int row = 0; row<nx ;row++)

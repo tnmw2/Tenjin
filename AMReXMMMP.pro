@@ -14,7 +14,8 @@ SOURCES += main.cpp \
     accesspattern.cpp \
     reactive.cpp \
     equationofstate.cpp \
-    tensor.cpp
+    tensor.cpp \
+    thinc.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -25,5 +26,6 @@ HEADERS += \
     cell.h \
     accesspattern.h \
     equationofstate.h \
-    tensor.h
+    tensor.h \
+    thinc.h
 
