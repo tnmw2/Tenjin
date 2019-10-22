@@ -132,4 +132,33 @@ public:
 
 };
 
+/*
+class MieGruneisenSolidEOS : public MieGruneisenEOS
+{
+
+public:
+
+    ~MieGruneisenSolidEOS(){}
+
+    MieGruneisenSolidEOS(){}
+
+    void define(Vector<Real>& params);
+    Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real shearPressure                  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real componentShearModulus          (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
+    void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
+
+    Real dpcdrho                        (BoxAccessCellArray& U, int i, int j, int k, int m);
+    Real dpsdrho                        (BoxAccessCellArray& U, int i, int j, int k, int m);
+
+
+    Real rho0;
+    Real G0;
+
+};
+*/
 #endif // EQUATIONOFSTATE_H

@@ -137,3 +137,32 @@ void Cell::operator= (Cell& U)
     (*this)(USTAR)     = U(USTAR);
 }
 
+bool Cell::check(MaterialSpecifier& n)
+{
+    return std::isnan((*this)(n));
+}
+
+bool Cell::contains_nan()
+{
+
+    for(auto n : accessPattern.conservativeVariables)
+    {
+        if(check(n))
+        {
+            Print() << accessPattern.variableNames[accessPattern[n.var]] << std::endl;
+            return true;
+        }
+    }
+
+    for(auto n : accessPattern.primitiveVariables)
+    {
+        if(check(n))
+        {
+            Print() << accessPattern.variableNames[accessPattern[n.var]] << std::endl;
+            return true;
+        }
+    }
+
+    return false;
+
+}

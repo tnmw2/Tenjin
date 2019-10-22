@@ -46,6 +46,11 @@ enum Direction_enum
     RIGHT
 };
 
+enum Boundary_type
+{
+    TRANMISSIVE,
+    REFLECTIVE
+};
 
 /** A struct that can uniquely specify a thermodynamic varible.
  *  mat - the material the variable relates to
@@ -81,12 +86,11 @@ class MieGruneisenEOS;
 struct MaterialDescriptor
 {
     Material_type   phase;
-    bool            mixture;
-    int             mixtureIndex;
+    bool            mixture = 0;
+    int             mixtureIndex = 1000;
 
     MieGruneisenEOS* EOS;
 };
-
 
 /** Holds simulation data that needs to be passed around.
  *  Contains the current timestep dt and the CFL number
@@ -100,6 +104,10 @@ struct ParameterStruct
 
     int SOLID;
     int THINC;
+    int REACTIVE;
+    int PLASTIC;
+    int RADIAL;
+    int MUSCL;
 
     int Ncomp;
     int Nghost;
@@ -149,9 +157,16 @@ struct InitialStruct
     Vector<Vector<Real> > lambda;
     Vector<Real> interfaces;
 
+    Vector<int> lowBoundary;
+    Vector<int> highBoundary;
+
     std::string filename;
 
-    InitialStruct(){}
+    InitialStruct()
+    {
+        lowBoundary.resize(AMREX_SPACEDIM);
+        highBoundary.resize(AMREX_SPACEDIM);
+    }
 
     void resize(ParameterStruct& parameters)
     {

@@ -278,8 +278,8 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
     }
 
 
-    Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 1000000.0;
+    Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10;
+    Real B = 15000.0; //100 for banks nondim
 
     Real p;
 
@@ -443,3 +443,81 @@ void RomenskiiSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i
     U(i,j,k,RHO_K,m) = rho0/determinant;
 
 }
+
+
+
+
+
+
+/*void MieGruneisenSolidEOS::define(Vector<Real> &params)
+{
+    adiabaticIndex 	= params[0];
+    GruneisenGamma 	= adiabaticIndex-1.0;
+    pref 			= params[1];
+    eref	 		= params[2];
+    CV 				= params[3];
+
+    rho0            = params[4];
+    G0              = params[5];
+}
+
+Real MieGruneisenSolidEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,P)*(GruneisenGamma+1.0)-(coldCompressionPressure(U,i,j,k,m)+shearPressure(U,i,j,k,m)))/U(i,j,k,RHO_K,m) + dpcdrho(U,i,j,k,m) + dpsdrho(U,i,j,k,m) + (4.0/3.0)*componentShearModulus(U,i,j,k,m)/U(i,j,k,RHO_K,m);
+}
+
+Real MieGruneisenSolidEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return G0;
+
+    U(i,j,k,RHO_K,m)*=1.0;
+}
+
+Real MieGruneisenSolidEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+
+    U(i,j,k,RHO_K,m)*=1.0;
+}
+
+Real MieGruneisenSolidEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+
+    U(i,j,k,RHO_K,m)*=1.0;
+}
+
+Real MieGruneisenSolidEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+     return U(i,j,k,ALPHA,m)*componentShearModulus(U,i,j,k,m)/(U(i,j,k,RHO_K,m)*GruneisenGamma);
+}
+
+Real MieGruneisenSolidEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,ALPHA,m)*(componentShearModulus(U,i,j,k,m)*U(i,j,k,HJ2));
+}
+
+Real MieGruneisenSolidEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,ALPHA,m)/GruneisenGamma)*((U(i,j,k,RHO_K,m)*dGdrho(U,i,j,k,m)-componentShearModulus(U,i,j,k,m))*U(i,j,k,HJ2));
+}
+
+Real MieGruneisenSolidEOS::dpcdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+
+    U(i,j,k,RHO_K,m)*=1.0;
+}
+
+Real MieGruneisenSolidEOS::dpsdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,RHO_K,m)*dG2drho2(U,i,j,k,m)*U(i,j,k,HJ2);
+}
+
+void MieGruneisenSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
+{
+    double determinant = det(F);
+
+    U(i,j,k,RHO_K,m) = rho0/determinant;
+
+}*/

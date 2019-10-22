@@ -77,7 +77,6 @@ void main_main ()
      * a flux vector
      * ----------------------------------------------------*/
 
-    Vector<BCRec> bc(parameters.Ncomp);
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
     for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
@@ -87,19 +86,16 @@ void main_main ()
         edge_ba.surroundingNodes(dir);
 
         flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
-
-        for(int n = 0; n < parameters.Ncomp; ++n)
-        {
-            bc[n].setLo(dir, BCType::foextrap);
-            bc[n].setHi(dir, BCType::foextrap);
-        }
     }
+
+    Vector<BCRec> bc(parameters.Ncomp);
+    setBoundaryConditions(bc,parameters,initial,accessPattern);
+
+
 
     /* ----------------------------------------------------
      * Setup and Print the initial conditions
      * ----------------------------------------------------*/
-
-
 
     setInitialConditions(U1,parameters,initial);
 
@@ -109,24 +105,11 @@ void main_main ()
         WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, 0.0, 0);
     }
 
-    //exit(0);
-
-
-    /*U2          = U1;
-    UL          = U1;
-    UR          = U1;
-    UStar       = U1;
-    MUSCLgrad   = U1;*/
-
-
-    //WriteSingleLevelPlotfile(initial.filename, U1.data, U1.accessPattern.variableNames, geom, 0.0, 0);
-    //PrintAllVarsTo1DGnuplotFile(U1,0,initial.filename);
-
     /* ----------------------------------------------------
      * The main time loop
      * ----------------------------------------------------*/
 
-    //exit(0);
+    //return;
 
     int n = 0;
 
@@ -161,7 +144,16 @@ void main_main ()
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
 
-        reactiveUpdate(U,U1,U2,parameters);
+
+        if(parameters.REACTIVE)
+        {
+            reactiveUpdate(U,U1,U2,parameters);
+        }
+
+        if(parameters.RADIAL)
+        {
+            geometricSourceTerm(U1,parameters);
+        }
 
         if(parameters.SOLID)
         {
@@ -177,11 +169,10 @@ void main_main ()
 
         }
 
-
         if(U1.data.contains_nan())
         {
             Print() << "Nan found in U1" << std::endl;
-            exit(1);
+            break;
         }
 
         //break;

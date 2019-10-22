@@ -30,16 +30,22 @@ void matrixExponential(double*, double*, int, int=3);
 void matrixSquareRoot(double*, double*, int=3);
 void matrixCopy(double*, double*, int N=3);
 double Jnorm(double*, int =3);
-double Heaviside(double);
 
 template<typename T> T delta(int i, int j)
 {
     return (T)(i==j);
 }
 
-template <typename I,typename O> O sgn(I val)
+template<typename In,typename Out> Out sgn(In val)
 {
-    return O((I(0) < val) - (val < I(0)));
+    return Out((In(0) < val) - (val < In(0)));
+}
+
+/** Heaviside function.
+ */
+template <typename In,typename Out> Out Heaviside(In x)
+{
+    return (Out)(x > In(0));
 }
 
 

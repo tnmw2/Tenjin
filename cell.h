@@ -69,6 +69,9 @@ public:
 
     void  operator= (Cell& U);
 
+    bool contains_nan();
+    bool check(MaterialSpecifier &n);
+
     BoxAccessCellArray* parent;
 
     int parent_i;

@@ -545,9 +545,4 @@ double Jnorm(double* M, int N)
     return sqrt(trace(product));
 }
 
-/** Heaviside function.
- */
-double Heaviside(double x)
-{
-    return (double)(x>=0.0);
-}
+

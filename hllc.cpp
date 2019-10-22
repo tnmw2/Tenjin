@@ -2,7 +2,7 @@
 
 /** Calculates the contact wave speed estimate.
  */
-double getSstar(Cell& UL, Cell& UR, Real SL, Real SR, int i, int j, int k, Direction_enum d)
+Real getSstar(Cell& UL, Cell& UR, Real SL, Real SR, int i, int j, int k, Direction_enum d)
 {
     return (-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d)))/(UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)));
 }
@@ -81,6 +81,12 @@ void getSigmaStar(Cell& UKStar, Real Sstar, Real SLT, Real SRT, Cell& UL, Cell& 
  */
 void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& UStarStar, Real SL, Real SR, Real SLT, Real SRT, Real Sstar, ParameterStruct& parameters, Direction_enum d, Cell& UK, Cell& UKStar, Real SKT)
 {
+    if(std::isnan(SLT) || std::isnan(SRT))
+    {
+        Print() << "Nan in transverse wave speed" << std::endl;
+
+    }
+
     int N = UL.numberOfComponents;
 
     UStarStar = UKStar;
@@ -121,37 +127,6 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
     }
 
     return;
-}
-
-/** Takes the dot product of the velocity with a column of the stress tensor.
- */
-double vdotsigma(Cell& U, int d)
-{
-    double result=0.0;
-
-    for(int i=0;i<U.numberOfComponents;i++)
-    {
-        result+=U(VELOCITY,0,i)*U(SIGMA,0,i,d);
-    }
-
-    return result;
-}
-
-/** Returns the equation flux of the conservative variables.
- */
-Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
-{
-    switch(n.var)
-    {
-        case ALPHA:         return U(ALPHA,n.mat)*           U(VELOCITY,0,d);
-        case ALPHARHO:  	return U(ALPHARHO,n.mat)*        U(VELOCITY,0,d);
-        case ALPHARHOLAMBDA:return U(ALPHARHOLAMBDA,n.mat)*  U(VELOCITY,0,d);
-        case RHOU: 			return U(RHOU,0,n.row)*          U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
-        case TOTAL_E:	   	return U(TOTAL_E)*               U(VELOCITY,0,d)-vdotsigma(U,d);
-        case V_TENSOR:      return U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
-        default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
-    }
-
 }
 
 /** Calculates the HLLC fluxes.
@@ -356,6 +331,27 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                         }
                     }
                 }
+
+                /*if(ULStar.contains_nan())
+                {
+                    Print() << "Nan in UStar" << std::endl;
+                }
+                if(URStar.contains_nan())
+                {
+                    Print() << "Nan in URStar" << std::endl;
+                }
+                if(UStarStar.contains_nan())
+                {
+                    Print() << "Nan in UStarStar" << std::endl;
+                }*/
+
+                /*for(auto n : ULbox.accessPattern.conservativeVariables)
+                {
+                    if(std::isnan(fluxbox(i,j,k,n)))
+                    {
+                        Print() << ULbox.accessPattern.variableNames[ULbox.accessPattern[n.var]] << std::endl;
+                    }
+                }*/
             }
         }
     }
@@ -388,8 +384,6 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                 Cell UL(URbox,i-extra[x],j-extra[y],k-extra[z],fluid);
                 Cell UR(ULbox,i,j,k,fluid);
                 Cell UStar(UStarbox,i,j,k,fluid);
-
-
 
                 SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
                 SL = -SR;
@@ -463,6 +457,7 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
                         }
                     }
                 }
+
             }
         }
     }
@@ -549,9 +544,6 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
                     UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
                     UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
 
-                    //UL(i,j,k,n) = U(i,j,k,n);
-                    //UR(i,j,k,n) = U(i,j,k,n);
-
                 }
             }
         }
@@ -576,6 +568,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
          * Perform MUSCL extrapolation.
          * -----------------------------------------------------------*/
 
+        UL = U;
+        UR = U;
+
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -591,8 +586,10 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             BoxAccessCellArray  URbox(mfi,bx,UR);
             BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
 
-
-            MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+            if(parameters.MUSCL)
+            {
+                MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+            }
 
             if(parameters.THINC)
             {
@@ -604,13 +601,17 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
                 THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
             }
 
-
-
             ULbox.primitiveToConservative();
             URbox.primitiveToConservative();
 
             ULbox.getSoundSpeed();
             URbox.getSoundSpeed();
+
+            /*if(ULbox.fab.contains_nan() || URbox.fab.contains_nan())
+            {
+                Print() << "Nan found in UL/UR" << std::endl;
+                break;
+            }*/
 
         }
 
@@ -649,6 +650,13 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             {
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
             }
+
+            /*if(fluxbox.fab.contains_nan())
+            {
+                Print() << "Nan found in flux" << std::endl;
+                break;
+            }*/
+
 
             update(fluxbox, Ubox, U1box, parameters,d);
 

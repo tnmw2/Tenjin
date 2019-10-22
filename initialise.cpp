@@ -14,6 +14,173 @@ void stringtochar(std::string string,char* file)
     return;
 }
 
+void BANKS_initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
+{
+
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    int s = 0;
+
+    int radiusInt       = (int)((initial.interfaces[0]/parameters.dimL[1])*parameters.n_cells[1]);
+    int middleInt       = (int)(parameters.n_cells[1]);
+    int startOfTubeInt  = (int)((initial.interfaces[0]/parameters.dimL[0])*parameters.n_cells[0]);
+    int endOfBoosterInt = (int)((2.0*initial.interfaces[0]/parameters.dimL[0])*parameters.n_cells[0]);
+
+    for                 (int k = lo.z; k <= hi.z; ++k)
+    {
+        for             (int j = lo.y; j <= hi.y; ++j)
+        {
+            for         (int i = lo.x; i <= hi.x; ++i)
+            {
+                if(i<startOfTubeInt ||  j< middleInt-radiusInt) //j>middleInt+radiusInt ||
+                {
+                    s=2;
+                }
+                else if(i<endOfBoosterInt)
+                {
+                    s=0;
+                }
+                else
+                {
+                    s=1;
+                }
+
+                for (int m = 0; m < parameters.numberOfMaterials; m++)
+                {
+                    U(i,j,k,ALPHA,m)    = initial.alpha[s][m];
+                    U(i,j,k,RHO_K,m)    = initial.rho[s][m];
+
+                    if(U.accessPattern.materialInfo[m].mixture)
+                    {
+                        U(i,j,k,RHO_MIX,m,0)    = initial.rho[s][m];
+                        U(i,j,k,RHO_MIX,m,1)    = initial.rho[s][m];
+
+                        U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
+                    }
+                }
+
+                U(i,j,k,P)             = initial.p[s];
+
+                U(i,j,k,VELOCITY,0,0)  = initial.u[s];
+                U(i,j,k,VELOCITY,0,1)  = initial.v[s];
+                U(i,j,k,VELOCITY,0,2)  = initial.w[s];
+
+            }
+        }
+    }
+}
+
+void BANKS_SOLID_initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
+{
+
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    int s = 0;
+
+    int radiusInt       = (int)((initial.interfaces[0]/parameters.dimL[1])*parameters.n_cells[1]);
+    int middleInt       = (int)(parameters.n_cells[1]);
+    int startOfTubeInt  = (int)((initial.interfaces[0]/parameters.dimL[0])*parameters.n_cells[0]);
+    int endOfBoosterInt = (int)((2.0*initial.interfaces[0]/parameters.dimL[0])*parameters.n_cells[0]);
+    int chamfer         = (int)((0.2*initial.interfaces[0]/parameters.dimL[0])*parameters.n_cells[0]);
+    std::vector< std::vector<double> > V(initial.numberOfStates);
+
+    if(parameters.SOLID)
+    {
+        for(int s = 0; s < initial.numberOfStates; s++)
+        {
+            V[s].resize(9);
+
+            getStretchTensor(&V[s][0],&initial.F[s][0]);
+
+            double norm1 = std::pow(det(&V[s][0]),-1.0/3.0);
+
+            for(int row=0;row<U.numberOfComponents;row++)
+            {
+                for(int col=0;col<U.numberOfComponents;col++)
+                {
+                    V[s][row*U.numberOfComponents+col] *= norm1;
+
+                }
+            }
+        }
+    }
+
+    for                 (int k = lo.z; k <= hi.z; ++k)
+    {
+        for             (int j = lo.y; j <= hi.y; ++j)
+        {
+            for         (int i = lo.x; i <= hi.x; ++i)
+            {
+                if(i<startOfTubeInt ||  j< middleInt-radiusInt) //j>middleInt+radiusInt ||
+                {
+                    s=2;
+                }
+                else if(i>startOfTubeInt+chamfer && i < endOfBoosterInt)
+                {
+                    s=0;
+                }
+                else if(i<=startOfTubeInt+chamfer)
+                {
+                    if(j>(middleInt-radiusInt+chamfer))
+                    {
+                        s=0;
+                    }
+                    else if((j-(middleInt-radiusInt+chamfer))*(j-(middleInt-radiusInt+chamfer))+(i-(startOfTubeInt+chamfer))*(i-(startOfTubeInt+chamfer)) < chamfer*chamfer)
+                    {
+                        s=0;
+                    }
+                    else
+                    {
+                        s=2;
+                    }
+                }
+                else
+                {
+                    s=1;
+                }
+
+                for (int m = 0; m < parameters.numberOfMaterials; m++)
+                {
+                    U(i,j,k,ALPHA,m)    = initial.alpha[s][m];
+                    U(i,j,k,RHO_K,m)    = initial.rho[s][m];
+
+                    if(U.accessPattern.materialInfo[m].mixture)
+                    {
+                        U(i,j,k,RHO_MIX,m,0)    = initial.rho[s][m];
+                        U(i,j,k,RHO_MIX,m,1)    = initial.rho[s][m];
+
+                        U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
+                    }
+
+                    if(parameters.materialInfo[m].phase == solid)
+                    {
+                        U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][0]);
+                    }
+                }
+
+                U(i,j,k,P)             = initial.p[s];
+
+                U(i,j,k,VELOCITY,0,0)  = initial.u[s];
+                U(i,j,k,VELOCITY,0,1)  = initial.v[s];
+                U(i,j,k,VELOCITY,0,2)  = initial.w[s];
+
+                if(parameters.SOLID)
+                {
+                    for(int row = 0; row<U.numberOfComponents; row++)
+                    {
+                        for(int col = 0; col<U.numberOfComponents; col++)
+                        {
+                            U(i,j,k,V_TENSOR,0,row,col) = V[s][row*U.numberOfComponents+col];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
 
@@ -228,9 +395,13 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
     std::string EOSstring;
     std::string material1string;
 
+    int tempa;
+
     materialname[m].lookupValue("material",material1string);
 
-    materialname[m].lookupValue("mixture" ,parameters.materialInfo[m].mixture);
+    materialname[m].lookupValue("mixture" ,tempa);
+
+    parameters.materialInfo[m].mixture = tempa;
 
     materialname[m].lookupValue("EOS",EOSstring);
 
@@ -256,6 +427,18 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             exit(1);
         }
     }
+    /*else if(EOSstring == "MieGruneisenSolid")
+    {
+        parameters.materialInfo[m].EOS = new MieGruneisenSolidEOS();
+
+        temp.push_back(materialname[m]["rho0"]);
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            std::cout << "Error: solid can't be a mixture (atm)" << std::endl;
+            exit(1);
+        }
+    }*/
     else if(EOSstring == "MieGruneisen")
     {
         if(parameters.materialInfo[m].mixture)
@@ -263,7 +446,6 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             parameters.materialInfo[m].EOS = new MixtureEOS();
 
             parameters.materialInfo[m].mixtureIndex = 0;
-
 
             temp.push_back(materialname[m]["adiabaticIndexmix"]);
             temp.push_back(materialname[m]["prefmix"]);
@@ -320,6 +502,7 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
             for(int i=0;i<9;i++)
             {
                 initial.F[s][i] = state[s]["material"][m]["F"][i];
+
             }
         }
     }
@@ -393,10 +576,22 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
 
-        cfg.lookupValue("SOLID",parameters.SOLID);
-        cfg.lookupValue("THINC",parameters.THINC);
+        cfg.lookupValue("SOLID",    parameters.SOLID);
+        cfg.lookupValue("THINC",    parameters.THINC);
+        cfg.lookupValue("REACTIVE", parameters.REACTIVE);
+        cfg.lookupValue("RADIAL",   parameters.RADIAL);
+        cfg.lookupValue("PLASTIC",  parameters.PLASTIC);
+        cfg.lookupValue("MUSCL",    parameters.MUSCL);
 
         cfg.lookupValue("THINCbeta",parameters.THINCbeta);
+
+        Setting& root = cfg.getRoot();
+
+        for(int dir; dir<AMREX_SPACEDIM;dir++)
+        {
+            initial.lowBoundary[dir]  = root["lowBoundary"][dir];
+            initial.highBoundary[dir] = root["highBoundary"][dir];
+        }
 
 
         int m = parameters.numberOfMaterials;
@@ -411,9 +606,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         parameters.materialInfo.resize(parameters.numberOfMaterials);
         initial.resize(parameters);
-
-
-        Setting& root = cfg.getRoot();
 
         Setting* materials = &root["listOfMaterials"];
 
