@@ -568,6 +568,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
     U1 = U;
 
+
     for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;
@@ -625,7 +626,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
