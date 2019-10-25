@@ -15,7 +15,8 @@ SOURCES += main.cpp \
     reactive.cpp \
     equationofstate.cpp \
     tensor.cpp \
-    thinc.cpp
+    thinc.cpp \
+    boundary.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -28,4 +29,7 @@ HEADERS += \
     equationofstate.h \
     tensor.h \
     thinc.h
+
+DISTFILES += \
+    Make.package
 

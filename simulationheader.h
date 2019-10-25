@@ -35,6 +35,7 @@ void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string
 void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 //void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial);
+void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern);
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters);
 #endif // SIMULATIONHEADER

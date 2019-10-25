@@ -405,6 +405,14 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         cfg.lookupValue("THINCbeta",parameters.THINCbeta);
 
+        Setting& root = cfg.getRoot();
+
+        for(int dir; dir<AMREX_SPACEDIM;dir++)
+        {
+            initial.lowBoundary[dir]  = root["lowBoundary"][dir];
+            initial.highBoundary[dir] = root["highBoundary"][dir];
+        }
+
 
         int m = parameters.numberOfMaterials;
         int mix = parameters.numberOfMixtures;
@@ -418,9 +426,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         parameters.materialInfo.resize(parameters.numberOfMaterials);
         initial.resize(parameters);
-
-
-        Setting& root = cfg.getRoot();
 
         Setting* materials = &root["listOfMaterials"];
 

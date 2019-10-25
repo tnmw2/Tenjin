@@ -51,6 +51,8 @@ void main_main ()
 
     AccessPattern accessPattern(parameters);
 
+    parameters.Ncomp = accessPattern.variableNames.size();
+
     /* ----------------------------------------------------
      * Declare Multifab wrappers with overloaded =,+,* for
      * ease.
@@ -77,29 +79,23 @@ void main_main ()
      * a flux vector
      * ----------------------------------------------------*/
 
-    Vector<BCRec> bc(parameters.Ncomp);
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
-    for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
-    {
-        BoxArray edge_ba = ba;
-
-        edge_ba.surroundingNodes(dir);
-
-        flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
-
-        for(int n = 0; n < parameters.Ncomp; ++n)
+        for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
         {
-            bc[n].setLo(dir, BCType::foextrap);
-            bc[n].setHi(dir, BCType::foextrap);
+            BoxArray edge_ba = ba;
+
+            edge_ba.surroundingNodes(dir);
+
+            flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
         }
-    }
+
+        Vector<BCRec> bc(parameters.Ncomp);
+        setBoundaryConditions(bc,parameters,initial,accessPattern);
 
     /* ----------------------------------------------------
      * Setup and Print the initial conditions
      * ----------------------------------------------------*/
-
-
 
     setInitialConditions(U1,parameters,initial);
 

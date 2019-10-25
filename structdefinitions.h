@@ -46,6 +46,12 @@ enum Direction_enum
     RIGHT
 };
 
+enum Boundary_type
+{
+    TRANMISSIVE,
+    REFLECTIVE
+};
+
 
 /** A struct that can uniquely specify a thermodynamic varible.
  *  mat - the material the variable relates to
@@ -149,9 +155,16 @@ struct InitialStruct
     Vector<Vector<Real> > lambda;
     Vector<Real> interfaces;
 
+    Vector<int> lowBoundary;
+    Vector<int> highBoundary;
+
     std::string filename;
 
-    InitialStruct(){}
+    InitialStruct()
+    {
+        lowBoundary.resize(AMREX_SPACEDIM);
+        highBoundary.resize(AMREX_SPACEDIM);
+    }
 
     void resize(ParameterStruct& parameters)
     {
