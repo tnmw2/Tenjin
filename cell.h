@@ -33,6 +33,8 @@ class Material
     Real*	alphaRho;
     Real*   lambda;
     Real*   alphaRhoLambda;
+    Real*   epsilon;
+    Real*   alphaRhoEpsilon;
 
 
 };
@@ -64,10 +66,15 @@ public:
     Cell(BoxAccessCellArray& U, int i, int j, int k,Material_type _phase);
 
 
-    Real& operator()(Variable var, int mat=0, int row=0, int col=0);
-    Real& operator()(MaterialSpecifier m);
+    Real&  operator()(Variable var, int mat=0, int row=0, int col=0);
+    Real&  operator()(MaterialSpecifier m);
+
+    void  assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m);
 
     void  operator= (Cell& U);
+
+    bool contains_nan();
+    bool check(MaterialSpecifier &n);
 
     BoxAccessCellArray* parent;
 

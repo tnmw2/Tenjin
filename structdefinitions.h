@@ -26,7 +26,9 @@ enum Variable
     V_TENSOR,
     VSTAR,
     DEVH,
-    HJ2
+    HJ2,
+    EPSILON,
+    ALPHARHOEPSILON
 };
 
 /** Not yet used...
@@ -79,9 +81,10 @@ enum Var_type
     PRIMITIVE,
     CONSERVATIVE,
     BOTH,
-    NEITHER
+    NEITHER,
+    CELL,
+    NOTCELL
 };
-
 class MieGruneisenEOS;
 
 struct MaterialDescriptor
@@ -106,6 +109,10 @@ struct ParameterStruct
 
     int SOLID;
     int THINC;
+    int RADIAL;
+    int PLASTIC;
+    int REACTIVE;
+    int MUSCL;
 
     int Ncomp;
     int Nghost;

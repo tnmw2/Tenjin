@@ -1,6 +1,6 @@
 #include "simulationheader.h"
 
-void AccessPattern::addVariable(int& position, std::string nameBase, Var_type type, Variable var, int materialNumber=1, int rowNumber=1, int colNumber=1)
+void AccessPattern::addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Variable var, int materialNumber=1, int rowNumber=1, int colNumber=1)
 {
     if(materialNumber*rowNumber*colNumber > 0)
     {
@@ -29,37 +29,51 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
                         break;
                     default: Print() << "Didn't specifiy variable type in access pattern" << std::endl; exit(1);
                     }
+
+                    if(INCELL == CELL)
+                    {
+                        cellVariables.push_back(MaterialSpecifier(var,m,row,col));
+                    }
                 }
             }
         }
     }
 }
 
+
 AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(parameters.materialInfo)
 {
     int n=0;
 
-    addVariable(n,"alpha"   ,       BOTH,           ALPHA,          parameters.numberOfMaterials);
-    addVariable(n,"alphaRho",       CONSERVATIVE,   ALPHARHO,       parameters.numberOfMaterials);
-    addVariable(n,"rho_k",          PRIMITIVE,      RHO_K,          parameters.numberOfMaterials);
-    addVariable(n,"rho",            NEITHER,        RHO);
-    addVariable(n,"rhoU",           CONSERVATIVE,   RHOU,           1,3);
-    addVariable(n,"u",              PRIMITIVE,      VELOCITY,       1,3);
-    addVariable(n,"E",              CONSERVATIVE,   TOTAL_E);
-    addVariable(n,"p",              PRIMITIVE,      P);
-    addVariable(n,"a",              NEITHER,        SOUNDSPEED);
-    addVariable(n,"uStar",          NEITHER,        USTAR);
-    addVariable(n,"rhomix",         NEITHER,        RHO_MIX,        parameters.numberOfMixtures,2);
-    addVariable(n,"lambda",         PRIMITIVE,      LAMBDA,         parameters.numberOfMixtures);
-    addVariable(n,"alpharholambda", CONSERVATIVE,   ALPHARHOLAMBDA, parameters.numberOfMixtures);
-    addVariable(n,"sigma",          NEITHER,        SIGMA,          1,3,3);
+    addVariable(n,"alpha"   ,       BOTH,           CELL,    ALPHA,          parameters.numberOfMaterials);
+    addVariable(n,"alphaRho",       CONSERVATIVE,   CELL,    ALPHARHO,       parameters.numberOfMaterials);
+    addVariable(n,"rho_k",          PRIMITIVE,      CELL,    RHO_K,          parameters.numberOfMaterials);
+    addVariable(n,"rho",            NEITHER,        CELL,    RHO);
+    addVariable(n,"rhoU",           CONSERVATIVE,   CELL,    RHOU,           1,3);
+    addVariable(n,"u",              PRIMITIVE,      CELL,    VELOCITY,       1,3);
+    addVariable(n,"E",              CONSERVATIVE,   CELL,    TOTAL_E);
+    addVariable(n,"p",              PRIMITIVE,      CELL,    P);
+    addVariable(n,"a",              NEITHER,        CELL,    SOUNDSPEED);
+    addVariable(n,"uStar",          NEITHER,        CELL,    USTAR);
+    addVariable(n,"sigma",          NEITHER,        CELL,    SIGMA,          1,3,3);
+
+
+    addVariable(n,"rhomix",         NEITHER,        NOTCELL,    RHO_MIX,        parameters.numberOfMixtures,2);
+    addVariable(n,"lambda",         PRIMITIVE,      CELL,       LAMBDA,         parameters.numberOfMixtures);
+    addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,       ALPHARHOLAMBDA, parameters.numberOfMixtures);
 
     if(parameters.SOLID)
     {
-        addVariable(n,"V",              BOTH,           V_TENSOR,       1,3,3);
-        addVariable(n,"VStar",          NEITHER,        VSTAR,          1,3,3);
-        addVariable(n,"devH",           NEITHER,        DEVH,           1,3,3);
-        addVariable(n,"HenckyJ2",       NEITHER,        HJ2);
+        addVariable(n,"V",          BOTH,           CELL,    V_TENSOR,       1,3,3);
+        addVariable(n,"VStar",      NEITHER,        CELL,    VSTAR,          1,3,3);
+        addVariable(n,"devH",       NEITHER,        NOTCELL, DEVH,           1,3,3);
+        addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, HJ2);
+
+        if(parameters.PLASTIC)
+        {
+            addVariable(n,"epsilon",            PRIMITIVE,    CELL,  EPSILON,         parameters.numberOfMaterials);
+            addVariable(n,"alphaRhoEpsilon",    CONSERVATIVE, CELL,  ALPHARHOEPSILON, parameters.numberOfMaterials);
+        }
     }
 
 }

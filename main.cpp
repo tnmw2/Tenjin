@@ -145,7 +145,15 @@ void main_main ()
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
 
-        reactiveUpdate(U,U1,U2,parameters);
+        if(parameters.REACTIVE)
+        {
+            reactiveUpdate(U,U1,U2,parameters);
+        }
+
+        if(parameters.RADIAL)
+        {
+            geometricSourceTerm(U1,parameters);
+        }
 
         if(parameters.SOLID)
         {

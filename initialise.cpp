@@ -400,8 +400,12 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
 
-        cfg.lookupValue("SOLID",parameters.SOLID);
-        cfg.lookupValue("THINC",parameters.THINC);
+        cfg.lookupValue("SOLID",    parameters.SOLID);
+        cfg.lookupValue("THINC",    parameters.THINC);
+        cfg.lookupValue("RADIAL",   parameters.RADIAL);
+        cfg.lookupValue("PLASTIC",  parameters.PLASTIC);
+        cfg.lookupValue("MUSCL",    parameters.MUSCL);
+        cfg.lookupValue("REACTIVE", parameters.REACTIVE);
 
         cfg.lookupValue("THINCbeta",parameters.THINCbeta);
 

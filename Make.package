@@ -1,4 +1,4 @@
-CEXE_sources += main.cpp timestep.cpp cellarray.cpp initialise.cpp boxaccesscellarray.cpp hllc.cpp print.cpp cell.cpp accesspattern.cpp reactive.cpp tensor.cpp thinc.cpp equationofstate.cpp boundary.cpp
-CEXE_headers += simulationHeader.h timestep.h cellarray.h amrexheader.h structdefinitions.h cell.h accesspattern.h equationofstate.h tensor.h thinc.h
+CEXE_sources += main.cpp timestep.cpp cellarray.cpp initialise.cpp boxaccesscellarray.cpp hllc.cpp print.cpp cell.cpp accesspattern.cpp reactive.cpp tensor.cpp thinc.cpp equationofstate.cpp boundary.cpp flux.cpp radial.cpp
+CEXE_headers += simulationHeader.h timestep.h cellarray.h amrexheader.h structdefinitions.h cell.h accesspattern.h equationofstate.h tensor.h thinc.h flux.h
 
 

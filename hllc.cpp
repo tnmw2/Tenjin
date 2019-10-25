@@ -123,36 +123,6 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
     return;
 }
 
-/** Takes the dot product of the velocity with a column of the stress tensor.
- */
-double vdotsigma(Cell& U, int d)
-{
-    double result=0.0;
-
-    for(int i=0;i<U.numberOfComponents;i++)
-    {
-        result+=U(VELOCITY,0,i)*U(SIGMA,0,i,d);
-    }
-
-    return result;
-}
-
-/** Returns the equation flux of the conservative variables.
- */
-Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
-{
-    switch(n.var)
-    {
-        case ALPHA:         return U(ALPHA,n.mat)*           U(VELOCITY,0,d);
-        case ALPHARHO:  	return U(ALPHARHO,n.mat)*        U(VELOCITY,0,d);
-        case ALPHARHOLAMBDA:return U(ALPHARHOLAMBDA,n.mat)*  U(VELOCITY,0,d);
-        case RHOU: 			return U(RHOU,0,n.row)*          U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
-        case TOTAL_E:	   	return U(TOTAL_E)*               U(VELOCITY,0,d)-vdotsigma(U,d);
-        case V_TENSOR:      return U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
-        default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
-    }
-
-}
 
 /** Calculates the HLLC fluxes.
  */
@@ -626,9 +596,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
+
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();

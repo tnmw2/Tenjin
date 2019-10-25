@@ -14,43 +14,10 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : p
 
     materials.resize(U.numberOfMaterials);
 
-    rho     =   (&U(i,j,k,RHO));
-    E       =   (&U(i,j,k,TOTAL_E));
-    p       =   (&U(i,j,k,P));
-    a       =   (&U(i,j,k,SOUNDSPEED));
-
-    for(int row = 0; row < U.numberOfComponents ; row++)
+    for(auto n : accessPattern.cellVariables)
     {
-        u[row]      = (&U(i,j,k,VELOCITY,0,row));
-        rhoU[row]   = (&U(i,j,k,RHOU,0,row));
-
-        for(int col = 0; col < U.numberOfComponents ; col++)
-        {
-            sigma   [row*numberOfComponents+col] = (&U(i,j,k,SIGMA,0,row,col));
-
-            if(phase == solid)
-            {
-                V       [row*numberOfComponents+col] = (&U(i,j,k,V_TENSOR,0,row,col));
-                VStar   [row*numberOfComponents+col] = (&U(i,j,k,VSTAR,0,row,col));
-            }
-        }
+        assignPointer(U,i,j,k,n);
     }
-
-    for(int m=0;m<U.numberOfMaterials;m++)
-    {
-        materials[m].alpha      = (&U(i,j,k,ALPHA,m));
-        materials[m].alphaRho   = (&U(i,j,k,ALPHARHO,m));
-        materials[m].rho        = (&U(i,j,k,RHO_K,m));
-
-        if(U.accessPattern.materialInfo[m].mixture)
-        {
-            materials[m].lambda         = (&U(i,j,k,LAMBDA,m));
-            materials[m].alphaRhoLambda = (&U(i,j,k,ALPHARHOLAMBDA,m));
-        }
-    }
-
-    uStar     =   (&U(i,j,k,USTAR));
-
 }
 
 Real& Cell::operator()(Variable var, int mat, int row, int col)
@@ -92,6 +59,53 @@ Real& Cell::operator()(MaterialSpecifier m)
         break;
     case VSTAR:             return *(VStar[m.row*numberOfComponents+m.col]);
         break;
+    case EPSILON:           return *(materials[m.mat].epsilon);
+        break;
+    case ALPHARHOEPSILON:   return *(materials[m.mat].alphaRhoEpsilon);
+        break;
+    default: Print() << "Incorrect cell variable" << std::endl;
+        exit(1);
+    }
+}
+
+void Cell::assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m)
+{
+    switch(m.var)
+    {
+    case ALPHA:           materials[m.mat].alpha                    = &U(i,j,k,m);
+        break;
+    case ALPHARHO:        (materials[m.mat].alphaRho)               = &U(i,j,k,m);
+        break;
+    case RHO_K:           (materials[m.mat].rho)                    = &U(i,j,k,m);
+        break;
+    case RHO:             rho                                       = &U(i,j,k,m);
+        break;
+    case RHOU:            (rhoU[m.row])                             = &U(i,j,k,m);
+        break;
+    case TOTAL_E:         E                                         = &U(i,j,k,m);
+        break;
+    case VELOCITY:        (u[m.row])                                = &U(i,j,k,m);
+        break;
+    case P:               p                                         = &U(i,j,k,m);
+        break;
+    case SOUNDSPEED:      a                                         = &U(i,j,k,m);
+        break;
+    case USTAR:           uStar                                     = &U(i,j,k,m);
+        break;
+    case LAMBDA:          (materials[m.mat].lambda)                 = &U(i,j,k,m);
+        break;
+    case ALPHARHOLAMBDA:  (materials[m.mat].alphaRhoLambda)         = &U(i,j,k,m);
+        break;
+    case SIGMA:           (sigma[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
+        break;
+    case V_TENSOR:        (V[m.row*numberOfComponents+m.col])       = &U(i,j,k,m);
+        break;
+    case VSTAR:           (VStar[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
+        break;
+    case EPSILON:         (materials[m.mat].epsilon)                = &U(i,j,k,m);
+        break;
+    case ALPHARHOEPSILON: (materials[m.mat].alphaRhoEpsilon)        = &U(i,j,k,m);
+        break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
     }
@@ -99,41 +113,29 @@ Real& Cell::operator()(MaterialSpecifier m)
 
 void Cell::operator= (Cell& U)
 {
-    (*this)(RHO)        =   U(RHO);
-    (*this)(TOTAL_E)    =   U(TOTAL_E);
-    (*this)(P)          =   U(P);
-    (*this)(SOUNDSPEED) =   U(SOUNDSPEED);
-
-    for(int row = 0; row < U.numberOfComponents ; row++)
+    for(auto n : accessPattern.cellVariables)
     {
-        (*this)(VELOCITY,0,row)   = U(VELOCITY,0,row);
-        (*this)(RHOU,0,row)       = U(RHOU,0,row);
-
-        for(int col = 0; col < U.numberOfComponents ; col++)
-        {
-            (*this)(SIGMA,0,row,col)    = U(SIGMA,0,row,col);
-
-            if(phase == solid)
-            {
-                (*this)(V_TENSOR,0,row,col) = U(V_TENSOR,0,row,col);
-                (*this)(VSTAR,0,row,col)    = U(VSTAR,0,row,col);
-            }
-        }
+        (*this)(n) = U(n);
     }
-
-    for(int m=0;m<materials.size();m++)
-    {
-        (*this)(ALPHA,m)     = U(ALPHA,m);
-        (*this)(ALPHARHO,m)  = U(ALPHARHO,m);
-        (*this)(RHO_K,m)     = U(RHO_K,m);
-
-        if(U.accessPattern.materialInfo[m].mixture)
-        {
-            (*this)(LAMBDA,m)           = U(LAMBDA,m);
-            (*this)(ALPHARHOLAMBDA,m)   = U(ALPHARHOLAMBDA,m);
-        }
-    }
-
-    (*this)(USTAR)     = U(USTAR);
 }
 
+bool Cell::check(MaterialSpecifier& n)
+{
+    return std::isnan((*this)(n));
+}
+
+bool Cell::contains_nan()
+{
+
+    for(auto n : accessPattern.cellVariables)
+    {
+        if(check(n))
+        {
+            Print() << accessPattern.variableNames[accessPattern[n.var]] << std::endl;
+            return true;
+        }
+    }
+
+    return false;
+
+}
