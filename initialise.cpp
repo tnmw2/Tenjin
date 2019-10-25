@@ -424,7 +424,6 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                 U(i,j,k,P)             = initial.p[s];
 
-                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
 
                 U(i,j,k,VELOCITY,0,0)  = initial.u[s];
                 U(i,j,k,VELOCITY,0,1)  = initial.v[s];
@@ -440,6 +439,9 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         }
                     }
                 }
+
+                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
+
             }
         }
     }
