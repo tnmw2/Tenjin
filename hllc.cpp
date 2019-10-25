@@ -28,6 +28,11 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
             UStar(ALPHARHOLAMBDA,m) = multiplier*U(ALPHARHOLAMBDA,m);
         }
 
+        if(parameters.PLASTIC)
+        {
+            UStar(ALPHARHOEPSILON,m) = multiplier*U(ALPHARHOEPSILON,m);
+        }
+
         UStar(RHO)             += UStar(ALPHARHO,m);
 
     }
@@ -126,6 +131,8 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
         }
     }
 
+    UStarStar.parent->cleanUpV(UStarStar.parent_i,UStarStar.parent_j,UStarStar.parent_k);
+
     return;
 }
 
@@ -163,9 +170,26 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
 
                 SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
-                SL = -SR;
+                SL = std::min(std::abs(UL(VELOCITY,0,d))-UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))-UR(SOUNDSPEED));
+
+                //SL = -SR;
+
 
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
+
+                if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
+                {
+                    Print() << "Nan in long. wave speed " << SL << " " << Sstar << " " << SR << std::endl;
+
+                    Print() << UL(VELOCITY,0,d) <<  " " << UL(SOUNDSPEED) << std::endl;
+
+                    Print() << UR(VELOCITY,0,d) <<  " " << UR(SOUNDSPEED) << std::endl;
+
+                    Print() << "at " << i << " " << j << " " << k << std::endl;
+
+
+                    //exit(1);
+                }
 
                 fluxbox(i,j,k,USTAR) = Sstar;
 
@@ -199,6 +223,13 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k);
 
+                    if(std::isnan(SLT) )
+                    {
+                        Print() << "Nan in L transverse wave speed " << Sstar << " " <<  ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k) << std::endl;
+                        exit(1);
+                    }
+
+
                     if(SLT>=0.0)
                     {
                         for(auto n : ULbox.accessPattern.conservativeVariables)
@@ -226,6 +257,12 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                         getStarState(UR,URStar,SR,Sstar,parameters,d);
 
                         SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k);
+
+                        if(std::isnan(SRT) )
+                        {
+                            Print() << "Nan in R transverse wave speed " << URStar(RHO_K,0) << std::endl;
+                            exit(1);
+                        }
 
                         getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UL,ULStar,SLT);
 
@@ -256,11 +293,24 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k);
 
+                    if(std::isnan(SRT) )
+                    {
+                        Print() << "Nan in R transverse wave speed " << URStar(RHO_K,0) << std::endl;
+                        exit(1);
+                    }
+
                     if(SRT>=0.0)
                     {
                         getStarState(UL,ULStar,SL,Sstar,parameters,d);
 
                         SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k);
+
+                        if(std::isnan(SLT) )
+                        {
+                            Print() << "Nan in L transverse wave speed " << ULStar(RHO_K,0) << std::endl;
+
+                            exit(1);
+                        }
 
                         getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UR,URStar,SRT);
 
@@ -571,6 +621,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         UL = U;
         UR = U;
 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -626,7 +679,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();

@@ -15,8 +15,9 @@ void main_main ()
 
     ParameterStruct parameters;
     InitialStruct   initial;
+    PlasticEOS      plastic;
 
-    libConfigInitialiseDataStructs(parameters,initial);
+    libConfigInitialiseDataStructs(parameters,initial,plastic);
 
     /* ----------------------------------------------------
      * Declare the domain and geometry required for Multifabs
@@ -50,6 +51,10 @@ void main_main ()
      * ------------------------------------------------------*/
 
     AccessPattern accessPattern(parameters);
+
+    parameters.Ncomp = accessPattern.variableNames.size();
+
+    Print()<< accessPattern.variableNames.size()<< std::endl;
 
     /* ----------------------------------------------------
      * Declare Multifab wrappers with overloaded =,+,* for
@@ -91,11 +96,11 @@ void main_main ()
     Vector<BCRec> bc(parameters.Ncomp);
     setBoundaryConditions(bc,parameters,initial,accessPattern);
 
-
-
     /* ----------------------------------------------------
      * Setup and Print the initial conditions
      * ----------------------------------------------------*/
+
+    U1.data.setVal(0.0);
 
     setInitialConditions(U1,parameters,initial);
 
@@ -108,6 +113,9 @@ void main_main ()
     /* ----------------------------------------------------
      * The main time loop
      * ----------------------------------------------------*/
+
+    //Print() << accessPattern.materialInfo[0].phase << " " << accessPattern.materialInfo[1].phase << std::endl;
+
 
     //return;
 
@@ -144,6 +152,15 @@ void main_main ()
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
 
+        /*if(parameters.SOLID)
+        {
+            U1.cleanUpV();
+        }*/
+
+        if(parameters.PLASTIC)
+        {
+            plastic.plasticUpdate(U1,parameters);
+        }
 
         if(parameters.REACTIVE)
         {
@@ -155,10 +172,13 @@ void main_main ()
             geometricSourceTerm(U1,parameters);
         }
 
-        if(parameters.SOLID)
+        /*if(parameters.SOLID)
         {
             U1.cleanUpV();
-        }
+        }*/
+
+
+
 
         if(t > ((Real)take_pic_counter)*(initial.finalT)/((Real)initial.numberOfPictures))
         {
@@ -197,6 +217,8 @@ void main_main ()
 
 int main (int argc, char* argv[])
 {
+    omp_set_num_threads(omp_get_num_procs());
+
     amrex::Initialize(argc,argv);
 
     main_main();

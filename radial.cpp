@@ -36,7 +36,9 @@ void addGeometricSourceTerm(BoxAccessCellArray& U, ParameterStruct& parameters)
  */
 void geometricSourceTerm(CellArray& U, ParameterStruct& parameters)
 {
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
@@ -46,9 +48,6 @@ void geometricSourceTerm(CellArray& U, ParameterStruct& parameters)
         addGeometricSourceTerm(Ubox,parameters);
 
         Ubox.conservativeToPrimitive();
-
     }
-
-
     return;
 }

@@ -2,116 +2,6 @@
 
 //EquationOfState::EquationOfState(){}
 
-MieGruneisenEOS::MieGruneisenEOS(Real gamma, Real _pref=0.0, Real _eref=0.0, Real _CV=0.0)
-{
-    adiabaticIndex 	= gamma;
-    GruneisenGamma 	= gamma-1.0;
-    pref 			= _pref;
-    eref	 		= _eref;
-    CV 				= _CV;
-}
-
-void MieGruneisenEOS::define(Vector<Real> &params)
-{
-
-
-    adiabaticIndex 	= params[0];
-    GruneisenGamma 	= adiabaticIndex-1.0;
-    pref 			= params[1];
-    eref	 		= params[2];
-    CV 				= params[3];
-
-
-
-}
-
-void MieGruneisenEOS::copy(MieGruneisenEOS& C)
-{
-    adiabaticIndex = C.adiabaticIndex;
-    GruneisenGamma = C.GruneisenGamma;
-    pref = C.pref;
-    eref = C.eref;
-    CV = C.CV;
-}
-
-Real MieGruneisenEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return eref*U(i,j,k,ALPHARHO,m);
-}
-
-Real MieGruneisenEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return pref*U(i,j,k,ALPHA,m)/GruneisenGamma;
-}
-
-Real MieGruneisenEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return U(i,j,k,ALPHA,m)/GruneisenGamma;
-}
-
-void MieGruneisenEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy)
-{
-    U(i,j,k,RHO_MIX,m,0) *= 1.0;
-
-    Print() << "Trying to root find on a non-mixture EOS" << std::endl;
-
-    exit(1);
-}
-
-Real MieGruneisenEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return U(i,j,k,P)*(GruneisenGamma+1.0)/U(i,j,k,RHO_K,m) - pref/U(i,j,k,RHO_K,m);
-}
-
-Real MieGruneisenEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
-{
-    mixidx *= 1;
-    return U(i,j,k,P)/(U(i,j,k,RHO_K,m)*GruneisenGamma*CV);
-}
-
-Real MieGruneisenEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 1.0/GruneisenGamma;
-}
-
-Real MieGruneisenEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-Real MieGruneisenEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-Real MieGruneisenEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-Real MieGruneisenEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-Real MieGruneisenEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-Real MieGruneisenEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
-{
-    return 0.0*U(i,j,k,0,m);
-}
-
-void MieGruneisenEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
-{
-    return;
-
-    F[0]*=1.0;
-    U(i,j,k,0,m)*=1.0;
-
-}
 
 /*****************************************************
  * Mixture EOS
@@ -122,8 +12,8 @@ MixtureEOS::MixtureEOS()
     first.mixture  = true;
     second.mixture = true;
 
-    first.mixtureIndex = 0;
-    second.mixtureIndex = 1;
+    //first.mixtureIndex = 0;
+    //second.mixtureIndex = 1;
 }
 
 Real MixtureEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
@@ -140,8 +30,6 @@ Real MixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, in
 
 Real MixtureEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    //return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
-    //return U(i,j,k,ALPHA,m)/first.GruneisenGamma;
     return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
 }
 
@@ -241,9 +129,10 @@ Real MixtureEOS::bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, i
 
 void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy)
 {
-    static const Real toleranceForSinglePhaseTreatment = 1E-3;
-    static const Real toleranceForConvergence = 1E-7;
-    static const Real toleranceForBeingNearRoot = 1E-4;
+    static const Real toleranceMixtureNotPresent = 1E-1;
+    static const Real toleranceForSinglePhaseTreatment = 1E-2;
+    static const Real toleranceForConvergence = 1E-3;
+    static const Real toleranceForBeingNearRoot = 1E2;
 
     /****************************************************
      * NB: Changed these if clauses as they were giving NaNs
@@ -260,6 +149,14 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
     if(std::isnan(U(i,j,k,LAMBDA,m)))
     {
         Print() << "Nan in Lambda in root finding" << std::endl;
+    }
+
+    if(U(i,j,k,ALPHA,m)<toleranceMixtureNotPresent)
+    {
+        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,1) = U(i,j,k,RHO_K,m);
+
+        return;
     }
 
     if(U(i,j,k,LAMBDA,m)> 1.0-toleranceForSinglePhaseTreatment)
@@ -279,7 +176,7 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10;
-    Real B = 15000.0; //100 for banks nondim
+    Real B = 200000.0; //100 for banks nondim
 
     Real p;
 
@@ -305,8 +202,9 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
     {
         Print() << "Error in root Bisection " << std::endl;
 
-        Print() << " A: " << A << " B: " << B << std::endl;
+        Print() << " A: " << A << " B: " << B << " at " << i << " " <<j << " "<< k << std::endl;
         Print() << bisectionFunction(U,i,j,k,m,A,kineticEnergy,p) << " " << bisectionFunction(U,i,j,k,m,B,kineticEnergy,p)<< std::endl;
+        Print() << " alpha: " << U(i,j,k,ALPHA,m) << " lambda: " << U(i,j,k,LAMBDA,m) << std::endl;
         exit(1);
     }
 
@@ -444,6 +342,103 @@ void RomenskiiSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i
 
 }
 
+
+
+
+
+
+
+void WilkinsSolidEOS::define(Vector<Real> &params)
+{
+    adiabaticIndex 	= params[0];
+    GruneisenGamma 	= adiabaticIndex-1.0;
+    pref 			= params[1];
+    eref	 		= params[2];
+    CV 				= params[3];
+
+    rho0            = params[4];
+    e1              = params[5];
+    e2              = params[6];
+    e3              = params[7];
+    e4              = params[8];
+    e5              = params[9];
+    G0              = params[10];
+}
+
+Real WilkinsSolidEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return U(i,j,k,ALPHARHO,m)*((e1+e2*x*x+e3*x+e4/x-e5*std::log(x))/rho0);
+}
+
+Real WilkinsSolidEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return (U(i,j,k,ALPHA,m)/GruneisenGamma)*( (2.0*e2*x*x*x+e3*x*x-e4-e5*x));
+}
+
+Real WilkinsSolidEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,P)*(GruneisenGamma+1.0)-(coldCompressionPressure(U,i,j,k,m)+shearPressure(U,i,j,k,m)))/U(i,j,k,RHO_K,m) + dpcdrho(U,i,j,k,m) + dpsdrho(U,i,j,k,m) + (4.0/3.0)*componentShearModulus(U,i,j,k,m)/U(i,j,k,RHO_K,m);
+}
+
+Real WilkinsSolidEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return G0;
+
+    U(i,j,k,0,m) *=1.0;
+}
+
+Real WilkinsSolidEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+
+    U(i,j,k,0,m) *=1.0;
+}
+
+Real WilkinsSolidEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+
+    U(i,j,k,0,m) *=1.0;
+}
+
+Real WilkinsSolidEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+     return U(i,j,k,ALPHA,m)*componentShearModulus(U,i,j,k,m)/(U(i,j,k,RHO_K,m)*GruneisenGamma);
+}
+
+Real WilkinsSolidEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,ALPHA,m)*(componentShearModulus(U,i,j,k,m)*U(i,j,k,HJ2));
+}
+
+Real WilkinsSolidEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,ALPHA,m)/GruneisenGamma)*((U(i,j,k,RHO_K,m)*dGdrho(U,i,j,k,m)-componentShearModulus(U,i,j,k,m))*U(i,j,k,HJ2));
+}
+
+Real WilkinsSolidEOS::dpcdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return (6.0*e2*x*x+2.0*e3*x-e5)/rho0;
+}
+
+Real WilkinsSolidEOS::dpsdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,RHO_K,m)*dG2drho2(U,i,j,k,m)*U(i,j,k,HJ2);
+}
+
+void WilkinsSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
+{
+    double determinant = det(F);
+
+    U(i,j,k,RHO_K,m) = rho0/determinant;
+
+}
 
 
 

@@ -4,6 +4,9 @@ CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, con
 
 void CellArray::conservativeToPrimitive()
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
@@ -16,6 +19,9 @@ void CellArray::conservativeToPrimitive()
 
 void CellArray::primitiveToConservative()
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
@@ -28,6 +34,9 @@ void CellArray::primitiveToConservative()
 
 void CellArray::getSoundSpeed()
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
@@ -40,6 +49,9 @@ void CellArray::getSoundSpeed()
 
 void CellArray::cleanUpV()
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();

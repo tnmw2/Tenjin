@@ -40,11 +40,11 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case USTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex+m.row));
+    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*2+m.row));
         break;
-    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex));
+    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat)); //accessPattern.materialInfo[m.mat].mixtureIndex
         break;
-    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex));
+    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
         break;
@@ -55,6 +55,10 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
     case DEVH:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
         break;
     case HJ2:               return (fab.array())(i, j, k, (accessPattern[m.var]));
+        break;
+    case EPSILON:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
@@ -74,12 +78,17 @@ void  BoxAccessCellArray::conservativeToPrimitive()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                (*this)(i,j,k,RHO) = 0;
+                (*this)(i,j,k,RHO) = 0.0;
 
                 for(int m = 0; m < numberOfMaterials ; m++)
                 {
                     (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
+
+                    if(accessPattern.materialInfo[m].plastic == true)
+                    {
+                        (*this)(i,j,k,EPSILON,m)	 = (*this)(i,j,k,ALPHARHOEPSILON,m)/(*this)(i,j,k,ALPHARHO,m);
+                    }
                 }
 
                 getHenckyJ2(i,j,k);
@@ -93,18 +102,62 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                     kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
                 }
 
+
                 for(int m = 0; m < numberOfMaterials ; m++)
                 {
                     if(accessPattern.materialInfo[m].mixture)
                     {
-                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
+                        /*if(std::isnan((*this)(i,j,k,ALPHARHOLAMBDA,m)))
+                        {
+                            (*this)(i,j,k,ALPHARHOLAMBDA,m) = (*this)(i,j,k,ALPHARHO,m)*0.999999;
+                        }*/
 
+                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
 
                         accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
                     }
                 }
 
                 (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k)+ getEffectiveNonThermalPressure(i,j,k))/(getEffectiveInverseGruneisen(i,j,k));
+
+                int a = 0;
+
+                for(auto n : accessPattern.conservativeVariables)
+                {
+                    if(std::isnan((*this)(i,j,k,n)))
+                    {
+                        Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat+n.row+n.col] << " is nan in CtoP" << std::endl;
+                        a=1;
+                    }
+                }
+                for(auto n : accessPattern.primitiveVariables)
+                {
+                    if(std::isnan((*this)(i,j,k,n)))
+                    {
+                        Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat+n.row+n.col] << " is nan in CtoP" << std::endl;
+                        a=1;
+                    }
+                }
+
+                /*if(a)
+                {
+                    exit(1);
+                }*/
+
+
+                if(std::isnan((*this)(i,j,k,P)))
+                {
+                    Print() << "Nan in p " << (*this)(i,j,k,TOTAL_E) << " " << kineticEnergy << " " << getEffectiveNonThermalInternalEnergy(i,j,k) << " " <<  getEffectiveNonThermalPressure(i,j,k) << " " <<  (getEffectiveInverseGruneisen(i,j,k)) << std::endl;
+
+                    Print() << (*this)(i,j,k,RHO_K,0) << " " << (*this)(i,j,k,ALPHARHO,0) << std::endl;
+                    Print() << (*this)(i,j,k,RHO_K,1) << " " << (*this)(i,j,k,ALPHARHO,1) << std::endl;
+                    Print() << (*this)(i,j,k,HJ2) << std::endl;
+
+                    for(int m=0;m<numberOfMaterials;m++)
+                    {
+                        Print() << accessPattern.materialInfo[m].EOS->coldCompressionInternalEnergy((*this),i,j,k,m) << " " << accessPattern.materialInfo[m].EOS->shearInternalEnergy((*this),i,j,k,m) << std::endl;
+                    }
+                }
 
                 stressTensor(i,j,k);
             }
@@ -125,7 +178,8 @@ void  BoxAccessCellArray::primitiveToConservative()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                (*this)(i,j,k,RHO) = 0;
+
+                (*this)(i,j,k,RHO) = 0.0;
 
                 for(int m = 0; m < numberOfMaterials ; m++)
                 {
@@ -135,6 +189,11 @@ void  BoxAccessCellArray::primitiveToConservative()
                     if(accessPattern.materialInfo[m].mixture)
                     {
                         (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
+                    }
+
+                    if(accessPattern.materialInfo[m].plastic == true)
+                    {
+                        (*this)(i,j,k,ALPHARHOEPSILON,m)	 = (*this)(i,j,k,ALPHARHO,m)*(*this)(i,j,k,EPSILON,m);
                     }
                 }
 
@@ -168,9 +227,11 @@ void BoxAccessCellArray::stressTensor(int i, int j, int k)
             if(accessPattern.materialInfo[m].phase == solid)
             {
                 checkSolid = 1;
+
+                TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
             }
 
-            TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
+            //TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
         }
 
         TotalShearModulus = TotalShearModulus/getEffectiveInverseGruneisen(i,j,k);
@@ -205,7 +266,7 @@ Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
 
     for(int m=0;m<numberOfMaterials;m++)
     {
-        tot += (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));// (*this)(i,j,k,ALPHA,m)/(0.4);//  (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)); // (*this)(i,j,k,ALPHA,m)/(accessPattern.materialInfo[m].EOS->GruneisenGamma);
+       tot += (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));// (*this)(i,j,k,ALPHA,m)/(0.4);//  (accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)); // (*this)(i,j,k,ALPHA,m)/(accessPattern.materialInfo[m].EOS->GruneisenGamma);
     }
 
     return tot;
@@ -275,6 +336,22 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
         }
     }
 
+    if(std::isnan(sqrt(b/getEffectiveInverseGruneisen(i,j,k))))
+    {
+        Print() << "Nan in tws: " << b <<" " << getEffectiveInverseGruneisen(i,j,k)<< std::endl;
+        Print() << "at: " << i <<" " << j << " " << k<< std::endl;
+
+        for(int m=0;m<numberOfMaterials;m++)
+        {
+            if(accessPattern.materialInfo[m].phase == solid)
+            {
+                Print() << accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m) << " " << accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m) << " " << ((*this)(i,j,k,RHO_K,m))  << " " << ((*this)(i,j,k,ALPHARHO,m)) << " "<< ((*this)(i,j,k,ALPHA,m)) << " " << m << std::endl;
+            }
+        }
+
+        //exit(1);
+    }
+
     return sqrt(b/getEffectiveInverseGruneisen(i,j,k));
 }
 
@@ -295,14 +372,17 @@ void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
         if(accessPattern.materialInfo[m].phase == solid)
         {
             double tempdevH[numberOfComponents*numberOfComponents];
+            double tempdevHT[numberOfComponents*numberOfComponents];
 
             getDeviatoricHenckyStrain(i,j,k);
 
             amrexToArray(i,j,k,DEVH,0,tempdevH);
 
+            matrixCopy(tempdevH,tempdevHT);
+
             double product[numberOfComponents*numberOfComponents];
 
-            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevH,product,numberOfComponents)); //totalAlpha
+            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevHT,product));
 
             return;
         }
@@ -316,10 +396,13 @@ void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k)
 
     double temp[numberOfComponents*numberOfComponents];
     double tempV[numberOfComponents*numberOfComponents];
+    double tempV1[numberOfComponents*numberOfComponents];
 
     amrexToArray(i,j,k,V_TENSOR,0,tempV);
 
-    squareMatrixMultiplyTranspose(tempV,tempV,temp);
+    matrixCopy(tempV,tempV1);
+
+    squareMatrixMultiplyTranspose(tempV,tempV1,temp);
 
     invert(temp,tempV);
 
@@ -434,8 +517,9 @@ void BoxAccessCellArray::cleanUpV()
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
-    double tempV[numberOfComponents*numberOfComponents];
-    double temp [numberOfComponents*numberOfComponents];
+    double tempV [numberOfComponents*numberOfComponents];
+    double tempV1[numberOfComponents*numberOfComponents];
+    double temp  [numberOfComponents*numberOfComponents];
     Real norm;
     Real totalSolid;
     Real totalAlpha;
@@ -463,7 +547,9 @@ void BoxAccessCellArray::cleanUpV()
 
                 amrexToArray(i,j,k,V_TENSOR,0,tempV);
 
-                squareMatrixMultiplyTranspose(tempV,tempV,temp);
+                matrixCopy(tempV,tempV1);
+
+                squareMatrixMultiplyTranspose(tempV,tempV1,temp);
 
                 matrixSquareRoot(tempV,temp);
 
@@ -481,4 +567,64 @@ void BoxAccessCellArray::cleanUpV()
     }
 
     return;
+}
+
+void BoxAccessCellArray::cleanUpV(int i, int j, int k)
+{
+
+    double tempV [numberOfComponents*numberOfComponents];
+    double tempV1[numberOfComponents*numberOfComponents];
+    double temp  [numberOfComponents*numberOfComponents];
+
+    Real norm;
+    Real totalSolid = 0.0;
+    Real totalAlpha = 0.0;
+
+    for(int m = 0; m < numberOfMaterials; m++)
+    {
+        totalAlpha += (*this)(i,j,k,ALPHA,m);
+
+        if(accessPattern.materialInfo[m].phase == solid)
+        {
+            totalSolid += (*this)(i,j,k,ALPHA,m);
+        }
+    }
+
+    //Print() << totalAlpha << std::endl;
+
+    amrexToArray(i,j,k,V_TENSOR,0,tempV);
+
+    matrixCopy(tempV,tempV1);
+
+    squareMatrixMultiplyTranspose(tempV,tempV1,temp);
+
+    matrixSquareRoot(tempV,temp);
+
+    norm = std::pow(det(tempV),-1.0/3.0);
+
+    for(int row=0;row<numberOfComponents;row++)
+    {
+        for(int col=0;col<numberOfComponents;col++)
+        {
+            (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
+        }
+    }
+
+
+    return;
+}
+
+bool BoxAccessCellArray::cellIsMostlyFluid(int i, int j, int k)
+{
+    double TotalSolid = 0.0;
+
+    for(int m=0;m<numberOfMaterials;m++)
+    {
+        if(accessPattern.materialInfo[m].phase == solid )
+        {
+            TotalSolid += (*this)(i,j,k,ALPHA,m);
+        }
+    }
+
+    return TotalSolid <= 0.1 ;
 }

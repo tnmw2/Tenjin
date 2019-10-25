@@ -34,12 +34,13 @@ Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
 {
     switch(n.var)
     {
-        case ALPHA:         return U(ALPHA,n.mat)*           U(VELOCITY,0,d);
-        case ALPHARHO:  	return U(ALPHARHO,n.mat)*        U(VELOCITY,0,d);
-        case ALPHARHOLAMBDA:return U(ALPHARHOLAMBDA,n.mat)*  U(VELOCITY,0,d);
-        case RHOU: 			return U(RHOU,0,n.row)*          U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
-        case TOTAL_E:	   	return U(TOTAL_E)*               U(VELOCITY,0,d)-vdotsigma(U,d);
-        case V_TENSOR:      return U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
+        case ALPHA:           return U(ALPHA,n.mat)*           U(VELOCITY,0,d);
+        case ALPHARHO:  	  return U(ALPHARHO,n.mat)*        U(VELOCITY,0,d);
+        case ALPHARHOLAMBDA:  return U(ALPHARHOLAMBDA,n.mat)*  U(VELOCITY,0,d);
+        case ALPHARHOEPSILON: return U(ALPHARHOEPSILON,n.mat)* U(VELOCITY,0,d);
+        case RHOU: 			  return U(RHOU,0,n.row)*          U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
+        case TOTAL_E:	   	  return U(TOTAL_E)*               U(VELOCITY,0,d)-vdotsigma(U,d);
+        case V_TENSOR:        return U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
     }
 
@@ -51,14 +52,15 @@ Real geometricFlux(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier
 {
     switch(n.var)
     {
-    case ALPHA:         return 0.0;
-    case ALPHARHO:  	return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
-    case ALPHARHOLAMBDA:return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
+    case ALPHA:          return 0.0;
+    case ALPHARHO:  	 return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
+    case ALPHARHOLAMBDA: return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
+    case ALPHARHOEPSILON:return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
 
     case RHOU:
         if(n.row==0){       return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - U(i,j,k,SIGMA,0,0,0) + U(i,j,k,SIGMA,0,2,2);}
         else if(n.row==1){  return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - U(i,j,k,SIGMA,0,0,1);}
-        else if(n.row==2){  return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - 2.0*U(i,j,k,SIGMA,0,0,2);}
+        else if(n.row==2){  return -2.0*U(i,j,k,SIGMA,0,0,2);}
         else {Print() << "Bad radial flux variable" << std::endl;}
 
     case TOTAL_E:	    return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - vdotsigma(U,i,j,k,x);

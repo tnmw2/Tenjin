@@ -119,7 +119,9 @@ void ArrheniusRateLaw_updateMassFraction(BoxAccessCellArray& U, BoxAccessCellArr
 void RKreactiveUpdate(CellArray& U, CellArray& U1, ParameterStruct& parameters)
 {
     U1 = U;
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
@@ -129,7 +131,7 @@ void RKreactiveUpdate(CellArray& U, CellArray& U1, ParameterStruct& parameters)
 
         pressureBased_updateMassFraction(Ubox,U1box,parameters);
 
-        U1box.conservativeToPrimitive();
+        //U1box.conservativeToPrimitive();
 
     }
 }
@@ -146,7 +148,9 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
         RKreactiveUpdate(U1,U2,parameters);
 
         //U1 = ((U1*(1.0/2.0))+(U2*(1.0/2.0)));
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -168,14 +172,15 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
                         {
                             for (int i = lo.x; i <= hi.x; ++i)
                             {
-                                U1box(i,j,k,ALPHARHO,m) = ((Ubox(i,j,k,ALPHARHO,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHO,m)*(1.0/2.0)));
+                                U1box(i,j,k,ALPHARHOLAMBDA,m) = ((Ubox(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0)));
+                                U1box(i,j,k,LAMBDA,m)         =  U1box(i,j,k,ALPHARHOLAMBDA,m)/U1box(i,j,k,ALPHA,m);
                             }
                         }
                     }
                 }
             }
 
-            U1box.conservativeToPrimitive();
+            //U1box.conservativeToPrimitive();
         }
     }
 }

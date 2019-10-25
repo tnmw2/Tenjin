@@ -90,6 +90,10 @@ public:
     void getDeviatoricHenckyStrain(int i, int j, int k);
     void normaliseV();
     void cleanUpV();
+    void cleanUpV(int i, int j, int k);
+
+
+    bool cellIsMostlyFluid(int i, int j, int k);
 
 
 };

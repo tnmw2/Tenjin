@@ -8,7 +8,7 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
         {
             if(initial.lowBoundary[dir] == REFLECTIVE)
             {
-                if(n == accessPattern[VELOCITY]+1 || n == accessPattern[RHOU]+1)
+                if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
                 {
                     bc[n].setLo(dir, BCType::reflect_odd);
                 }
@@ -24,7 +24,7 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
 
             if(initial.highBoundary[dir] == REFLECTIVE)
             {
-                if(n == accessPattern[VELOCITY]+1 || n == accessPattern[RHOU]+1)
+                if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
                 {
                     bc[n].setHi(dir, BCType::reflect_odd);
                 }

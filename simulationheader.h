@@ -7,6 +7,7 @@
 #include <string>
 #include <limits>
 #include <iostream>
+#include <iomanip>
 #include <ctime>
 #include <utility>
 #include <map>
@@ -26,6 +27,8 @@ using namespace amrex;
 #include "cell.h"
 #include "thinc.h"
 #include "flux.h"
+#include "plastic.h"
+
 
 
 
@@ -33,7 +36,7 @@ void advance(CellArray& U, CellArray& U1, CellArray &U2, CellArray &MUSCLgrad, C
 
 void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename);
 
-void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
+void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial, PlasticEOS &plastic);
 //void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial);
 void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern &accessPattern);

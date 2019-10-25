@@ -35,6 +35,9 @@ void TimeStep::boxTimeStepFunction(BoxAccessCellArray& U, Array4<Real> const& pr
  */
 Real TimeStep::getTimeStep(CellArray& U, ParameterStruct& parameters)
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
         const Box& bx   = mfi.validbox();

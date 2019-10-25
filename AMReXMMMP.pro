@@ -18,7 +18,10 @@ SOURCES += main.cpp \
     thinc.cpp \
     radial.cpp \
     flux.cpp \
-    boundary.cpp
+    boundary.cpp \
+    plastic.cpp \
+    miegruneiseneos.cpp \
+    romenskiieos.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -31,5 +34,6 @@ HEADERS += \
     equationofstate.h \
     tensor.h \
     thinc.h \
-    flux.h
+    flux.h \
+    plastic.h
 

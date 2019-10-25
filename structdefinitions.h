@@ -26,7 +26,9 @@ enum Variable
     V_TENSOR,
     VSTAR,
     DEVH,
-    HJ2
+    HJ2,
+    EPSILON,
+    ALPHARHOEPSILON
 };
 
 /** Not yet used...
@@ -78,18 +80,21 @@ enum Var_type
     PRIMITIVE,
     CONSERVATIVE,
     BOTH,
-    NEITHER
+    NEITHER,
+    CELL,
+    NOTCELL
 };
 
-class MieGruneisenEOS;
+class EquationOfState;
 
 struct MaterialDescriptor
 {
     Material_type   phase;
     bool            mixture = 0;
-    int             mixtureIndex = 1000;
+    bool            plastic = false;
 
-    MieGruneisenEOS* EOS;
+    EquationOfState* EOS;
+
 };
 
 /** Holds simulation data that needs to be passed around.
@@ -155,7 +160,8 @@ struct InitialStruct
     Vector<Vector<Real> > rho;
     Vector<Vector<Real> > alpha;
     Vector<Vector<Real> > lambda;
-    Vector<Real> interfaces;
+
+    Real interface;
 
     Vector<int> lowBoundary;
     Vector<int> highBoundary;
