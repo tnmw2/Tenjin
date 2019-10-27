@@ -117,6 +117,37 @@ void MieGruneisenEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, 
  * Mixture EOS
  ****************************************************/
 
+Real MixtureEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real MixtureEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real MixtureEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real MixtureEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real MixtureEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real MixtureEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+
 MixtureEOS::MixtureEOS()
 {
     first.mixture  = true;

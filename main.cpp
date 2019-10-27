@@ -81,14 +81,14 @@ void main_main ()
 
     Array<MultiFab, AMREX_SPACEDIM> flux_arr;
 
-        for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
-        {
-            BoxArray edge_ba = ba;
+    for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
+    {
+        BoxArray edge_ba = ba;
 
-            edge_ba.surroundingNodes(dir);
+        edge_ba.surroundingNodes(dir);
 
-            flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
-        }
+        flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
+    }
 
         Vector<BCRec> bc(parameters.Ncomp);
         setBoundaryConditions(bc,parameters,initial,accessPattern);

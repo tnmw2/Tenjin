@@ -123,7 +123,6 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
     return;
 }
 
-
 /** Calculates the HLLC fluxes.
  */
 void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d)
@@ -131,11 +130,11 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
     const auto lo = lbound(ULbox.box);
     const auto hi = ubound(ULbox.box);
 
-    Real SR;
-    Real SL;
-    Real SLT;
-    Real SRT;
-    Real Sstar;
+    Real SR     = 0.0;
+    Real SL     = 0.0;
+    Real SLT    = 0.0;
+    Real SRT    = 0.0;
+    Real Sstar  = 0.0;
 
     IntVect extra(AMREX_D_DECL(0,0,0));
 
@@ -249,7 +248,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                 {
                     getStarState(UR,URStar,SR,Sstar,parameters,d);
 
-                    SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k);
+                    SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k); 
 
                     if(SRT>=0.0)
                     {
@@ -326,6 +325,41 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                         }
                     }
                 }
+
+                if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar) || std::isnan(SLT) || std::isnan(SRT))
+                {
+                    Print() << "Nan in Wavespeeds " << std::endl;
+                    Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
+                    exit(1);
+                }
+
+
+                /*if(UL.contains_nan())
+                {
+                    Print() << "NaN in UL" << std::endl;
+                }
+
+                if(UR.contains_nan())
+                {
+                    Print() << "NaN in UR" << std::endl;
+                }
+
+                if(ULStar.contains_nan())
+                {
+                    Print() << "NaN in UL*" << std::endl;
+                }
+
+                if(URStar.contains_nan())
+                {
+                    Print() << "NaN in UR*" << std::endl;
+                }*/
+
+
+                /*if(UStarStar.contains_nan())
+                {
+                    Print() << "NaN in U**" << std::endl;
+                }*/
+
             }
         }
     }
@@ -538,10 +572,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
     U1 = U;
 
-
     for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;
+
+        UL = U;
+        UR = U;
 
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
@@ -588,9 +624,18 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         FillDomainBoundary(UL.data, geom, bc);
         FillDomainBoundary(UR.data, geom, bc);
 
-
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
+
+        /*if(UL.data.contains_nan())
+        {
+            Print() << "NaN in UL" << std::endl;
+        }
+
+        if(UR.data.contains_nan())
+        {
+            Print() << "NaN in UR" << std::endl;
+        }*/
 
 
         /*-------------------------------------------------------------
@@ -620,6 +665,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             {
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
             }
+
+            /*if(fluxbox.contains_nan())
+            {
+                Print() << "NaN in flux" << std::endl;
+                exit(1);
+            }*/
 
             update(fluxbox, Ubox, U1box, parameters,d);
 

@@ -160,7 +160,7 @@ struct InitialStruct
     Vector<Vector<Real> > rho;
     Vector<Vector<Real> > alpha;
     Vector<Vector<Real> > lambda;
-    Vector<Real> interfaces;
+    Real interface;
 
     Vector<int> lowBoundary;
     Vector<int> highBoundary;

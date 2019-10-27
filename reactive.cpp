@@ -1,70 +1,57 @@
 #include "simulationheader.h"
 
-void updateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters)
+void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, int i, int j, int k, int m)
+{
+
+    Real sigma = 20.0   ;//10.0;
+    Real nu    = 0.5;
+    Real n     = 1.2;
+
+    if(U(i,j,k,ALPHA,m) < 0.5)
+    {
+        U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m);
+        return;
+    }
+
+
+    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)-(parameters.dt)*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n));
+
+    if(U1(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    {
+        U1(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+    }
+
+}
+
+void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, int i, int j, int k, int m)
 {
 
     Real Tc = 150.0; //Reference temp;
 
     Real A = 2E6;    //Pre-exponential factor
 
-    Real T;
+    Real T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
 
-    Real temp;
-
-    const auto lo = lbound(U.box);
-    const auto hi = ubound(U.box);
-
-    for                 (int m = 0;    m < parameters.numberOfMaterials; m++)
+    if(T<=0.0)
     {
-        if(U.accessPattern.materialInfo[m].mixture)
-        {
-            for    		(int k = lo.z; k <= hi.z; ++k)
-            {
-                for     (int j = lo.y; j <= hi.y; ++j)
-                {
-                    for (int i = lo.x; i <= hi.x; ++i)
-                    {
-                        T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
-
-                        if(T<=0.0)
-                        {
-                            T = 1E-20;
-                        }
-
-                        temp = -A*U(i,j,k,ALPHARHOLAMBDA,m)*std::exp(-Tc/T);
-
-                        if(std::isnan(temp))
-                        {
-                            temp = 0.0;
-                        }
-
-                        U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+(parameters.dt)*temp;
-
-                    }
-                }
-            }
-        }
+        T = 1E-20;
     }
-}
 
-/** Adds the reactive source term.
- */
-void RKreactiveUpdate(CellArray& U, CellArray& U1, ParameterStruct& parameters)
-{
-    U1 = U;
+    Real temp = -A*U(i,j,k,ALPHARHOLAMBDA,m)*std::exp(-Tc/T);
 
-    for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
+    if(std::isnan(temp))
     {
-        const Box& bx = mfi.validbox();
-
-        BoxAccessCellArray Ubox(mfi,bx,U);
-        BoxAccessCellArray U1box(mfi,bx,U1);
-
-        updateMassFraction(Ubox,U1box,parameters);
-
-        U1box.conservativeToPrimitive();
-
+        temp = 0.0;
     }
+
+    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+(parameters.dt)*temp;
+
+    if(U1(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    {
+        U1(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+    }
+
+
 }
 
 
@@ -75,11 +62,6 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
     if(parameters.numberOfMixtures > 0)
     {
         U = U1;
-
-        RKreactiveUpdate(U,U1,parameters);
-        RKreactiveUpdate(U1,U2,parameters);
-
-        //U1 = ((U1*(1.0/2.0))+(U2*(1.0/2.0)));
 
         for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
         {
@@ -102,7 +84,10 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
                         {
                             for (int i = lo.x; i <= hi.x; ++i)
                             {
-                                U1box(i,j,k,ALPHARHO,m) = ((Ubox(i,j,k,ALPHARHO,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHO,m)*(1.0/2.0)));
+                                pressureBased_UpdateMassFraction(Ubox,U1box,parameters,i,j,k,m);
+                                pressureBased_UpdateMassFraction(U1box,U2box,parameters,i,j,k,m);
+
+                                U1box(i,j,k,ALPHARHOLAMBDA,m) = ((Ubox(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0)));
                             }
                         }
                     }

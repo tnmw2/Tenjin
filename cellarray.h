@@ -92,6 +92,10 @@ public:
     void cleanUpV();
 
 
+    bool check(MaterialSpecifier& m);
+    bool contains_nan();
+
+
 };
 
 
