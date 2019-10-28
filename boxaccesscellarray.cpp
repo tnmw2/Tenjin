@@ -3,7 +3,6 @@
 BoxAccessCellArray::BoxAccessCellArray(const Box& bx, FArrayBox& fb,  CellArray& U) : box{bx}, fab{fb}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
 
 BoxAccessCellArray::BoxAccessCellArray(MFIter& mfi, const Box& bx, CellArray &U) : box{bx}, fab{U.data[mfi]}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
-
 Real& BoxAccessCellArray::operator()(int i, int j, int k, Variable var, int mat, int row, int col)
 {
     MaterialSpecifier temp(var,mat,row,col);
@@ -56,6 +55,9 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case HJ2:               return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
+    case EPSILON:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
     }
@@ -80,6 +82,12 @@ void  BoxAccessCellArray::conservativeToPrimitive()
                 {
                     (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
                     (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
+
+                    if(accessPattern.materialInfo[m].plastic)
+                    {
+                        (*this)(i,j,k,EPSILON,m) = (*this)(i,j,k,ALPHARHOEPSILON,m)/(*this)(i,j,k,ALPHARHO,m);
+                    }
+
                 }
 
                 getHenckyJ2(i,j,k);
@@ -135,6 +143,13 @@ void  BoxAccessCellArray::primitiveToConservative()
                     if(accessPattern.materialInfo[m].mixture)
                     {
                         (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
+
+                        accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
+                    }
+
+                    if(accessPattern.materialInfo[m].plastic)
+                    {
+                        (*this)(i,j,k,ALPHARHOEPSILON,m) = (*this)(i,j,k,EPSILON,m)*(*this)(i,j,k,ALPHARHO,m);
                     }
                 }
 
@@ -168,9 +183,9 @@ void BoxAccessCellArray::stressTensor(int i, int j, int k)
             if(accessPattern.materialInfo[m].phase == solid)
             {
                 checkSolid = 1;
-            }
 
-            TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
+                TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
+            }
         }
 
         TotalShearModulus = TotalShearModulus/getEffectiveInverseGruneisen(i,j,k);
@@ -197,7 +212,7 @@ void BoxAccessCellArray::stressTensor(int i, int j, int k)
         }
 
         return;
-    }
+}
 
 Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
 {
@@ -293,29 +308,25 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
 
 void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
 {
-    /*Real totalAlpha = 0.0;
 
-    for(int m=0; m<numberOfMaterials;m++)
-    {
-        if(accessPattern.materialInfo[m].phase == solid)
-        {
-            totalAlpha += (*this)(i,j,k,ALPHA,m);
-        }
-    }*/
 
     for(int m=0; m<numberOfMaterials;m++)
     {
         if(accessPattern.materialInfo[m].phase == solid)
         {
             double tempdevH[numberOfComponents*numberOfComponents];
+            double tempdevHT[numberOfComponents*numberOfComponents];
+            double product[numberOfComponents*numberOfComponents];
+
 
             getDeviatoricHenckyStrain(i,j,k);
 
             amrexToArray(i,j,k,DEVH,0,tempdevH);
 
-            double product[numberOfComponents*numberOfComponents];
+            matrixCopy(tempdevH,tempdevHT);
 
-            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevH,product,numberOfComponents)); //totalAlpha
+
+            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevHT,product,numberOfComponents)); //totalAlpha
 
             return;
         }
@@ -329,10 +340,13 @@ void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k)
 
     double temp[numberOfComponents*numberOfComponents];
     double tempV[numberOfComponents*numberOfComponents];
+    double tempV1[numberOfComponents*numberOfComponents];
 
     amrexToArray(i,j,k,V_TENSOR,0,tempV);
 
-    squareMatrixMultiplyTranspose(tempV,tempV,temp);
+    matrixCopy(tempV,tempV1);
+
+    squareMatrixMultiplyTranspose(tempV,tempV1,temp);
 
     invert(temp,tempV);
 
@@ -540,4 +554,19 @@ bool BoxAccessCellArray::contains_nan()
     }
 
     return checker;
+}
+
+bool BoxAccessCellArray::cellIsMostlyFluid(int i, int j, int k)
+{
+    double TotalSolid = 0.0;
+
+    for(int m=0;m<numberOfMaterials;m++)
+    {
+        if(accessPattern.materialInfo[m].phase == solid )
+        {
+            TotalSolid += (*this)(i,j,k,ALPHA,m);
+        }
+    }
+
+    return TotalSolid <= 0.5 ;
 }

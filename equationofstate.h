@@ -54,6 +54,7 @@ public:
     virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     void copy(MieGruneisenEOS& C);
 
@@ -92,7 +93,7 @@ public:
     virtual Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
-
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
 
     Real bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p);
     Real pressureFunction (BoxAccessCellArray& U, int i, int j, int k, int m, Real& p);
@@ -124,6 +125,10 @@ public:
     virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
+    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
+
+
 
     Real dpcdrho                                (BoxAccessCellArray& U, int i, int j, int k, int m);
     Real dpsdrho                                (BoxAccessCellArray& U, int i, int j, int k, int m);

@@ -90,8 +90,9 @@ class MieGruneisenEOS;
 struct MaterialDescriptor
 {
     Material_type   phase;
-    bool            mixture;
+    bool            mixture = 0;
     int             mixtureIndex;
+    int             plastic = false;
 
     MieGruneisenEOS* EOS;
 };

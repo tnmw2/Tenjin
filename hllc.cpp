@@ -28,6 +28,11 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
             UStar(ALPHARHOLAMBDA,m) = multiplier*U(ALPHARHOLAMBDA,m);
         }
 
+        if(parameters.materialInfo[m].plastic)
+        {
+            UStar(ALPHARHOEPSILON,m) = multiplier*U(ALPHARHOEPSILON,m);
+        }
+
         UStar(RHO)             += UStar(ALPHARHO,m);
 
     }
@@ -62,7 +67,7 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
     }
 
 
-    UStar(TOTAL_E)      = multiplier*U(RHO)*(U(TOTAL_E)/U(RHO) + (Sstar-U(VELOCITY,0,d))*(Sstar + (U(P))/(U(RHO)*(SK-U(VELOCITY,0,d))) ));
+    UStar(TOTAL_E)      = multiplier*U(RHO)*(U(TOTAL_E)/U(RHO) + (Sstar-U(VELOCITY,0,d))*(Sstar - (U(SIGMA,0,d,d))/(U(RHO)*(SK-U(VELOCITY,0,d))) ));
 
     return;
 }
@@ -333,33 +338,6 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     exit(1);
                 }
 
-
-                /*if(UL.contains_nan())
-                {
-                    Print() << "NaN in UL" << std::endl;
-                }
-
-                if(UR.contains_nan())
-                {
-                    Print() << "NaN in UR" << std::endl;
-                }
-
-                if(ULStar.contains_nan())
-                {
-                    Print() << "NaN in UL*" << std::endl;
-                }
-
-                if(URStar.contains_nan())
-                {
-                    Print() << "NaN in UR*" << std::endl;
-                }*/
-
-
-                /*if(UStarStar.contains_nan())
-                {
-                    Print() << "NaN in U**" << std::endl;
-                }*/
-
             }
         }
     }
@@ -550,11 +528,9 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
 
                     grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
 
+
                     UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
                     UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
-
-                    //UL(i,j,k,n) = U(i,j,k,n);
-                    //UR(i,j,k,n) = U(i,j,k,n);
 
                 }
             }
@@ -582,7 +558,9 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
          * -----------------------------------------------------------*/
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -596,16 +574,19 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
             BoxAccessCellArray  Ubox(mfi,bx,U);
             BoxAccessCellArray  ULbox(mfi,bx,UL);
             BoxAccessCellArray  URbox(mfi,bx,UR);
-            BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
 
 
-            MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+            if(parameters.MUSCL)
+            {
+                BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
+
+                MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+            }
 
             if(parameters.THINC)
             {
                 BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
                 BoxAccessCellArray URTHINC(mfi,bx,URStar);
-
                 BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
 
                 THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
@@ -627,21 +608,14 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
 
-        /*if(UL.data.contains_nan())
-        {
-            Print() << "NaN in UL" << std::endl;
-        }
-
-        if(UR.data.contains_nan())
-        {
-            Print() << "NaN in UR" << std::endl;
-        }*/
-
 
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -666,12 +640,6 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
             }
 
-            /*if(fluxbox.contains_nan())
-            {
-                Print() << "NaN in flux" << std::endl;
-                exit(1);
-            }*/
-
             update(fluxbox, Ubox, U1box, parameters,d);
 
         }
@@ -693,12 +661,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
  */
 void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc, THINCArray &THINC)
 {
-
     HLLCadvance(U,  U1, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
     HLLCadvance(U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+
 
 }
 

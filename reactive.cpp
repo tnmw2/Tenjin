@@ -63,6 +63,9 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
     {
         U = U1;
 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();

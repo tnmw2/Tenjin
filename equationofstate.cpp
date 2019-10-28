@@ -107,10 +107,11 @@ Real MieGruneisenEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, 
 void MieGruneisenEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
 {
     return;
+}
 
-    F[0]*=1.0;
-    U(i,j,k,0,m)*=1.0;
-
+void MieGruneisenEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return;
 }
 
 /*****************************************************
@@ -171,9 +172,9 @@ Real MixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, in
 
 Real MixtureEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    //return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+    return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
     //return U(i,j,k,ALPHA,m)/first.GruneisenGamma;
-    return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
+    //return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
 }
 
 void MixtureEOS::define(Vector<Real> &params)
@@ -386,6 +387,14 @@ Real MixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int 
     }
 }
 
+void MixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m)*(U(i,j,k,LAMBDA,m)+(1.0-U(i,j,k,LAMBDA,m))*((U(i,j,k,P)-first.pref)/(U(i,j,k,P)-second.pref))*((second.CV*second.GruneisenGamma)/(first.CV*first.GruneisenGamma)));
+    U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
+
+    return;
+}
+
 
 /*******************************************
  * Solid EOS
@@ -422,7 +431,7 @@ Real RomenskiiSolidEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, in
 
 Real RomenskiiSolidEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return (U(i,j,k,P)*(GruneisenGamma+1.0)-(coldCompressionPressure(U,i,j,k,m)+shearPressure(U,i,j,k,m)))/U(i,j,k,RHO_K,m) + dpcdrho(U,i,j,k,m) + dpsdrho(U,i,j,k,m) + (4.0/3.0)*componentShearModulus(U,i,j,k,m)/U(i,j,k,RHO_K,m);
+    return (U(i,j,k,P)*(GruneisenGamma+1.0)-(coldCompressionPressure(U,i,j,k,m)+shearPressure(U,i,j,k,m))*(GruneisenGamma+1.0))/U(i,j,k,RHO_K,m) + dpcdrho(U,i,j,k,m) + dpsdrho(U,i,j,k,m) + (4.0/3.0)*componentShearModulus(U,i,j,k,m)/U(i,j,k,RHO_K,m);
 }
 
 Real RomenskiiSolidEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
@@ -473,4 +482,14 @@ void RomenskiiSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i
 
     U(i,j,k,RHO_K,m) = rho0/determinant;
 
+}
+
+Real RomenskiiSolidEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,ALPHA,m)/GruneisenGamma;
+}
+
+void RomenskiiSolidEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return;
 }

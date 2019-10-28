@@ -15,8 +15,9 @@ void main_main ()
 
     ParameterStruct parameters;
     InitialStruct   initial;
+    PlasticEOS      plastic;
 
-    libConfigInitialiseDataStructs(parameters,initial);
+    libConfigInitialiseDataStructs(parameters,initial,plastic);
 
     /* ----------------------------------------------------
      * Declare the domain and geometry required for Multifabs
@@ -110,6 +111,7 @@ void main_main ()
      * The main time loop
      * ----------------------------------------------------*/
 
+
     //return;
 
     int n = 0;
@@ -140,7 +142,6 @@ void main_main ()
             parameters.dt*=0.2;
         }
 
-
         U = U1;
 
         advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
@@ -148,6 +149,11 @@ void main_main ()
         if(parameters.REACTIVE)
         {
             reactiveUpdate(U,U1,U2,parameters);
+        }
+
+        if(parameters.PLASTIC)
+        {
+            plastic.plasticUpdate(U1,parameters);
         }
 
         if(parameters.RADIAL)
@@ -198,6 +204,7 @@ void main_main ()
 
 int main (int argc, char* argv[])
 {
+
     amrex::Initialize(argc,argv);
 
     main_main();

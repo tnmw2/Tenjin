@@ -18,7 +18,8 @@ SOURCES += main.cpp \
     thinc.cpp \
     boundary.cpp \
     flux.cpp \
-    radial.cpp
+    radial.cpp \
+    plastic.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -31,7 +32,8 @@ HEADERS += \
     equationofstate.h \
     tensor.h \
     thinc.h \
-    flux.h
+    flux.h \
+    plastic.h
 
 DISTFILES += \
     Make.package

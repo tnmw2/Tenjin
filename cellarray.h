@@ -29,6 +29,8 @@ public:
     void        operator=(CellArray& U);
     CellArray&  operator*(Real d);
     CellArray&  operator+(CellArray& U);
+    bool        contains_nan();
+
 
     MultiFab data;
 
@@ -94,6 +96,8 @@ public:
 
     bool check(MaterialSpecifier& m);
     bool contains_nan();
+
+    bool cellIsMostlyFluid(int i, int j, int k);
 
 
 };

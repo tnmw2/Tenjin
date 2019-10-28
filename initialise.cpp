@@ -222,7 +222,7 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStru
     }
 }
 
-void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& parameters, int m)
+void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& parameters, int m, PlasticEOS& plastic)
 {
     using namespace libconfig;
 
@@ -286,19 +286,33 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
         exit(1);
     }
 
+    if(parameters.PLASTIC)
+    {
+        plastic.yieldStress[m] = 0.0;
+    }
+
     if(material1string == "solid")
     {
         parameters.materialInfo[m].phase = solid;
 
         temp.push_back(materialname[m]["G0"]);
 
+        if(parameters.PLASTIC)
+        {
+            plastic.yieldStress[m] = materialname[m]["yieldStress"];
+            parameters.materialInfo[m].plastic = true;
+        }
+
     }
     else if(material1string == "fluid")
     {
         parameters.materialInfo[m].phase = fluid;
+        parameters.materialInfo[m].plastic = false;
     }
 
     parameters.materialInfo[m].EOS->define(temp);
+
+
 
     return;
 }
@@ -337,7 +351,7 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
     return;
 }
 
-void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial)
+void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial, PlasticEOS &plastic)
 {
     using namespace libconfig;
 
@@ -426,12 +440,14 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         parameters.materialInfo.resize(parameters.numberOfMaterials);
         initial.resize(parameters);
+        plastic.yieldStress.resize(parameters.numberOfMaterials);
+
 
         Setting* materials = &root["listOfMaterials"];
 
         for(int m=0;m<parameters.numberOfMaterials;m++)
         {
-            getMaterialParameters(*materials,parameters,m);
+            getMaterialParameters(*materials,parameters,m,plastic);
         }
 
         Setting* states = &root["listOfStates"];
@@ -457,7 +473,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
             s=0;
@@ -466,7 +482,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=1;
         }
-    }*/
+    }
 
     /******************************************
      * Wilkins
@@ -490,7 +506,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
      * RateStick
      *****************************************/
 
-    {
+    /*{
         int radiusInt       = (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]);
         int startOfTubeInt  = (int)((initial.interface/parameters.dimL[1])*parameters.n_cells[1]);
         int endOfBoosterInt = (int)((2.0*initial.interface/parameters.dimL[1])*parameters.n_cells[1]);
@@ -523,7 +539,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=1;
         }
-    }
+    }*/
 
 
     /******************************************

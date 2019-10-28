@@ -11,9 +11,6 @@ void addGeometricSourceTerm(BoxAccessCellArray& U, ParameterStruct& parameters)
 
     const static Real multiplier = (AMREX_SPACEDIM == 1 ? -2.0 : -1.0) ;
 
-    //Print() << lo.x << " " << hi.x << std::endl;
-
-
     for    			(auto n : U.accessPattern.conservativeVariables)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
@@ -39,6 +36,9 @@ void addGeometricSourceTerm(BoxAccessCellArray& U, ParameterStruct& parameters)
  */
 void geometricSourceTerm(CellArray& U, ParameterStruct& parameters)
 {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
