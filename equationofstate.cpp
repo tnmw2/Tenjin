@@ -493,3 +493,104 @@ void RomenskiiSolidEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int
 {
     return;
 }
+
+
+/*******************************************
+ * Wilkins EOS
+ ******************************************/
+
+void WilkinsSolidEOS::define(Vector<Real> &params)
+{
+    adiabaticIndex 	= params[0];
+    GruneisenGamma 	= adiabaticIndex-1.0;
+    pref 			= params[1];
+    eref	 		= params[2];
+    CV 				= params[3];
+
+    rho0            = params[4];
+    e1              = params[5];
+    e2              = params[6];
+    e3              = params[7];
+    e4              = params[8];
+    e5              = params[9];
+    G0              = params[10];
+}
+
+Real WilkinsSolidEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return U(i,j,k,ALPHARHO,m)*((e1+e2*x*x+e3*x+e4/x-e5*std::log(x))/rho0);
+}
+
+Real WilkinsSolidEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return (U(i,j,k,ALPHA,m)/GruneisenGamma)*( (2.0*e2*x*x*x+e3*x*x-e4-e5*x));
+}
+
+Real WilkinsSolidEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,P)*(GruneisenGamma+1.0)-(coldCompressionPressure(U,i,j,k,m)+shearPressure(U,i,j,k,m))*(GruneisenGamma+1.0))/U(i,j,k,RHO_K,m) + dpcdrho(U,i,j,k,m) + dpsdrho(U,i,j,k,m) + (4.0/3.0)*componentShearModulus(U,i,j,k,m)/U(i,j,k,RHO_K,m);
+}
+
+Real WilkinsSolidEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return G0;
+}
+
+Real WilkinsSolidEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real WilkinsSolidEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real WilkinsSolidEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+     return U(i,j,k,ALPHA,m)*componentShearModulus(U,i,j,k,m)/(U(i,j,k,RHO_K,m)*GruneisenGamma);
+}
+
+Real WilkinsSolidEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,ALPHA,m)*(componentShearModulus(U,i,j,k,m)*U(i,j,k,HJ2));
+}
+
+Real WilkinsSolidEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return (U(i,j,k,ALPHA,m)/GruneisenGamma)*((U(i,j,k,RHO_K,m)*dGdrho(U,i,j,k,m)-componentShearModulus(U,i,j,k,m))*U(i,j,k,HJ2));
+}
+
+Real WilkinsSolidEOS::dpcdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return (6.0*e2*x*x+2.0*e3*x-e5)/rho0;
+}
+
+Real WilkinsSolidEOS::dpsdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,RHO_K,m)*dG2drho2(U,i,j,k,m)*U(i,j,k,HJ2);
+}
+
+void WilkinsSolidEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
+{
+    double determinant = det(F);
+
+    U(i,j,k,RHO_K,m) = rho0/determinant;
+
+}
+
+Real WilkinsSolidEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,ALPHA,m)/GruneisenGamma;
+}
+
+void WilkinsSolidEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return;
+}

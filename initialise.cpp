@@ -261,6 +261,23 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             exit(1);
         }
     }
+    else if(EOSstring == "WilkinsSolid")
+    {
+        parameters.materialInfo[m].EOS = new WilkinsSolidEOS();
+
+        temp.push_back(materialname[m]["rho0"]);
+        temp.push_back(materialname[m]["e1"]);
+        temp.push_back(materialname[m]["e2"]);
+        temp.push_back(materialname[m]["e3"]);
+        temp.push_back(materialname[m]["e4"]);
+        temp.push_back(materialname[m]["e5"]);
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            std::cout << "Error: solid can't be a mixture (atm)" << std::endl;
+            exit(1);
+        }
+    }
     else if(EOSstring == "MieGruneisen")
     {
         if(parameters.materialInfo[m].mixture)
@@ -473,7 +490,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
             s=0;
@@ -482,17 +499,17 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=1;
         }
-    }
+    }*/
 
     /******************************************
      * Wilkins
      *****************************************/
     /*{
-        if(j < (int)((initial.interface/parameters.dimL[1])*parameters.n_cells[1]))
+        if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
             s=0;
         }
-        else if(j < (int)((2.0*initial.interface/parameters.dimL[1])*parameters.n_cells[1]))
+        else if(i < (int)((2.0*initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
             s=1;
         }
@@ -546,10 +563,11 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
      * Rod Impact
      *****************************************/
 
-    /*{
+    {
         int chamfer = (int)((0.06E-2/parameters.dimL[0])*parameters.n_cells[0]);
         int length  = (int)((2.347E-2/parameters.dimL[1])*parameters.n_cells[1]);
         int radius  = (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]);
+
         if(i<radius)
         {
             if(j< length-chamfer)
@@ -576,7 +594,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=0;
         }
-    }*/
+    }
 
 
 }

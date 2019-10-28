@@ -2,10 +2,10 @@
 
 PlasticEOS::PlasticEOS(){}
 
-/*double plastic::epsilonFunction(double J, double Jnew, cell& U, int m)
+Real PlasticEOS::epsilonFunction(double J, double Jnew, BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U.epsilon[m] - sqrt23*(Jnew-J);
-}*/
+    return U(i,j,k,EPSILON,m) - sqrt(2.0/3.0)*(Jnew-J);
+}
 
 /** Calculate the plastic flow rate, \f$ \chi \f$.
  */
@@ -15,10 +15,10 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
     {
         return 1E20*Heaviside<Real,Real>(U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew*sqrt(3.0) - (*this).yieldStress[m]);
     }
-    /*else if(parameters.PLASTIC==2)
+    else if(parameters.PLASTIC==2)
     {
-        return std::exp((1.0/c3)*(sqrt(3.0/2.0)*2.0*U.componentShearModulus(parameters,m)*Jnew/(c1+c2*std::pow(epsilonFunction(J,Jnew,U,m),n))-1.0));
-    }*/
+        return std::exp((1.0/c3)*(sqrt(3.0/2.0)*2.0*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew/(c1+c2*std::pow(epsilonFunction(J,Jnew,U,i,j,k,m),n))-1.0));
+    }
     else
     {
         std::cout << "Incorrect plasticity type" << std::endl;
@@ -131,9 +131,9 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
 
                         if(overYieldStress(J,U,i,j,k,m))
                         {
-                            Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
+                            //Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
 
-                            //Jnew = bisection(U,i,j,k,J,parameters,m);
+                            Jnew = bisection(U,i,j,k,J,parameters,m);
 
                             /*if(parameters.PLASTIC==1)
                             {
