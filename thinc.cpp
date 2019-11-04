@@ -117,7 +117,7 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         {
                             normalisedVectorComponent = youngsInterfaceConstruction(nx,ny,U,parameters,d,m,i,j,k);
                         }
-                        else if(AMREX_SPACEDIM == 2)
+                        else if(AMREX_SPACEDIM == 1)
                         {
                             normalisedVectorComponent = 1.0;
                         }
@@ -191,11 +191,11 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         UL(i,j,k,ALPHA,m)	= UTHINC_L(i,j,k,ALPHA,m);
                         UR(i,j,k,ALPHA,m)	= UTHINC_R(i,j,k,ALPHA,m);
 
-                        //UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
-                        //UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
+                        /*UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
+                        UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
 
-                        //UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
-                        //UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);;
+                        UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
+                        UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);*/
                     }
                 }
             }

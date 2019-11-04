@@ -62,6 +62,21 @@ void CellArray::cleanUpV()
     }
 }
 
+void CellArray::cleanUpAlpha()
+{
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    for(MFIter mfi(data); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        BoxAccessCellArray baca(mfi,bx,(*this));
+
+        baca.cleanUpAlpha();
+    }
+}
+
 void CellArray::operator=(CellArray& U)
 {
     MultiFab::Copy(data, U.data, 0, 0, data.nComp(), data.nGrow());

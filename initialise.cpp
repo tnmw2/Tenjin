@@ -16,106 +16,6 @@ void stringtochar(std::string string,char* file)
     return;
 }
 
-/*void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
-{
-
-    const auto lo = lbound(U.box);
-    const auto hi = ubound(U.box);
-
-    Vector<int> boundary;
-
-    boundary.push_back(0);
-
-    for(int s = 0; s < initial.numberOfStates-1; s++)
-    {
-        boundary.push_back((int)((initial.interfaces[s]/parameters.dimL[0])*parameters.n_cells[0]));
-    }
-
-    boundary.push_back(parameters.n_cells[0]);
-
-    for(int s = 0; s < initial.numberOfStates; s++)
-    {
-        std::vector<double> V;
-
-        if(parameters.SOLID)
-        {
-            V.resize(9);
-
-            getStretchTensor(&V[0],&initial.F[s][0]);
-
-            double norm1 = std::pow(det(&V[0]),-1.0/3.0);
-
-            for(int row=0;row<U.numberOfComponents;row++)
-            {
-                for(int col=0;col<U.numberOfComponents;col++)
-                {
-                    V[row*U.numberOfComponents+col] *= norm1;
-                }
-            }
-        }
-
-        for                 (int k = lo.z; k <= hi.z; ++k)
-        {
-            for             (int j = lo.y; j <= hi.y; ++j)
-            {
-                for         (int i = lo.x; i <= hi.x; ++i)
-                {
-                    //if(boundary[s] <= i && i < boundary[s+1])
-                    //{
-                    int S;
-
-                    chooseStateBasedOnInitialCondition(S,i,j,k,initial,parameters);
-
-                        for (int m = 0; m < parameters.numberOfMaterials; m++)
-                        {
-                            U(i,j,k,ALPHA,m)    = initial.alpha[S][m];
-                            U(i,j,k,RHO_K,m)    = initial.rho[S][m];
-
-                            if(U.accessPattern.materialInfo[m].mixture)
-                            {
-                                U(i,j,k,RHO_MIX,m,0)    = initial.rho[S][m];
-                                U(i,j,k,RHO_MIX,m,1)    = initial.rho[S][m];
-
-                                U(i,j,k,LAMBDA,m)       = initial.lambda[S][m];
-                            }
-
-                            if(parameters.materialInfo[m].phase == solid)
-                            {
-                                U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[S][0]);
-                            }
-                        }
-
-                        U(i,j,k,P)  = initial.p[S];
-
-
-
-                        U(i,j,k,VELOCITY,0,0)  = initial.u[S];
-                        U(i,j,k,VELOCITY,0,1)  = initial.v[S];
-                        U(i,j,k,VELOCITY,0,2)  = initial.w[S];
-
-                        if(parameters.SOLID)
-                        {
-                            for(int row = 0; row<U.numberOfComponents; row++)
-                            {
-                                for(int col = 0; col<U.numberOfComponents; col++)
-                                {
-                                    U(i,j,k,V_TENSOR,0,row,col) = V[row*U.numberOfComponents+col];
-                                }
-                            }
-                        }
-
-
-                        U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
-
-
-                    //}
-                }
-            }
-        }
-    }
-
-    //U.normaliseV();
-}*/
 
 void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
 {
@@ -519,6 +419,87 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         }
     }*/
 
+
+    /******************************************
+     * Solid RMI - sine
+     *****************************************/
+    /*{
+        Real amplitude = 2E-4;
+
+        Real pi = 3.14;
+
+        if(i < (int)((0.5*initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
+        {
+            s=1;
+        }
+        else if(i < (int)(((0.1)*parameters.n_cells[0]))+ (int)((amplitude*sin(((double)j/(double)(2*parameters.n_cells[1]))*pi*2.0+pi/2.0)/parameters.dimL[0])*parameters.n_cells[0]))
+        {
+            s=2;
+        }
+        else
+        {
+            s=3;
+        }
+    }*/
+
+    /******************************************
+     * Solid RMI - saw
+     *****************************************/
+    {
+        Real gradient = -0.2E-3;
+
+        if(i < (int)((0.5*initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
+        {
+            s=1;
+        }
+        else if(i < (int)(((0.1)*parameters.n_cells[0]))+ (int)((gradient*((double)j/(double)(parameters.n_cells[1]))/parameters.dimL[0])*parameters.n_cells[0]))
+        {
+            s=2;
+        }
+        else
+        {
+            s=3;
+        }
+    }
+
+    /******************************************
+     * Udaykunar Groove
+     *****************************************/
+    {
+        Real x = i*parameters.dx[0];
+        Real y = j*parameters.dx[1];
+
+        Real shock = 1E-3;
+        Real interface = initial.interface;
+        Real radius = 15E-3;
+
+        /*Real shock = std::max((int)((1E-3/parameters.dimL[1])*parameters.n_cells[1]),5);
+        Real interface =      (int)((initial.interface/parameters.dimL[1])*parameters.n_cells[1]);
+        Real radius =         (int)((15E-3/parameters.dimL[0])*parameters.n_cells[0]);*/
+
+        if(y < shock)
+        {
+            s=1;
+        }
+        else if(y < interface)
+        {
+            if( (y-interface)*(y-interface) + (x)*(x) < radius*radius  )
+            {
+                s=3;
+            }
+            else
+            {
+                s=2;
+            }
+        }
+        else
+        {
+            s=3;
+        }
+    }
+
+
+
     /******************************************
      * RateStick
      *****************************************/
@@ -563,7 +544,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
      * Rod Impact
      *****************************************/
 
-    {
+    /*{
         int chamfer = (int)((0.06E-2/parameters.dimL[0])*parameters.n_cells[0]);
         int length  = (int)((2.347E-2/parameters.dimL[1])*parameters.n_cells[1]);
         int radius  = (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]);
@@ -594,7 +575,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=0;
         }
-    }
+    }*/
 
 
 }

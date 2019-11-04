@@ -166,6 +166,39 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
+                if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
+                {
+                    Print() << "Nan in Wavespeeds " << std::endl;
+                    Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
+                    Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
+                    Print() << "a " <<  UL(SOUNDSPEED) << " " << UR(SOUNDSPEED)  << std::endl;
+                    Print() << "u " <<  UL(VELOCITY,0,d) << " " << UR(VELOCITY,0,d)  << std::endl;
+                    Print() << "rho "<< std::endl;
+
+                    for(int m=0;m<parameters.numberOfMaterials;m++)
+                    {
+                        Print() <<  UL(RHO_K,m) << " " << UR(RHO_K,m)  << std::endl;
+                    }
+
+                    Print() << "alpha "<< std::endl;
+
+                    for(int m=0;m<parameters.numberOfMaterials;m++)
+                    {
+                        Print() <<  UL(ALPHA,m) << " " << UR(ALPHA,m)  << std::endl;
+                    }
+
+                    Print() << "a k "<< std::endl;
+
+                    for(int m=0;m<parameters.numberOfMaterials;m++)
+                    {
+                        Print() <<  UL.parent->accessPattern.materialInfo[m].EOS->getSoundSpeedContribution(*UL.parent,i,j,k,m) << " " << UR.parent->accessPattern.materialInfo[m].EOS->getSoundSpeedContribution(*UR.parent,i,j,k,m)  << std::endl;
+                    }
+
+                    Print() << "p " <<  UL(P) << " " << UR(P)  << std::endl;
+
+                    exit(1);
+                }
+
                 fluxbox(i,j,k,USTAR) = Sstar;
 
                 if(SL>=0.0)
@@ -335,6 +368,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                 {
                     Print() << "Nan in Wavespeeds " << std::endl;
                     Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
+                    Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
                     exit(1);
                 }
 
@@ -583,15 +617,18 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
                 MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
             }
 
-            if(parameters.THINC)
+            if(parameters.THINC) // && d == x
             {
                 BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
                 BoxAccessCellArray URTHINC(mfi,bx,URStar);
                 BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
 
                 THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
-            }
 
+                UL.cleanUpAlpha();
+                UR.cleanUpAlpha();
+
+            }
 
 
             ULbox.primitiveToConservative();
@@ -666,7 +703,6 @@ void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, C
     HLLCadvance(U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
-
 
 }
 

@@ -71,7 +71,7 @@ Real geometricFlux(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier
         else if(n.row==2){  return -(2.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);}
         else {Print() << "Bad radial flux variable" << std::endl;}
 
-    default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
+    default:   amrex::Print() << "Bad radial flux variable" << std::endl; exit(1);
     }
 
 }

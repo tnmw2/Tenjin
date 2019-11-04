@@ -3,6 +3,7 @@
 BoxAccessCellArray::BoxAccessCellArray(const Box& bx, FArrayBox& fb,  CellArray& U) : box{bx}, fab{fb}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
 
 BoxAccessCellArray::BoxAccessCellArray(MFIter& mfi, const Box& bx, CellArray &U) : box{bx}, fab{U.data[mfi]}, accessPattern{U.accessPattern}, numberOfMaterials{U.numberOfMaterials}{}
+
 Real& BoxAccessCellArray::operator()(int i, int j, int k, Variable var, int mat, int row, int col)
 {
     MaterialSpecifier temp(var,mat,row,col);
@@ -266,8 +267,13 @@ void BoxAccessCellArray::getSoundSpeed()
 
                 for(int m=0; m<numberOfMaterials;m++)
                 {
-                    a     += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)*(*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,RHO);
+                    a     += std::max(0.0,accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)*(*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,RHO));
                     xiTot += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*(*this)(i,j,k,ALPHA,m);
+                }
+
+                if(a<=0.0)
+                {
+                    a = 1E-6;// soundSpeedTolerance
                 }
 
                 (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
@@ -292,18 +298,29 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
         }
     }
 
-    if(std::isnan(b))
+    if(std::isnan(b) || b < 0.0)
     {
+        b = 0.0;
+
+        /*Print() << "Nan in transverse wave speeds" << std::endl;
         for(int m=0;m<numberOfMaterials;m++)
         {
             Print() <<  accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m) << " " << accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m) << " "<< ((*this)(i,j,k,RHO_K,m)) << std::endl;
+        }*/
 
-        }
-
-        exit(1);
+        //exit(1);
     }
 
-    return sqrt(b/getEffectiveInverseGruneisen(i,j,k));
+    Real temp = sqrt(b/getEffectiveInverseGruneisen(i,j,k));
+
+    if(std::isnan(temp))
+    {
+        temp = 0.0;
+    }
+
+    return temp;
+
+    //return sqrt(b/getEffectiveInverseGruneisen(i,j,k));
 }
 
 void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
@@ -502,6 +519,77 @@ void BoxAccessCellArray::cleanUpV()
                     {
                         (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
                     }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
+void BoxAccessCellArray::cleanUpAlpha()
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    Real totalAlpha;
+    int Nan;
+
+    for    		   (int k = lo.z; k <= hi.z; ++k)
+    {
+        for        (int j = lo.y; j <= hi.y; ++j)
+        {
+            for    (int i = lo.x; i <= hi.x; ++i)
+            {
+                totalAlpha = 0.0;
+                Nan = 0;
+
+                for(int m=0;m<numberOfMaterials;m++)
+                {
+                    if(std::isnan((*this)(i,j,k,ALPHA,m)))
+                    {
+                        (*this)(i,j,k,ALPHA,m) = 0.0;
+
+                        if(Nan == 0)
+                        {
+                            Nan = m;
+                        }
+                        else
+                        {
+                            Print() << "Error in scaling volume fractions, too many Nans" << std::endl;
+
+                            exit(1);
+                        }
+                    }
+                    else if((*this)(i,j,k,ALPHA,m)<0.0)
+                    {
+                        (*this)(i,j,k,ALPHA,m)= 1E-6;
+                    }
+                    else if((*this)(i,j,k,ALPHA,m)>1.0)
+                    {
+                        (*this)(i,j,k,ALPHA,m) = 1.0;
+                    }
+
+                    totalAlpha += (*this)(i,j,k,ALPHA,m);
+                }
+
+                if(Nan>0)
+                {
+                    (*this)(i,j,k,ALPHA,Nan) = 1.0 - totalAlpha;
+
+                    totalAlpha += (*this)(i,j,k,ALPHA,Nan);
+                }
+
+                if(totalAlpha <= 0.0)
+                {
+                    Print() << "Error in scaling volume fractions" << std::endl;
+
+                    exit(1);
+                }
+
+                for(int m=0;m<numberOfMaterials;m++)
+                {
+                    (*this)(i,j,k,ALPHA,m) *= 1.0/totalAlpha;
                 }
             }
         }

@@ -25,6 +25,7 @@ public:
     void conservativeToPrimitive();
     void getSoundSpeed          ();
     void cleanUpV               ();
+    void cleanUpAlpha           ();
 
     void        operator=(CellArray& U);
     CellArray&  operator*(Real d);
@@ -92,6 +93,9 @@ public:
     void getDeviatoricHenckyStrain(int i, int j, int k);
     void normaliseV();
     void cleanUpV();
+    void cleanUpAlpha();
+
+
 
 
     bool check(MaterialSpecifier& m);

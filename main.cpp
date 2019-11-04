@@ -127,7 +127,7 @@ void main_main ()
 
         parameters.dt = timeStep.getTimeStep(U1,parameters);
 
-        if(n%1==0)
+        if(n%10==0)
         {
             amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
         }
@@ -166,6 +166,10 @@ void main_main ()
             U1.cleanUpV();
         }
 
+        {
+            U1.cleanUpAlpha();
+        }
+
         if(t > ((Real)take_pic_counter)*(initial.finalT)/((Real)initial.numberOfPictures))
         {
             take_pic_counter++;
@@ -176,7 +180,7 @@ void main_main ()
         }
 
 
-        if(U1.data.contains_nan())
+        if(U1.contains_nan())
         {
             Print() << "Nan found in U1" << std::endl;
             break;

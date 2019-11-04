@@ -131,9 +131,9 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
 
                         if(overYieldStress(J,U,i,j,k,m))
                         {
-                            //Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
+                            Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
 
-                            Jnew = bisection(U,i,j,k,J,parameters,m);
+                            //Jnew = bisection(U,i,j,k,J,parameters,m);
 
                             /*if(parameters.PLASTIC==1)
                             {
