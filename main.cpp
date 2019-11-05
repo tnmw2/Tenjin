@@ -1,217 +1,89 @@
-#include "simulationheader.h"
-#include "timestep.h"
+
+#include <new>
+#include <iostream>
+#include <iomanip>
+
+#include <AMReX_Amr.H>
+#include <AMReX_ParmParse.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_AmrLevel.H>
+
+//#include "simulation.H"
+
+
 using namespace amrex;
 
-void main_main ()
+int
+main (int   argc,
+      char* argv[])
 {
-    Real start_time = amrex::second();
-
-    ParmParse pp;
-
-    /* -----------------------------------------------------
-     * parameters and initial are structs that hold and pass
-     * around simulation parameters.
-     * -----------------------------------------------------*/
-
-    ParameterStruct parameters;
-    InitialStruct   initial;
-    PlasticEOS      plastic;
-
-    libConfigInitialiseDataStructs(parameters,initial,plastic);
-
-    /* ----------------------------------------------------
-     * Declare the domain and geometry required for Multifabs
-     * Also delcare a Distribution mapping (Only the standard
-     * one has been used, but I would like to know the benefits
-     * of using others)
-     * -----------------------------------------------------*/
-
-    IntVect lo(AMREX_D_DECL(0,0,0));
-    IntVect hi(AMREX_D_DECL(parameters.n_cells[0]-1, parameters.n_cells[1]-1, parameters.n_cells[2]-1));
-
-    Box domain(lo,hi);
-
-    BoxArray ba(domain);
-
-    ba.maxSize(parameters.max_grid_size);
-
-    RealBox real_box({AMREX_D_DECL(0.0,0.0,0.0)},{AMREX_D_DECL(parameters.dimL[0], parameters.dimL[1], parameters.dimL[2])});
-
-    Geometry geom(domain,real_box,CoordSys::cartesian,{AMREX_D_DECL(0,0,0)});
-
-    DistributionMapping dm(ba);
-
-    parameters.dx = {geom.CellSize()[0],geom.CellSize()[1],geom.CellSize()[2]};
-
-    /* ----------------------------------------------------
-     *  Because the number of components in a Multifab changes
-     * from simulation to simulation, we declare an
-     * AccessPattern which tells us how to get a specific
-     * variable from a Multifab.
-     * ------------------------------------------------------*/
-
-    AccessPattern accessPattern(parameters);
-
-    parameters.Ncomp = accessPattern.variableNames.size();
-
-    /* ----------------------------------------------------
-     * Declare Multifab wrappers with overloaded =,+,* for
-     * ease.
-     * Declare a timestep class that will calculate the
-     * timestep and have its own Multifab to store data.
-     * ----------------------------------------------------*/
-
-    CellArray U         (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray U1        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray U2        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray UL        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray UR        (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray ULStar    (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray URStar    (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray UStarStar (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-    CellArray MUSCLgrad (ba, dm, parameters.Ncomp, parameters.Nghost, accessPattern, parameters);
-
-    THINCArray THINCArr (ba, dm,                   parameters.Nghost,                parameters);
-
-    TimeStep timeStep(ba, dm, AMREX_SPACEDIM, parameters.Nghost);
-
-    /* ----------------------------------------------------
-     * Declare transmissive boundary conditions and set up
-     * a flux vector
-     * ----------------------------------------------------*/
-
-    Array<MultiFab, AMREX_SPACEDIM> flux_arr;
-
-    for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
-    {
-        BoxArray edge_ba = ba;
-
-        edge_ba.surroundingNodes(dir);
-
-        flux_arr[dir].define(edge_ba, dm, parameters.Ncomp, 0);
-    }
-
-        Vector<BCRec> bc(parameters.Ncomp);
-        setBoundaryConditions(bc,parameters,initial,accessPattern);
-
-    /* ----------------------------------------------------
-     * Setup and Print the initial conditions
-     * ----------------------------------------------------*/
-
-    setInitialConditions(U1,parameters,initial);
-
-    {
-        const std::string& pltfile = Concatenate(initial.filename,0,5);
-
-        WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, 0.0, 0);
-    }
-
-
-    /* ----------------------------------------------------
-     * The main time loop
-     * ----------------------------------------------------*/
-
-
-    //return;
-
-    int n = 0;
-
-    int take_pic_counter = 0;
-
-    for(Real t = 0.0 ; t<initial.finalT; t += parameters.dt, n++)
-    {
-
-        FillDomainBoundary(U1.data, geom, bc);
-
-        U1.data.FillBoundary(geom.periodicity());
-
-        parameters.dt = timeStep.getTimeStep(U1,parameters);
-
-        if(n%10==0)
-        {
-            amrex::Print() << "dt: " << parameters.dt << "      t: " << t << " / " << initial.finalT << std::endl;
-        }
-
-        if(t+parameters.dt>initial.finalT)
-        {
-            parameters.dt=initial.finalT-t;
-        }
-
-        if(n<5)
-        {
-            parameters.dt*=0.2;
-        }
-
-        U = U1;
-
-        advance(U, U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters,bc,THINCArr);
-
-        if(parameters.REACTIVE)
-        {
-            reactiveUpdate(U,U1,U2,parameters);
-        }
-
-        if(parameters.PLASTIC)
-        {
-            plastic.plasticUpdate(U1,parameters);
-        }
-
-        if(parameters.RADIAL)
-        {
-            geometricSourceTerm(U1,parameters);
-        }
-
-        if(parameters.SOLID)
-        {
-            U1.cleanUpV();
-        }
-
-        {
-            U1.cleanUpAlpha();
-        }
-
-        if(t > ((Real)take_pic_counter)*(initial.finalT)/((Real)initial.numberOfPictures))
-        {
-            take_pic_counter++;
-            const std::string& pltfile = Concatenate(initial.filename,n,5);
-
-            WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, t, n);
-
-        }
-
-
-        if(U1.contains_nan())
-        {
-            Print() << "Nan found in U1" << std::endl;
-            break;
-        }
-
-        //break;
-
-    }
-
-
-
-    {
-        const std::string& pltfile = Concatenate(initial.filename,n,5);
-        //PrintAllVarsTo1DGnuplotFile(U1,1,initial.filename);
-        WriteSingleLevelPlotfile(pltfile, U1.data, U1.accessPattern.variableNames , geom, initial.finalT, n);
-    }
-
-
-    Real stop_time = amrex::second() - start_time;
-    const int IOProc = ParallelDescriptor::IOProcessorNumber();
-    ParallelDescriptor::ReduceRealMax(stop_time,IOProc);
-    Print() << "Run time = " << stop_time << std::endl;
-
-}
-
-int main (int argc, char* argv[])
-{
-
     amrex::Initialize(argc,argv);
 
-    main_main();
+    Real dRunTime1 = amrex::second();
+
+    int  max_step;
+    Real strt_time;
+    Real stop_time;
+
+    {
+        ParmParse pp;
+
+        max_step  = -1;
+        strt_time =  0.0;
+        stop_time = -1.0;
+
+        pp.query("max_step",max_step);
+        pp.query("strt_time",strt_time);
+        pp.query("stop_time",stop_time);
+    }
+
+    if (strt_time < 0.0) {
+        amrex::Abort("MUST SPECIFY a non-negative strt_time");
+    }
+
+    if (max_step < 0 && stop_time < 0.0) {
+    amrex::Abort("Exiting because neither max_step nor stop_time is non-negative.");
+    }
+
+    {
+
+    Amr amr;
+
+    amr.init(strt_time,stop_time);
+
+    int a = 0;
+
+    while ( amr.okToContinue() &&
+           (amr.levelSteps(0) < max_step || max_step < 0) &&
+           (amr.cumTime() < stop_time || stop_time < 0.0) )
+
+    {
+        //
+        // Do a coarse timestep.  Recursively calls timeStep()
+        //
+        amr.coarseTimeStep(stop_time);
+
+
+
+        a++;
+    }
+
+    // Write final checkpoint and plotfile
+    if (amr.stepOfLastCheckPoint() < amr.levelSteps(0)) {
+        amr.checkPoint();
+    }
+
+    if (amr.stepOfLastPlotFile() < amr.levelSteps(0)) {
+        amr.writePlotFile();
+    }
+
+    }
+
+    Real dRunTime2 = amrex::second() - dRunTime1;
+
+    ParallelDescriptor::ReduceRealMax(dRunTime2, ParallelDescriptor::IOProcessorNumber());
+
+    amrex::Print() << "Run time = " << dRunTime2 << std::endl;
 
     amrex::Finalize();
 

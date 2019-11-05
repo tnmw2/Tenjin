@@ -1,6 +1,7 @@
 ﻿#include "simulationheader.h"
 
 void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStruct& initial, ParameterStruct& parameters);
+void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters);
 
 /** Convert a c++ string to a char array for file I/O operations
  */
@@ -16,8 +17,7 @@ void stringtochar(std::string string,char* file)
     return;
 }
 
-
-void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial)
+void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
 {
 
     const auto lo = lbound(U.box);
@@ -47,13 +47,23 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
     int s=0;
 
-    for                 (int k = lo.z; k <= hi.z; ++k)
+    Real x,y,z;
+
+    for 		(int k = lo.z; k <= hi.z; ++k)
     {
-        for             (int j = lo.y; j <= hi.y; ++j)
+                z = prob_lo[2] + (Real(k)+0.5)*dx[2];
+
+        for 	(int j = lo.y; j <= hi.y; ++j)
         {
-            for         (int i = lo.x; i <= hi.x; ++i)
+                y = prob_lo[1] + (Real(j)+0.5)*dx[1];
+
+            for (int i = lo.x; i <= hi.x; ++i)
             {
-                chooseStateBasedOnInitialCondition(s,i,j,k,initial,parameters);
+                x = prob_lo[0] + (Real(i)+0.5)*dx[0];
+
+                //chooseStateBasedOnInitialCondition(s,i,j,k,initial,parameters);
+
+                AMR_chooseStateBasedOnInitialCondition(s,x,y,z,initial,parameters);
 
                 //Print()<< s << " ";
 
@@ -108,7 +118,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
     }
 }
 
-void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial)
+void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
 {
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
@@ -116,7 +126,7 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStru
 
         BoxAccessCellArray baca(mfi,bx,U);
 
-        initial_conditions(baca, parameters, initial);
+        initial_conditions(baca, parameters, initial,dx,prob_lo);
 
         baca.primitiveToConservative();
     }
@@ -302,10 +312,11 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
          * General Simulation Parameters
          ****************************************************/
 
-        pp.get("max_grid_size", parameters.max_grid_size);
-        pp.get("Nghost",        parameters.Nghost);
+        //pp.get("max_grid_size", parameters.max_grid_size);
+        //pp.get("Nghost",        parameters.Nghost);
 
-        pp.get("plotDirectory", initial.filename);
+        //pp.get("plotDirectory", initial.filename);
+
 
         cfg.lookupValue("finalTime",initial.finalT);
 
@@ -316,6 +327,9 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         cfg.lookupValue("xdomainLength",parameters.dimL[0]);
         cfg.lookupValue("ydomainLength",parameters.dimL[1]);
         cfg.lookupValue("zdomainLength",parameters.dimL[2]);
+
+        Print() << "Here" << std::endl;
+
 
         cfg.lookupValue("CFL",parameters.CFL);
 
@@ -390,16 +404,18 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
+        Print() << i << " " << (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]) << std::endl;
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
             s=0;
         }
         else
         {
+            Print() << "HERE" << std::endl;
             s=1;
         }
-    }*/
+    }
 
     /******************************************
      * Wilkins
@@ -445,7 +461,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * Solid RMI - saw
      *****************************************/
-    {
+    /*{
         Real gradient = -0.2E-3;
 
         if(i < (int)((0.5*initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
@@ -460,12 +476,12 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=3;
         }
-    }
+    }*/
 
     /******************************************
      * Udaykunar Groove
      *****************************************/
-    {
+    /*{
         Real x = i*parameters.dx[0];
         Real y = j*parameters.dx[1];
 
@@ -473,9 +489,9 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         Real interface = initial.interface;
         Real radius = 15E-3;
 
-        /*Real shock = std::max((int)((1E-3/parameters.dimL[1])*parameters.n_cells[1]),5);
-        Real interface =      (int)((initial.interface/parameters.dimL[1])*parameters.n_cells[1]);
-        Real radius =         (int)((15E-3/parameters.dimL[0])*parameters.n_cells[0]);*/
+        //Real shock = std::max((int)((1E-3/parameters.dimL[1])*parameters.n_cells[1]),5);
+        //Real interface =      (int)((initial.interface/parameters.dimL[1])*parameters.n_cells[1]);
+        //Real radius =         (int)((15E-3/parameters.dimL[0])*parameters.n_cells[0]);
 
         if(y < shock)
         {
@@ -496,7 +512,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
         {
             s=3;
         }
-    }
+    }*/
 
 
 
@@ -579,3 +595,36 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
 
 
 }
+
+void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters)
+{
+
+    /******************************************
+     * 1D RP
+     *****************************************/
+    {
+        if(x < initial.interface)
+        {
+            s=0;
+        }
+        else
+        {
+             s=1;
+        }
+    }
+
+    /******************************************
+     * 2D Sod
+     *****************************************/
+    /*{
+        if((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) < 0.2*0.2)
+        {
+            s=0;
+        }
+        else
+        {
+             s=1;
+        }
+    }*/
+}
+

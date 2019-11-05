@@ -26,6 +26,8 @@ class AccessPattern
 public:
 
     AccessPattern(ParameterStruct &parameters);
+
+    void define(ParameterStruct &parameters);
     void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Variable var, int materialNumber, int rowNumber, int colNumber);
 
     int& operator[](Variable var);
@@ -34,6 +36,8 @@ public:
 
     Vector<MaterialSpecifier>   conservativeVariables;
     Vector<MaterialSpecifier>   primitiveVariables;
+    Vector<MaterialSpecifier>   allVariables;
+
 
     Vector<std::string>         variableNames;
     Vector<MaterialDescriptor>&  materialInfo;

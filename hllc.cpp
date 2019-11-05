@@ -490,7 +490,7 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
  *  The volume fraction alpha also needs a special
  *  non-conservative update.
  */
-void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d)
+void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx)
 {
 
     const auto lo = lbound(Ubox.box);
@@ -506,15 +506,15 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
                 {
                     if(n.var == ALPHA)
                     {
-                        U1box(i,j,k,n) += (parameters.dt/parameters.dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
                     }
                     else if(n.var == V_TENSOR)
                     {
-                        U1box(i,j,k,n) += (parameters.dt/parameters.dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -(2.0/3.0)*Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)) + Ubox(i,j,k,VELOCITY,0,n.row)*(fluxbox(i,j,k,VSTAR,0,d,n.col) - fluxbox.right(d,i,j,k,VSTAR,0,d,n.col)));
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -(2.0/3.0)*Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)) + Ubox(i,j,k,VELOCITY,0,n.row)*(fluxbox(i,j,k,VSTAR,0,d,n.col) - fluxbox.right(d,i,j,k,VSTAR,0,d,n.col)));
                     }
                     else
                     {
-                        U1box(i,j,k,n) += (parameters.dt/parameters.dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n));
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n));
                     }
                 }
             }
@@ -677,7 +677,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
             }
 
-            update(fluxbox, Ubox, U1box, parameters,d);
+            update(fluxbox, Ubox, U1box, parameters,d,parameters.dt,parameters.dx.dataPtr());
 
         }
 

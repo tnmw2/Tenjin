@@ -19,7 +19,7 @@ class CellArray
 {
 public:
 
-    CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, AccessPattern& _accessPattern, ParameterStruct &parameters);
+    CellArray(MultiFab& S, AccessPattern &_accessPattern, ParameterStruct& parameters);
 
     void primitiveToConservative();
     void conservativeToPrimitive();
@@ -33,7 +33,7 @@ public:
     bool        contains_nan();
 
 
-    MultiFab data;
+    MultiFab& data;
 
     AccessPattern& accessPattern;
 

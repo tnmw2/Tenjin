@@ -19,7 +19,10 @@ SOURCES += main.cpp \
     boundary.cpp \
     flux.cpp \
     radial.cpp \
-    plastic.cpp
+    plastic.cpp \
+    AmrLevelAdv.cpp \
+    newAMRFunctions.cpp \
+    LevelBldAdv.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -33,8 +36,12 @@ HEADERS += \
     tensor.h \
     thinc.h \
     flux.h \
-    plastic.h
+    plastic.h \
+    Adv_F.H \
+    AmrLevelAdv.H
 
 DISTFILES += \
-    Make.package
+    Make.package \
+    ../build-AMReXMMMP-Desktop-Debug/GNUmakefile \
+    bc_fill_nd.f90
 

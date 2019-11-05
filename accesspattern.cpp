@@ -34,16 +34,29 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
                     {
                         cellVariables.push_back(MaterialSpecifier(var,m,row,col));
                     }
+
+                    allVariables.push_back(MaterialSpecifier(var,m,row,col));
                 }
             }
         }
     }
 }
 
-
 AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(parameters.materialInfo)
 {
+    define(parameters);
+}
+
+void AccessPattern::define(ParameterStruct& parameters)
+{
     int n=0;
+
+    data.clear();
+    conservativeVariables.clear();
+    primitiveVariables.clear();
+    allVariables.clear();
+    variableNames.clear();
+    cellVariables.clear();
 
     addVariable(n,"alpha"   ,       BOTH,           CELL,    ALPHA,          parameters.numberOfMaterials);
     addVariable(n,"alphaRho",       CONSERVATIVE,   CELL,    ALPHARHO,       parameters.numberOfMaterials);
@@ -77,6 +90,7 @@ AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(paramet
     }
 
 }
+
 
 int& AccessPattern::operator[](Variable var)
 {

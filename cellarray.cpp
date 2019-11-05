@@ -1,6 +1,6 @@
 #include "cellarray.h"
 
-CellArray::CellArray(BoxArray& ba, DistributionMapping& dm, const int Ncomp, const int Nghost, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(ba,dm,Ncomp,Nghost), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
+CellArray::CellArray(MultiFab& S, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(S), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
 
 void CellArray::conservativeToPrimitive()
 {
