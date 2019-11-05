@@ -36,6 +36,8 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
                     }
 
                     allVariables.push_back(MaterialSpecifier(var,m,row,col));
+
+
                 }
             }
         }
