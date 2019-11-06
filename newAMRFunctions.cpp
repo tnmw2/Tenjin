@@ -6,8 +6,11 @@
 
 #include "simulationheader.h"
 
-
 using namespace amrex;
+
+/*-------------------------------------------------------------
+ * Declaring static member data
+ * -----------------------------------------------------------*/
 
 int      AmrLevelAdv::verbose           = 0;
 Real     AmrLevelAdv::cfl               = 0.9;
@@ -23,47 +26,58 @@ Vector<Real>    AmrLevelAdv::levelGradientCoefficients;
 int      AmrLevelAdv::NUM_STATE       = 1;  // One variable in the state
 int      AmrLevelAdv::NUM_GROW        = 1;  // number of ghost cells
 
+/*-------------------------------------------------------------
+ * Non-AMR functions in other files that can interface to
+ * the new AMR_HLLC functions
+ * -----------------------------------------------------------*/
+
 void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d);
 void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
 
 
-void C_nullfill(double* adv, const int& adv_lo, const int& adv_hi, const int& domlo, const int& domhi, const int* delta, const int* xlo, const double* time, const double*, const double*, const int* bc)
-{
-
-	return;
-}
-
 void AmrLevelAdv::initData ()
 {
 
-    const Real* dx  = geom.CellSize();
+    const Real* dx      = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
-    MultiFab& S_new = get_new_data(Phi_Type);
-    Real cur_time   = state[Phi_Type].curTime();
+    MultiFab& S_new     = get_new_data(Phi_Type);
 
-    if (verbose) {
+    if (verbose)
+    {
         amrex::Print() << "Initializing the data at level " << level << std::endl;
     }
+
+    /*-------------------------------------------------------------
+     * The old setInitialConditions function can still be used to
+     * initialise data on a level, but now works in terms of real
+     * position instead of array coordinates
+     * -----------------------------------------------------------*/
      
     CellArray U(S_new,accessPattern,parameters); 
      
     setInitialConditions(U,parameters,initial,dx,prob_lo);
     
 
-#ifdef AMREX_PARTICLES
+    #ifdef AMREX_PARTICLES
     init_particles();
-#endif
+    #endif
 
-    if (verbose) {
-	amrex::Print() << "Done initializing the level " << level 
-                       << " data " << std::endl;
+    if (verbose)
+    {
+        amrex::Print() << "Done initializing the level " << level  << " data " << std::endl;
     }
 }
 
 void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real* dx, AccessPattern& accessPattern, ParameterStruct& parameters)
 {
+    /*-------------------------------------------------------------
+     * Fluxes need to be rescaled for the refluxing operation.
+     * We put CellArray wrappers around the flux mulitfabs
+     * to access them easily
+     * -----------------------------------------------------------*/
+
 	CellArray F0(flux_arr[0],accessPattern,parameters);
 	CellArray F1(flux_arr[1],accessPattern,parameters);
 	CellArray F2(flux_arr[2],accessPattern,parameters);
@@ -183,12 +197,6 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             URbox.getSoundSpeed();
 
         }
-
-        /*FillDomainBoundary(UL.data, geom, bc);
-        FillDomainBoundary(UR.data, geom, bc);
-
-        UL.data.FillBoundary(geom.periodicity());
-        UR.data.FillBoundary(geom.periodicity());*/
         
         FillPatch(*this, UL.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
 		FillPatch(*this, UR.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
@@ -242,6 +250,10 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
 Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 {
+    /*-------------------------------------------------------------
+     * Runge-Kutta time integration with MUSCL/HLLC is used to update the
+     * solution on a given level.
+     * -----------------------------------------------------------*/
 
     MultiFab& S_new = get_new_data(Phi_Type);
 
@@ -271,6 +283,12 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 		current = &getFluxReg(level);
     }
 
+    /*-------------------------------------------------------------
+     * Declared flux multifabs. Several are needed as we need to
+     * keep track of the flux in each Runge-Kutta timestep to such
+     * that we can reflux appropriately
+     * -----------------------------------------------------------*/
+
     Array <MultiFab, AMREX_SPACEDIM> fluxes;
     Array <MultiFab, AMREX_SPACEDIM> fluxes1;
     Array <MultiFab, AMREX_SPACEDIM> fluxes2;
@@ -288,7 +306,11 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     }
 
 
-    // States with ghost cells
+    /*-------------------------------------------------------------
+     * Declare some multifabs with Ghost cells to hold intermediate
+     * data in the RK update, and then wrap them in CellArrays
+     * -----------------------------------------------------------*/
+
     MultiFab S0(grids, dmap, parameters.Ncomp, NUM_GROW);
     FillPatch(*this, S0, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
     MultiFab S1(grids, dmap, parameters.Ncomp, NUM_GROW);
@@ -363,6 +385,13 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
 Real AmrLevelAdv::estTimeStep (Real)
 {
+
+    /*-------------------------------------------------------------
+     * This timestep function is essentially unchanged from the
+     * tutorial execept that we calculate the wavespeed in the
+     * normal way, instead of the plain advection way.
+     * -----------------------------------------------------------*/
+
     // This is just a dummy value to start with 
     Real dt_est  = 1.0e+20;
 
@@ -449,10 +478,7 @@ void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArra
 {
 	const auto lo = lbound(box);
     const auto hi = ubound(box);
-    
 
-    //Vector<Real> levelSpecificCoefficient{0.3,0.3,0.3,0.3,0.3,0.3};
-    
     Real ax,ay,az,gradient;
 
     for 		(int k = lo.z; k <= hi.z; ++k)
@@ -482,6 +508,13 @@ void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArra
 
 void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real time, int n_error_buf, int ngrow)
 {
+
+    /*-------------------------------------------------------------
+     * This function tags cells for regridding. We first calculate
+     * the maximum gradient on a level, and tag cells based on
+     * whether they are within a certain fraction of that gradient
+     * -----------------------------------------------------------*/
+
     const Real* dx        = geom.CellSize();
     const Real* prob_lo   = geom.ProbLo();
 
@@ -497,9 +530,9 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
     Real temp    = 0.0;
 
 
-#ifdef _OPENMP
-#pragma omp parallel reduction(max:gradMax)
-#endif
+    #ifdef _OPENMP
+    #pragma omp parallel reduction(max:gradMax)
+    #endif
     {
 		for (MFIter mfi(S_new); mfi.isValid(); ++mfi)
 		{
@@ -515,11 +548,9 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 	
 	ParallelDescriptor::ReduceRealMax(gradMax);
 	
-    Print() << level << " " << gradMax << std::endl;
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #endif
     {
 		for (MFIter mfi(S_new); mfi.isValid(); ++mfi)
 		{
@@ -537,109 +568,23 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 	}
 }
 
-void FStyle_State_error(Array4<char> const& tag, const int* tag_lo, const int* tag_hi, BoxAccessCellArray& state, const Box& box, int set, int clear, const Real* dx, const Real* prob_lo, Real time, int level)
-{
-	int dim;
-	
-	Real ax,ay,az,gradient;
-	
-	const auto lo = lbound(box);
-	const auto hi = ubound(box);
-	
-	if(lo.z == hi.z)
-	{
-		dim = 2;
-	}
-	else
-	{
-		dim = 3;
-	}
-	
-    if(level < 10)
-	{
-		for 		(int k = lo.z; k <= hi.z; ++k)
-		{
-			for 	(int j = lo.y; j <= hi.y; ++j)
-			{
-				for (int i = lo.x; i <= hi.x; ++i)
-				{
-					
-					ax = (state(i+1,j,k,RHO)-state(i-1,j,k,RHO))/(2.0*dx[0]);
-					ay = (state(i,j+1,k,RHO)-state(i,j-1,k,RHO))/(2.0*dx[1]);
-
-					
-					if(dim == 2)
-					{
-						az = 0.0;
-					}
-					else
-					{
-						Print() << "No tagging in 3D yet" << std::endl;
-						exit(1);
-					}
-					
-					gradient = sqrt(ax*ax+ay*ay+az*az);
-					
-
-					if(gradient >= 2.0)
-					{
-						tag(i,j,k) = TagBox::SET;		
-					}
-					else
-					{
-						tag(i,j,k) = TagBox::CLEAR;
-					}
-				}
-			}
-		}
-	}
-}
-
-
-/*void
-AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real time, int n_error_buf, int ngrow)
-{
-    const Real* dx        = geom.CellSize();
-    const Real* prob_lo   = geom.ProbLo();
-
-    MultiFab& S_new = get_new_data(Phi_Type);
-    
-    // State with ghost cells
-    MultiFab Sborder(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, Sborder, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    CellArray U(Sborder,accessPattern,parameters);
-    
-    
-    
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    {
-        Vector<int>  itags;
-	
-		for (MFIter mfi(S_new,true); mfi.isValid(); ++mfi)
-		{
-			const Box&  tilebx  = mfi.tilebox();
-
-			TagBox&     tagfab  = tags[mfi];
-			
-			BoxAccessCellArray Ubox(mfi,tilebx,U);
-			
-			Array4<char> const& tagarr 	= tagfab.array();
-
-			int*        tptr    = itags.dataPtr();
-			
-			const int*  tlo     = tilebx.loVect();
-			const int*  thi     = tilebx.hiVect();
-			
-			FStyle_State_error(tagarr,tlo,thi,Ubox,tilebx,tagval,clearval,dx,prob_lo,time,level);
-		}
-    }
-}*/
-
 void AmrLevelAdv::variableSetUp ()
 {
+
+    /*-------------------------------------------------------------
+     * This function sets names and boundary conditions for each
+     * variable.
+     *
+     *
+     * Question:
+     *
+     * Why do I have to write my own function (Phifill) to set
+     * the boundary conditions? Is this not something AMReX is
+     * capable of handling itself?
+     *
+     *
+     * -----------------------------------------------------------*/
+
     BL_ASSERT(desc_lst.size() == 0);
 
     read_params();
@@ -652,8 +597,7 @@ void AmrLevelAdv::variableSetUp ()
     
     for(int n = 0; n<parameters.Ncomp; n++)
     {
-        desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc[n],
-			  StateDescriptor::BndryFunc(phifill)); 
+        desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
 	}
 }
 
