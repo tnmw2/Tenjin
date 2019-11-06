@@ -18,6 +18,7 @@ ParameterStruct AmrLevelAdv::parameters;
 InitialStruct   AmrLevelAdv::initial;
 PlasticEOS      AmrLevelAdv::plastic;
 AccessPattern 	AmrLevelAdv::accessPattern(AmrLevelAdv::parameters);
+Vector<Real>    AmrLevelAdv::levelGradientCoefficients;
 
 int      AmrLevelAdv::NUM_STATE       = 1;  // One variable in the state
 int      AmrLevelAdv::NUM_GROW        = 1;  // number of ghost cells
@@ -251,9 +252,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     const Real* dx = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
 
-    //Print() << "In advance: " << level << " " << dx[0] << std::endl;
-
-
     //
     // Get pointers to Flux registers, or set pointer to zero if not there.
     //
@@ -277,22 +275,18 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     Array <MultiFab, AMREX_SPACEDIM> fluxes1;
     Array <MultiFab, AMREX_SPACEDIM> fluxes2;
 
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+        ba.surroundingNodes(j);
+        fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes [j].setVal(0.0);
+        fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes1[j].setVal(0.0);
+        fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes2[j].setVal(0.0);
+    }
 
-
-    //if(do_reflux)
-    //{
-		for (int j = 0; j < BL_SPACEDIM; j++)
-		{
-			BoxArray ba = S_new.boxArray();
-			ba.surroundingNodes(j);
-            fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
-            fluxes [j].setVal(0.0);
-            fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
-            fluxes1[j].setVal(0.0);
-            fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
-            fluxes2[j].setVal(0.0);
-		}
-    //}
 
     // States with ghost cells
     MultiFab S0(grids, dmap, parameters.Ncomp, NUM_GROW);
@@ -313,8 +307,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     FillPatch(*this, SStarStar, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
     MultiFab Sgrad(grids, dmap, parameters.Ncomp, NUM_GROW);
     FillPatch(*this, Sgrad, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-         
-    
+          
     CellArray U (S0,accessPattern,parameters);
     CellArray U1(S1,accessPattern,parameters);
     CellArray U2(S2,accessPattern,parameters);
@@ -339,48 +332,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
 
-/*#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    {
-		//FArrayBox flux[BL_SPACEDIM];
-
-			for (MFIter mfi(S_new, true); mfi.isValid(); ++mfi)
-			{
-				const Box& bx = mfi.tilebox();
-				
-				
-				
-
-				/*const FArrayBox& statein  = Sborder[mfi];
-				FArrayBox&       stateout =   S_new[mfi];
-				
-				Array4<Real const> const& Uold = statein.array();
-				Array4<Real> const& Unew = stateout.array();
-				
-				// Allocate fabs for fluxes and Godunov velocities.
-				for (int i = 0; i < BL_SPACEDIM ; i++)
-				{
-					const Box& bxtmp = amrex::surroundingNodes(bx,i);
-					flux[i].resize(bxtmp,parameters.Ncomp);
-				}*/
-				
-				/*Array4<Real> const& xflux = flux[0].array();
-				Array4<Real> const& yflux = flux[1].array();
-				Array4<Real> const& zflux = flux[2].array();
-  
-				C_advect(time,bx,Uold,Unew,xflux,yflux,zflux,dx,dt,cfl,parameters.Ncomp,advectionVeloctiy);	
-			
-
-			if (do_reflux)
-			{
-				for (int i = 0; i < BL_SPACEDIM ; i++)
-				{
-					fluxes[i][mfi].copy(flux[i],mfi.nodaltilebox(i));
-				}
-			}
-		}
-    }*/
     
     if (do_reflux)
     {
@@ -400,11 +351,12 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 		}
     }
 
-#ifdef AMREX_PARTICLES
-    if (TracerPC) {
+    #ifdef AMREX_PARTICLES
+    if (TracerPC)
+    {
       TracerPC->AdvectWithUmac(Umac, level, dt);
     }
-#endif
+    #endif
 
     return dt;
 }
@@ -493,13 +445,13 @@ Real findBiggestGradientOnLevel(const Box& box, BoxAccessCellArray& U, const Rea
 	return max;			
 }
 
-void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, const Real* dx, Real time, Real level, Real gradMax)
+void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, const Real* dx, Real time, Real level, Real gradMax, Vector<Real> levelGradientCoefficients)
 {
 	const auto lo = lbound(box);
     const auto hi = ubound(box);
     
 
-    Vector<Real> levelSpecificCoefficient{0.3,0.3,0.3,0.3,0.3,0.3};
+    //Vector<Real> levelSpecificCoefficient{0.3,0.3,0.3,0.3,0.3,0.3};
     
     Real ax,ay,az,gradient;
 
@@ -516,7 +468,7 @@ void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArra
 				gradient = sqrt(ax*ax+ay*ay);
 				
 
-                if(gradient >= levelSpecificCoefficient[level]*gradMax)
+                if(gradient > levelGradientCoefficients[level]*gradMax)
 				{
 					tagarr(i,j,k) = TagBox::SET;
                 }
@@ -579,7 +531,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
             
             Array4<char> const& tagarr 	= tagfab.array();
             
-            C_state_error(tagarr,bx,Ubox,dx,time,level,gradMax);
+            C_state_error(tagarr,bx,Ubox,dx,time,level,gradMax,levelGradientCoefficients);
             
         }
 	}
@@ -694,19 +646,13 @@ void AmrLevelAdv::variableSetUp ()
 
     desc_lst.addDescriptor(Phi_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.Ncomp,&cell_cons_interp);
 
-    int lo_bc[BL_SPACEDIM];
-    int hi_bc[BL_SPACEDIM];
-    
-    for (int i = 0; i < BL_SPACEDIM; ++i)
-    {
-		lo_bc[i] = hi_bc[i] = BCType::foextrap;   // transmissive boundaries
-    }
-    
-    BCRec bc(lo_bc, hi_bc);
+    Vector<BCRec> bc(parameters.Ncomp);
+
+    setBoundaryConditions(bc,parameters,initial,accessPattern);
     
     for(int n = 0; n<parameters.Ncomp; n++)
     {
-		desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc, 
+        desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc[n],
 			  StateDescriptor::BndryFunc(phifill)); 
 	}
 }
@@ -725,6 +671,7 @@ void AmrLevelAdv::read_params ()
     pp.query("cfl",cfl);
     pp.query("do_reflux",do_reflux);
     pp.query("vel",advectionVeloctiy);
+    pp.queryarr("level_Coeff",levelGradientCoefficients);
     
     libConfigInitialiseDataStructs(parameters,initial,plastic);
     

@@ -187,8 +187,10 @@ protected:
     static InitialStruct   initial;
     static PlasticEOS	   plastic;
     static AccessPattern   accessPattern;
+
+    static Vector<Real>    levelGradientCoefficients;
     
-    static amrex::Real  advectionVeloctiy;
+    static amrex::Real     advectionVeloctiy;
 
 #ifdef AMREX_PARTICLES
     void init_particles ();
