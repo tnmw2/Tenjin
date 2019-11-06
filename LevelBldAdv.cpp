@@ -1,4 +1,3 @@
-
 #include <AMReX_LevelBld.H>
 #include <AmrLevelAdv.H>
 

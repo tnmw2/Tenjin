@@ -198,8 +198,8 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
         }
         
-        FillPatch(*this, UL.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-		FillPatch(*this, UR.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
+        //FillPatch(*this, UL.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
+        //FillPatch(*this, UR.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
 		
 
 
@@ -445,62 +445,59 @@ Real AmrLevelAdv::estTimeStep (Real)
     return dt_est;
 }
 
-Real findBiggestGradientOnLevel(const Box& box, BoxAccessCellArray& U, const Real* dx, Real time, Real level)
+void findBiggestGradientOnLevel(const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad,const Real* dx, Real time, Real level, Real& gradMax, MaterialSpecifier& n)
 {
 	const auto lo = lbound(box);
     const auto hi = ubound(box);
     
-    Real ax,ay,gradient;
-    
-    Real max = 0.0;
-    
-    for 		(int k = lo.z; k <= hi.z; ++k)
-	{
-		for 	(int j = lo.y; j <= hi.y; ++j)
-		{
-			for (int i = lo.x; i <= hi.x; ++i)
-			{
-				
-				ax = (U(i+1,j,k,RHO)-U(i-1,j,k,RHO))/(2.0*dx[0]);
-				ay = (U(i,j+1,k,RHO)-U(i,j-1,k,RHO))/(2.0*dx[1]);
+    Real ax,ay;
 
-				gradient = sqrt(ax*ax+ay*ay);
-				
-				max = (gradient > max ? gradient : max);
-			}
-		}
-	}
+    for 		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for 	(int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+
+                ax = (U(i+1,j,k,n)-U(i-1,j,k,n))/(2.0*dx[0]);
+                ay = (U(i,j+1,k,n)-U(i,j-1,k,n))/(2.0*dx[1]);
+
+                grad(i,j,k,n) = sqrt(ax*ax+ay*ay);
+
+                gradMax = (grad(i,j,k,n) > gradMax ? grad(i,j,k,n) : gradMax);
+            }
+        }
+    }
+
 	
-	return max;			
+    return;
 }
 
-void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, const Real* dx, Real time, Real level, Real gradMax, Vector<Real> levelGradientCoefficients)
+void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
 {
 	const auto lo = lbound(box);
     const auto hi = ubound(box);
 
-    Real ax,ay,az,gradient;
+    int m = 0;
 
-    for 		(int k = lo.z; k <= hi.z; ++k)
-	{
-		for 	(int j = lo.y; j <= hi.y; ++j)
-		{
-			for (int i = lo.x; i <= hi.x; ++i)
-			{
-				
-				ax = (U(i+1,j,k,RHO)-U(i-1,j,k,RHO))/(2.0*dx[0]);
-				ay = (U(i,j+1,k,RHO)-U(i,j-1,k,RHO))/(2.0*dx[1]);
-
-				gradient = sqrt(ax*ax+ay*ay);
-				
-
-                if(gradient > levelGradientCoefficients[level]*gradMax)
-				{
-					tagarr(i,j,k) = TagBox::SET;
+    for(auto n : accessPattern.refineVariables)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    if(grad(i,j,k,n) > levelGradientCoefficients[level]*gradMax[m])
+                    {
+                        tagarr(i,j,k) = TagBox::SET;
+                    }
                 }
-			}	
-		}
-	}
+            }
+        }
+
+        m++;
+    }
 
 	return;
 
@@ -523,30 +520,45 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
     // State with ghost cells
     MultiFab Sborder(grids, dmap, parameters.Ncomp, NUM_GROW);
     FillPatch(*this, Sborder, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
+
+    MultiFab Sgrad(grids, dmap, parameters.Ncomp, NUM_GROW);
+    FillPatch(*this, Sgrad, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
     
     CellArray U(Sborder,accessPattern,parameters);
-    
-    Real gradMax = 0.0;
-    Real temp    = 0.0;
+    CellArray grad(Sgrad,accessPattern,parameters);
 
+    Vector<Real> gradMaxVec(parameters.Ncomp,0.0); //accessPattern.refineVariables.size()+1
 
-    #ifdef _OPENMP
-    #pragma omp parallel reduction(max:gradMax)
-    #endif
+    int m = 0;
+
+    for(auto n : accessPattern.refineVariables)
     {
-		for (MFIter mfi(S_new); mfi.isValid(); ++mfi)
-		{
-			const Box& bx	  			= mfi.validbox();
-			
-			BoxAccessCellArray 			Ubox(mfi,bx,U);
+        Real gradMax = 0.0;
+        Real temp    = 0.0;
 
-            temp = findBiggestGradientOnLevel(bx,Ubox,dx,time,level);
-            
-            gradMax = ( (temp > gradMax) ? temp : gradMax );
-		}
-	}
+        #ifdef _OPENMP
+        #pragma omp parallel reduction(max:gradMax)
+        #endif
+        {
+            for (MFIter mfi(S_new); mfi.isValid(); ++mfi)
+            {
+                const Box& bx	  			= mfi.validbox();
+
+                BoxAccessCellArray 			Ubox(mfi,bx,U);
+                BoxAccessCellArray 			gradbox(mfi,bx,grad);
+
+                findBiggestGradientOnLevel(bx,Ubox,gradbox,dx,time,level,gradMax,n);
+            }
+        }
+
+        ParallelDescriptor::ReduceRealMax(gradMax);
+
+        gradMaxVec[m] = gradMax;
+
+        m++;
+    }
 	
-	ParallelDescriptor::ReduceRealMax(gradMax);
+
 	
     #ifdef _OPENMP
     #pragma omp parallel
@@ -556,13 +568,14 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 		{
 			const Box& bx	  			= mfi.validbox();
 			
-			BoxAccessCellArray 			Ubox(mfi,bx,U);
+            BoxAccessCellArray 			Ubox(mfi,bx,U);
+            BoxAccessCellArray 			gradbox(mfi,bx,grad);
 
             TagBox&    tagfab	  		= tags[mfi];
             
             Array4<char> const& tagarr 	= tagfab.array();
             
-            C_state_error(tagarr,bx,Ubox,dx,time,level,gradMax,levelGradientCoefficients);
+            C_state_error(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
             
         }
 	}
@@ -620,6 +633,11 @@ void AmrLevelAdv::read_params ()
     libConfigInitialiseDataStructs(parameters,initial,plastic);
     
     accessPattern.define(parameters);
+
+    for(auto n : accessPattern.refineVariables)
+    {
+        Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat] << std::endl;
+    }
     
     parameters.Ncomp = accessPattern.variableNames.size();
 

@@ -83,8 +83,10 @@ enum Var_type
     BOTH,
     NEITHER,
     CELL,
-    NOTCELL
+    NOTCELL,
+    REFINE
 };
+
 class MieGruneisenEOS;
 
 struct MaterialDescriptor

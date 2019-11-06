@@ -1,4 +1,3 @@
-
 #include <AmrLevelAdv.H>
 #include <Adv_F.H>
 #include <AMReX_VisMF.H>

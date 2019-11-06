@@ -1,4 +1,3 @@
-
 #include <new>
 #include <iostream>
 #include <iomanip>
@@ -8,7 +7,9 @@
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_AmrLevel.H>
 
-//#include "simulation.H"
+#include "simulationheader.h"
+
+void stringtochar(std::string string,char* file);
 
 
 using namespace amrex;
@@ -26,6 +27,8 @@ main (int   argc,
     Real stop_time;
 
     {
+        using namespace libconfig;
+
         ParmParse pp;
 
         max_step  = -1;
@@ -35,6 +38,28 @@ main (int   argc,
         pp.query("max_step",max_step);
         pp.query("strt_time",strt_time);
         pp.query("stop_time",stop_time);
+
+        std::string settingsFileString;
+
+        pp.get("SettingsFile",settingsFileString);
+
+        char settingsFile[settingsFileString.length()+1];
+
+        stringtochar(settingsFileString,settingsFile);
+
+        Config cfg;
+
+        try
+        {
+            cfg.readFile(settingsFile);
+        }
+        catch(ParseException except)
+        {
+            std::cout << "Incorrect Settings file" << std::endl;
+            exit(1);
+        }
+
+        cfg.lookupValue("finalTime",stop_time);
     }
 
     if (strt_time < 0.0) {

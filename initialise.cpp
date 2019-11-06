@@ -328,9 +328,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         cfg.lookupValue("ydomainLength",parameters.dimL[1]);
         cfg.lookupValue("zdomainLength",parameters.dimL[2]);
 
-        Print() << "Here" << std::endl;
-
-
         cfg.lookupValue("CFL",parameters.CFL);
 
         cfg.lookupValue("materials",    parameters.numberOfMaterials);
