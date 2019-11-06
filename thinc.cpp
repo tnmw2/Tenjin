@@ -25,12 +25,12 @@ bool mixedCell(Real C, BoxAccessCellArray& U, Direction_enum d, int m, int i, in
 
 /** Estimates the local interface normal using Young's method in 2D.
  */
-Real youngsInterfaceConstruction(Real nx, Real ny, BoxAccessCellArray& U, ParameterStruct& parameters, Direction_enum d, int m, int i, int j, int k)
+Real youngsInterfaceConstruction(Real nx, Real ny, BoxAccessCellArray& U, ParameterStruct& parameters, Direction_enum d,const Real* dx, int m, int i, int j, int k)
 {
     Real norm;
 
-    nx = -1.0/(8.0*parameters.dx[0])*(U.neighbour(1,1,0,i,j,k,ALPHA,m)+2.0*U.neighbour(1,0,0,i,j,k,ALPHA,m)+U.neighbour(1,-1,0,i,j,k,ALPHA,m)-U.neighbour(-1,1,0,i,j,k,ALPHA,m) -2.0*U.neighbour(-1,0,0,i,j,k,ALPHA,m)-U.neighbour(-1,-1,0,i,j,k,ALPHA,m));
-    ny = -1.0/(8.0*parameters.dx[1])*(U.neighbour(1,1,0,i,j,k,ALPHA,m)+2.0*U.neighbour(0,1,0,i,j,k,ALPHA,m)+U.neighbour(-1,1,0,i,j,k,ALPHA,m)-U.neighbour(-1,-1,0,i,j,k,ALPHA,m)-2.0*U.neighbour(0,-1,0,i,j,k,ALPHA,m)-U.neighbour(1,-1,0,i,j,k,ALPHA,m));
+    nx = -1.0/(8.0*dx[0])*(U.neighbour(1,1,0,i,j,k,ALPHA,m)+2.0*U.neighbour(1,0,0,i,j,k,ALPHA,m)+U.neighbour(1,-1,0,i,j,k,ALPHA,m)-U.neighbour(-1,1,0,i,j,k,ALPHA,m) -2.0*U.neighbour(-1,0,0,i,j,k,ALPHA,m)-U.neighbour(-1,-1,0,i,j,k,ALPHA,m));
+    ny = -1.0/(8.0*dx[1])*(U.neighbour(1,1,0,i,j,k,ALPHA,m)+2.0*U.neighbour(0,1,0,i,j,k,ALPHA,m)+U.neighbour(-1,1,0,i,j,k,ALPHA,m)-U.neighbour(-1,-1,0,i,j,k,ALPHA,m)-2.0*U.neighbour(0,-1,0,i,j,k,ALPHA,m)-U.neighbour(1,-1,0,i,j,k,ALPHA,m));
 
     norm = std::sqrt(nx*nx+ny*ny);
 
@@ -64,7 +64,7 @@ double TBV(BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& U
 
 /** Performs the BVD-THINC update from Deng for the volume fraction.
  */
-void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, ParameterStruct& parameters, Direction_enum d)
+void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, ParameterStruct& parameters,const Real* dx, Direction_enum d)
 {
 
     Real beta;
@@ -115,7 +115,7 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
 
                         if(AMREX_SPACEDIM == 2)
                         {
-                            normalisedVectorComponent = youngsInterfaceConstruction(nx,ny,U,parameters,d,m,i,j,k);
+                            normalisedVectorComponent = youngsInterfaceConstruction(nx,ny,U,parameters,d,dx,m,i,j,k);
                         }
                         else if(AMREX_SPACEDIM == 1)
                         {

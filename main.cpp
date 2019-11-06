@@ -88,7 +88,7 @@ main (int   argc,
         //
         amr.coarseTimeStep(stop_time);
 
-
+        Print() << "t: " << amr.cumTime() << " dt: " << amr.dtLevel(0) <<std::endl;
 
         a++;
     }

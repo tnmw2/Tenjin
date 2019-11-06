@@ -22,6 +22,7 @@ InitialStruct   AmrLevelAdv::initial;
 PlasticEOS      AmrLevelAdv::plastic;
 AccessPattern 	AmrLevelAdv::accessPattern(AmrLevelAdv::parameters);
 Vector<Real>    AmrLevelAdv::levelGradientCoefficients;
+Vector<BCRec>   AmrLevelAdv::bc;
 
 int      AmrLevelAdv::NUM_STATE       = 1;  // One variable in the state
 int      AmrLevelAdv::NUM_GROW        = 1;  // number of ghost cells
@@ -133,15 +134,18 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 		
 }
 
-void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,ParameterStruct& parameters, const Real* dx, Real dt, Real time)
+void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, Real dt, Real time)
 {
-    Direction_enum d;
-    
+    Direction_enum d; 
+
+    FillDomainBoundary(U.data, geom, bc);
+    U.data.FillBoundary(geom.periodicity());
+
     U.conservativeToPrimitive();
 
     U1 = U;
 
-    for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
+    for(int dir = 0; dir < 1 ; dir++)
     {
         d = (Direction_enum)dir;
 
@@ -176,18 +180,18 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
                 MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
             }
 
-            /*if(parameters.THINC)
+            if(parameters.THINC)
             {
                 BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
                 BoxAccessCellArray URTHINC(mfi,bx,URStar);
                 BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
 
-                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
+                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
 
                 UL.cleanUpAlpha();
                 UR.cleanUpAlpha();
 
-            }*/
+            }
 
 
             ULbox.primitiveToConservative();
@@ -197,11 +201,13 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             URbox.getSoundSpeed();
 
         }
-        
-        //FillPatch(*this, UL.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-        //FillPatch(*this, UR.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-		
 
+        FillDomainBoundary(UL.data, geom, bc);
+        FillDomainBoundary(UR.data, geom, bc);
+
+        UL.data.FillBoundary(geom.periodicity());
+        UR.data.FillBoundary(geom.periodicity());
+        
 
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
@@ -240,11 +246,9 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
     }
 
     U1.conservativeToPrimitive();
-    /*FillDomainBoundary(U1.data, geom, bc);
-    U1.data.FillBoundary(geom.periodicity());*/
 
-    //FillPatch(*this, U1.data, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-
+    FillDomainBoundary(U1.data, geom, bc);
+    U1.data.FillBoundary(geom.periodicity());
 
 }
 
@@ -339,9 +343,11 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     CellArray URStar(SRStar,accessPattern,parameters);
 	CellArray UStarStar(SStarStar,accessPattern,parameters);
     CellArray MUSCLgrad(Sgrad,accessPattern,parameters);
+
+    THINCArray THINCArr(this->grids,this->dmap,NUM_GROW,parameters);
     
-    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,parameters,dx,dt,time);
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,parameters,dx,dt,time);
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,dt,time);
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,dt,time);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
@@ -604,7 +610,7 @@ void AmrLevelAdv::variableSetUp ()
 
     desc_lst.addDescriptor(Phi_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.Ncomp,&cell_cons_interp);
 
-    Vector<BCRec> bc(parameters.Ncomp);
+    bc.resize(parameters.Ncomp);
 
     setBoundaryConditions(bc,parameters,initial,accessPattern);
     

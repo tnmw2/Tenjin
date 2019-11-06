@@ -71,9 +71,9 @@ void AccessPattern::define(ParameterStruct& parameters)
     addVariable(n,"rho_k",          PRIMITIVE,      CELL, NEITHER,  RHO_K,          parameters.numberOfMaterials);
     addVariable(n,"rho",            NEITHER,        CELL, NEITHER,  RHO);
     addVariable(n,"rhoU",           CONSERVATIVE,   CELL, NEITHER,  RHOU,           1,3);
-    addVariable(n,"u",              PRIMITIVE,      CELL, NEITHER,  VELOCITY,       1,3);
+    addVariable(n,"u",              PRIMITIVE,      CELL, REFINE,   VELOCITY,       1,3);
     addVariable(n,"E",              CONSERVATIVE,   CELL, NEITHER,  TOTAL_E);
-    addVariable(n,"p",              PRIMITIVE,      CELL, NEITHER,  P);
+    addVariable(n,"p",              PRIMITIVE,      CELL, REFINE,   P);
     addVariable(n,"a",              NEITHER,        CELL, NEITHER,  SOUNDSPEED);
     addVariable(n,"uStar",          NEITHER,        CELL, NEITHER,  USTAR);
     addVariable(n,"sigma",          NEITHER,        CELL, NEITHER,  SIGMA,          1,3,3);
@@ -88,7 +88,7 @@ void AccessPattern::define(ParameterStruct& parameters)
         addVariable(n,"V",          BOTH,           CELL,    NEITHER, V_TENSOR,       1,3,3);
         addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, VSTAR,          1,3,3);
         addVariable(n,"devH",       NEITHER,        NOTCELL, NEITHER, DEVH,           1,3,3);
-        addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, REFINE , HJ2);
+        addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, NEITHER , HJ2);
 
         if(parameters.PLASTIC)
         {

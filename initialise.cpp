@@ -120,6 +120,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
 {
+    U.data.setVal(0.0);
+
     for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();

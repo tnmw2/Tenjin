@@ -95,7 +95,7 @@ public:
     //
 	// My own HLLC
 	//
-    void AMR_HLLCadvance(MultiFab& S, CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,ParameterStruct& parameters, const Real* dx, Real dt, Real time);
+    void AMR_HLLCadvance(MultiFab& S, CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, THINCArray& THINCArr,ParameterStruct& parameters, const Real* dx, Real dt, Real time);
     //
     //Estimate time step.
     //
@@ -189,6 +189,7 @@ protected:
     static AccessPattern   accessPattern;
 
     static Vector<Real>    levelGradientCoefficients;
+    static Vector<BCRec>   bc;
     
     static amrex::Real     advectionVeloctiy;
 

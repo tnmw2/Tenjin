@@ -623,7 +623,7 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
                 BoxAccessCellArray URTHINC(mfi,bx,URStar);
                 BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
 
-                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,d);
+                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters, parameters.dx.dataPtr(),d);
 
                 UL.cleanUpAlpha();
                 UR.cleanUpAlpha();
