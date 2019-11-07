@@ -100,7 +100,14 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 				{
 					for (int i = lo.x; i <= hi.x; ++i)
 					{
-						xFlux(i,j,k,n) *= (dt*dx[1]);	
+                        if(n.var == V_TENSOR)
+                        {
+                            xFlux(i,j,k,n) *= 0.0;
+                        }
+                        else
+                        {
+                            xFlux(i,j,k,n) *= (dt*dx[1]);
+                        }
 					}
 				}
 			}
@@ -124,7 +131,14 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 				{
 					for (int i = lo.x; i <= hi.x; ++i)
 					{
-						yFlux(i,j,k,n) *= (dt*dx[0]);	
+                        if(n.var == V_TENSOR)
+                        {
+                            yFlux(i,j,k,n) *= 0.0;
+                        }
+                        else
+                        {
+                            yFlux(i,j,k,n) *= (dt*dx[0]);
+                        }
 					}
 				}
 			}
@@ -145,7 +159,7 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
     U1 = U;
 
-    for(int dir = 0; dir < 1 ; dir++)
+    for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
     {
         d = (Direction_enum)dir;
 
@@ -351,12 +365,39 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
-    for (int j = 0; j < BL_SPACEDIM; j++)
+    if(do_reflux)
     {
-        MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
+        for (int j = 0; j < BL_SPACEDIM; j++)
+        {
+            MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
+        }
+
+        ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
     }
 
-    ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
+    if(parameters.REACTIVE)
+    {
+        reactiveUpdate(U,U1,U2,parameters,dt);
+    }
+
+    if(parameters.PLASTIC)
+    {
+        plastic.plasticUpdate(U1,parameters,dt);
+    }
+
+    if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U1,parameters,dx,dt,prob_lo);
+    }
+
+    if(parameters.SOLID)
+    {
+        U1.cleanUpV();
+    }
+
+    {
+        U1.cleanUpAlpha();
+    }
 
     MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
 

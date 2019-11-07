@@ -80,12 +80,12 @@ void AccessPattern::define(ParameterStruct& parameters)
 
 
     addVariable(n,"rhomix",         NEITHER,        NOTCELL,NEITHER,    RHO_MIX,        parameters.numberOfMixtures,2);
-    addVariable(n,"lambda",         PRIMITIVE,      CELL,   NEITHER,    LAMBDA,         parameters.numberOfMixtures);
+    addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,     LAMBDA,         parameters.numberOfMixtures);
     addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,    ALPHARHOLAMBDA, parameters.numberOfMixtures);
 
     if(parameters.SOLID)
     {
-        addVariable(n,"V",          BOTH,           CELL,    NEITHER, V_TENSOR,       1,3,3);
+        addVariable(n,"V",          BOTH,           CELL,    REFINE, V_TENSOR,       1,3,3);
         addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, VSTAR,          1,3,3);
         addVariable(n,"devH",       NEITHER,        NOTCELL, NEITHER, DEVH,           1,3,3);
         addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, NEITHER , HJ2);

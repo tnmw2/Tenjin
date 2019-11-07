@@ -39,8 +39,8 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 //void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial, const Real* dx, const Real* prob_lo);
 void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern);
-void geometricSourceTerm(CellArray& U, ParameterStruct& parameters);
+void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *dx, Real dt,const Real *prob_lo);
 
-void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters);
+void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt);
 #endif // SIMULATIONHEADER
 

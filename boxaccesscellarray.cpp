@@ -325,8 +325,6 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
 
 void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
 {
-
-
     for(int m=0; m<numberOfMaterials;m++)
     {
         if(accessPattern.materialInfo[m].phase == solid)
@@ -341,7 +339,6 @@ void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
             amrexToArray(i,j,k,DEVH,0,tempdevH);
 
             matrixCopy(tempdevH,tempdevHT);
-
 
             (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevHT,product,numberOfComponents)); //totalAlpha
 
@@ -520,6 +517,8 @@ void BoxAccessCellArray::cleanUpV()
                         (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
                     }
                 }
+
+                getHenckyJ2(i,j,k);
             }
         }
     }

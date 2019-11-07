@@ -29,12 +29,12 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
 
 /** Function used in bisection of which we find the root.
  */
-Real PlasticEOS::bisectionFunction(Real Jnew, Real J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters, int m)
+Real PlasticEOS::bisectionFunction(Real Jnew, Real J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters, int m, Real dt)
 {
-    return Jnew-J+parameters.dt*plasticStrainRate(Jnew,J,U,i,j,k,parameters,m);
+    return Jnew-J+dt*plasticStrainRate(Jnew,J,U,i,j,k,parameters,m);
 }
 
-Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, ParameterStruct& parameters, int m)
+Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, ParameterStruct& parameters, int m, Real dt)
 {
     Real JA = 0.0;
     Real JB = J;
@@ -42,7 +42,7 @@ Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, P
 
     Real tolerance = 1E-5;
 
-    if(sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m)) == sgn<Real,int>(bisectionFunction(JB,J,U,i,j,k,parameters,m)) )
+    if(sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m,dt)) == sgn<Real,int>(bisectionFunction(JB,J,U,i,j,k,parameters,m,dt)) )
     {
         Print() << "Error in plastic Bisection " << std::endl;
         exit(1);
@@ -51,7 +51,7 @@ Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, P
 
     while(true)
     {
-        if(sgn<Real,int>(bisectionFunction(Jmid,J,U,i,j,k,parameters,m)) == sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m)))
+        if(sgn<Real,int>(bisectionFunction(Jmid,J,U,i,j,k,parameters,m,dt)) == sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m,dt)))
         {
             JA = Jmid;
         }
@@ -80,7 +80,7 @@ bool PlasticEOS::overYieldStress(Real& J, BoxAccessCellArray& U, int i, int j, i
 
 /** Loops over all cells performing the plastic update.
  */
-void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& parameters)
+void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& parameters, Real dt)
 {
 
     Real  JBefore;
@@ -224,7 +224,7 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
 
 /** Loops over all cells performing the plastic update.
  */
-void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters)
+void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters, Real dt)
 {
 #ifdef _OPENMP
 #pragma omp parallel
@@ -235,7 +235,7 @@ void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters)
 
         BoxAccessCellArray  Ubox(mfi,bx,U);
 
-        boxPlasticUpdate(Ubox,parameters);
+        boxPlasticUpdate(Ubox,parameters,dt);
 
         Ubox.conservativeToPrimitive();
     }

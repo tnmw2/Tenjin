@@ -10,13 +10,13 @@ public:
     PlasticEOS();
 
     Real plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters,int m);
-    Real bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, ParameterStruct& parameters, int m);
-    Real bisectionFunction(Real Jnew, Real J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters, int m);
+    Real bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, ParameterStruct& parameters, int m, Real dt);
+    Real bisectionFunction(Real Jnew, Real J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters, int m, Real dt);
     Real epsilonFunction(double J, double Jnew, BoxAccessCellArray& U, int i, int j, int k, int m);
 
     bool    overYieldStress(Real& J, BoxAccessCellArray& U, int i, int j, int k, int m);
-    void  	boxPlasticUpdate(BoxAccessCellArray& U, ParameterStruct& parameters);
-    void  	plasticUpdate   (CellArray& U,          ParameterStruct& parameters);
+    void  	boxPlasticUpdate(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt);
+    void  	plasticUpdate   (CellArray& U,          ParameterStruct& parameters, Real dt);
 
     Vector<Real> yieldStress;
 

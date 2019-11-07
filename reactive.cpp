@@ -1,6 +1,6 @@
 #include "simulationheader.h"
 
-void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, int i, int j, int k, int m)
+void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
     Real sigma = 20.0   ;//10.0;
@@ -14,7 +14,7 @@ void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray&
     }
 
 
-    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)-(parameters.dt)*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n));
+    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)-dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n));
 
     if(U1(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
     {
@@ -23,7 +23,7 @@ void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray&
 
 }
 
-void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, int i, int j, int k, int m)
+void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
     Real Tc = 150.0; //Reference temp;
@@ -44,7 +44,7 @@ void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1,
         temp = 0.0;
     }
 
-    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+(parameters.dt)*temp;
+    U1(i,j,k,ALPHARHOLAMBDA,m) = U(i,j,k,ALPHARHOLAMBDA,m)+dt*temp;
 
     if(U1(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
     {
@@ -57,7 +57,7 @@ void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1,
 
 /** Adds the reactive source term with RK2.
  */
-void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters)
+void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt)
 {
     if(parameters.numberOfMixtures > 0)
     {
@@ -87,8 +87,8 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
                         {
                             for (int i = lo.x; i <= hi.x; ++i)
                             {
-                                pressureBased_UpdateMassFraction(Ubox,U1box,parameters,i,j,k,m);
-                                pressureBased_UpdateMassFraction(U1box,U2box,parameters,i,j,k,m);
+                                pressureBased_UpdateMassFraction(Ubox,U1box,parameters,dt,i,j,k,m);
+                                pressureBased_UpdateMassFraction(U1box,U2box,parameters,dt,i,j,k,m);
 
                                 U1box(i,j,k,ALPHARHOLAMBDA,m) = ((Ubox(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0)));
                             }

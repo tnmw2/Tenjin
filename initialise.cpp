@@ -601,7 +601,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -610,7 +610,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -625,5 +625,46 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
              s=1;
         }
     }*/
+
+    /******************************************
+     * RateStick
+     *****************************************/
+
+    {
+        Real radius       = initial.interface;
+        Real startOfTube  = initial.interface;
+        Real endOfBooster = 2.0*initial.interface;
+        Real chamfer      = 0.2*initial.interface;
+
+        if(y<startOfTube ||  x > radius)
+        {
+            s=2;
+        }
+        else if(y>startOfTube+chamfer && y <= endOfBooster)
+        {
+            s=0;
+        }
+        else if(y<=startOfTube+chamfer)
+        {
+            if(x<radius-chamfer)
+            {
+                s=0;
+            }
+            else if((x-(radius-chamfer))*(x-(radius-chamfer))+(y-(startOfTube+chamfer))*(y-(startOfTube+chamfer)) < chamfer*chamfer)
+            {
+                s=0;
+            }
+            else
+            {
+                s=2;
+            }
+        }
+        else
+        {
+            s=1;
+        }
+    }
+
+
 }
 
