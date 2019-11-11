@@ -224,12 +224,12 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
 
 /** Loops over all cells performing the plastic update.
  */
-void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters, Real dt)
+void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters, Real dt, MultiFab& S_new)
 {
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
+    for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
 

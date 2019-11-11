@@ -13,7 +13,6 @@
 #include <AMReX_BCUtil.H>
 #include <AMReX_ParmParse.H>
 
-
 using namespace amrex;
 
 #endif // AMREXHEADER

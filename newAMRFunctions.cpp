@@ -25,7 +25,7 @@ Vector<Real>    AmrLevelAdv::levelGradientCoefficients;
 Vector<BCRec>   AmrLevelAdv::bc;
 
 int      AmrLevelAdv::NUM_STATE       = 1;  // One variable in the state
-int      AmrLevelAdv::NUM_GROW        = 1;  // number of ghost cells
+int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
 
 /*-------------------------------------------------------------
  * Non-AMR functions in other files that can interface to
@@ -169,52 +169,65 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
          * -----------------------------------------------------------*/
+
+        if(parameters.MUSCL)
+        {
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-        for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-
-            /*-------------------------------------------------------------
-             * Data can't be accessed straight from a Multifab so we make
-             * some wrappers to hold the FArrayBoxes that can access the
-             * data called BoxAccessCellArray.
-             * -----------------------------------------------------------*/
-
-            BoxAccessCellArray  Ubox(mfi,bx,U);
-            BoxAccessCellArray  ULbox(mfi,bx,UL);
-            BoxAccessCellArray  URbox(mfi,bx,UR);
-
-
-            if(parameters.MUSCL)
+            for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
             {
+                const Box& bx = mfi.validbox();
+
+                /*-------------------------------------------------------------
+                 * Data can't be accessed straight from a Multifab so we make
+                 * some wrappers to hold the FArrayBoxes that can access the
+                 * data called BoxAccessCellArray.
+                 * -----------------------------------------------------------*/
+
+                BoxAccessCellArray  Ubox(mfi,bx,U);
+                BoxAccessCellArray  ULbox(mfi,bx,UL);
+                BoxAccessCellArray  URbox(mfi,bx,UR);
                 BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
 
                 MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
+
             }
+
 
             if(parameters.THINC)
             {
-                BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
-                BoxAccessCellArray URTHINC(mfi,bx,URStar);
-                BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+                for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
+                {
+                    const Box& bx = mfi.validbox();
 
-                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
+                    BoxAccessCellArray  Ubox(mfi,bx,U);
+                    BoxAccessCellArray  ULbox(mfi,bx,UL);
+                    BoxAccessCellArray  URbox(mfi,bx,UR);
+                    BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
+                    BoxAccessCellArray URTHINC(mfi,bx,URStar);
+                    BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
 
-                UL.cleanUpAlpha();
-                UR.cleanUpAlpha();
+                    THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
 
+                    ULbox.cleanUpAlpha();
+                    URbox.cleanUpAlpha();
+
+                }
             }
 
 
-            ULbox.primitiveToConservative();
-            URbox.primitiveToConservative();
+            UL.primitiveToConservative();
+            UR.primitiveToConservative();
 
-            ULbox.getSoundSpeed();
-            URbox.getSoundSpeed();
+            UL.getSoundSpeed();
+            UR.getSoundSpeed();
 
         }
+
 
         FillDomainBoundary(UL.data, geom, bc);
         FillDomainBoundary(UR.data, geom, bc);
@@ -329,24 +342,36 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * data in the RK update, and then wrap them in CellArrays
      * -----------------------------------------------------------*/
 
-    MultiFab S0(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, S0, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab S1(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, S1, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab S2(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, S2, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SL(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, SL, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SR(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, SR, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SLStar(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, SLStar, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SRStar(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, SRStar, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SStarStar(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, SStarStar, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab Sgrad(grids, dmap, parameters.Ncomp, NUM_GROW);
-    FillPatch(*this, Sgrad, NUM_GROW, time, Phi_Type, 0, parameters.Ncomp);
+    /*------------------------------------------------------------
+     * States with Two Ghost Cells:
+     * -----------------------------------------------------------*/
+    int TWOGHOST = 2;
+
+    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S1, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S2, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+
+    /*-------------------------------------------------------------
+     * States with One Ghost Cell:
+     * -----------------------------------------------------------*/
+
+    int ONEGHOST = 1;
+
+    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, SL, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, SR, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, SLStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, SRStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, SStarStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab Sgrad(grids, dmap, parameters.Ncomp, ONEGHOST);
+    FillPatch(*this, Sgrad, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
           
     CellArray U (S0,accessPattern,parameters);
     CellArray U1(S1,accessPattern,parameters);
@@ -358,7 +383,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 	CellArray UStarStar(SStarStar,accessPattern,parameters);
     CellArray MUSCLgrad(Sgrad,accessPattern,parameters);
 
-    THINCArray THINCArr(this->grids,this->dmap,NUM_GROW,parameters);
+    THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
     
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,dt,time);
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,dt,time);
@@ -377,27 +402,32 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     if(parameters.REACTIVE)
     {
-        reactiveUpdate(U,U1,U2,parameters,dt);
+        reactiveUpdate(U,U1,U2,parameters,dt,S_new);
     }
 
     if(parameters.PLASTIC)
     {
-        plastic.plasticUpdate(U1,parameters,dt);
+        plastic.plasticUpdate(U1,parameters,dt,S_new);
     }
 
     if(parameters.RADIAL)
     {
-        geometricSourceTerm(U1,parameters,dx,dt,prob_lo);
+        geometricSourceTerm(U1,parameters,dx,dt,prob_lo,S_new);
     }
 
     if(parameters.SOLID)
     {
-        U1.cleanUpV();
+        //U1.cleanUpV();
     }
+
 
     {
         U1.cleanUpAlpha();
     }
+
+    FillDomainBoundary(U1.data, geom, bc);
+    U1.data.FillBoundary(geom.periodicity());
+
 
     MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
 
@@ -484,6 +514,11 @@ Real AmrLevelAdv::estTimeStep (Real)
     ParallelDescriptor::ReduceRealMin(dt_est);
     dt_est *= cfl;
 
+    if(nStep() <= 5)
+    {
+        dt_est *= 0.2;
+    }
+
     if (verbose) {
 	amrex::Print() << "AmrLevelAdv::estTimeStep at level " << level 
                        << ":  dt_est = " << dt_est << std::endl;
@@ -499,28 +534,57 @@ void findBiggestGradientOnLevel(const Box& box, BoxAccessCellArray& U, BoxAccess
     
     Real ax,ay;
 
+    if(level > 2 && n.var != ALPHA)
+    {
+        return;
+    }
+
     for 		(int k = lo.z; k <= hi.z; ++k)
     {
         for 	(int j = lo.y; j <= hi.y; ++j)
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-
                 ax = (U(i+1,j,k,n)-U(i-1,j,k,n))/(2.0*dx[0]);
                 ay = (U(i,j+1,k,n)-U(i,j-1,k,n))/(2.0*dx[1]);
 
-                grad(i,j,k,n) = sqrt(ax*ax+ay*ay);
+                grad(i,j,k,n) = std::max(std::abs(ax),std::abs(ay)); //sqrt(ax*ax+ay*ay);
 
                 gradMax = (grad(i,j,k,n) > gradMax ? grad(i,j,k,n) : gradMax);
             }
         }
     }
 
-	
     return;
 }
 
-void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+void findBiggestDifferenceOnLevel(const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& diff,const Real* dx, Real time, Real level, Real& diffMax, MaterialSpecifier& n)
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    Real ax,ay;
+
+    for 		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for 	(int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+                ax = (U(i+1,j,k,n)-U(i-1,j,k,n));
+                ay = (U(i,j+1,k,n)-U(i,j-1,k,n));
+
+                diff(i,j,k,n) = (std::max(ax*ax,ay*ay))/(U(i,j,k,n)*U(i,j,k,n)); //sqrt(ax*ax+ay*ay);
+
+                diffMax = (diff(i,j,k,n) > diffMax ? diff(i,j,k,n) : diffMax);
+            }
+        }
+    }
+
+    return;
+}
+
+void C_state_error_grad(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
 {
 	const auto lo = lbound(box);
     const auto hi = ubound(box);
@@ -529,6 +593,11 @@ void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArra
 
     for(auto n : accessPattern.refineVariables)
     {
+        if(level > 2 && n.var != ALPHA)
+        {
+            continue;
+        }
+
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
             for 	(int j = lo.y; j <= hi.y; ++j)
@@ -547,6 +616,36 @@ void C_state_error(Array4<char> const& tagarr, const Box& box, BoxAccessCellArra
     }
 
 	return;
+
+}
+
+void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    int m = 0;
+
+    for(auto n : accessPattern.refineVariables)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    if(grad(i,j,k,n) > levelGradientCoefficients[level])
+                    {
+                        tagarr(i,j,k) = TagBox::SET;
+                    }
+                }
+            }
+        }
+
+        m++;
+    }
+
+    return;
 
 }
 
@@ -594,7 +693,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
                 BoxAccessCellArray 			Ubox(mfi,bx,U);
                 BoxAccessCellArray 			gradbox(mfi,bx,grad);
 
-                findBiggestGradientOnLevel(bx,Ubox,gradbox,dx,time,level,gradMax,n);
+                findBiggestDifferenceOnLevel(bx,Ubox,gradbox,dx,time,level,gradMax,n);
             }
         }
 
@@ -622,7 +721,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
             
             Array4<char> const& tagarr 	= tagfab.array();
             
-            C_state_error(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
+            C_state_error_diff(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
             
         }
 	}
@@ -681,10 +780,10 @@ void AmrLevelAdv::read_params ()
     
     accessPattern.define(parameters);
 
-    for(auto n : accessPattern.refineVariables)
+    /*for(auto n : accessPattern.refineVariables)
     {
         Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat] << std::endl;
-    }
+    }*/
     
     parameters.Ncomp = accessPattern.variableNames.size();
 

@@ -94,9 +94,12 @@ public:
     void normaliseV();
     void cleanUpV();
     void cleanUpAlpha();
+    void checkAndAmendVariable(MaterialSpecifier& m, int i, int j, int k);
+    void checkLimits(Vector<MaterialSpecifier>& list);
+    void checkLimits(MaterialSpecifier& m);
+    void smoothFromNeighbours(MaterialSpecifier& m, int i, int j, int k);
 
-
-
+    int checking = 0;
 
     bool check(MaterialSpecifier& m);
     bool contains_nan();

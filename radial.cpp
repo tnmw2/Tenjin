@@ -42,12 +42,12 @@ void addGeometricSourceTerm(BoxAccessCellArray& U, ParameterStruct& parameters, 
 
 /** Creates boxes to add the Geometric source term using the Geometric flux function.
  */
-void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real* dx, Real dt, const Real* prob_lo)
+void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real* dx, Real dt, const Real* prob_lo, MultiFab& S_new)
 {
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-    for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
+    for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
     {
         const Box& bx = mfi.validbox();
 

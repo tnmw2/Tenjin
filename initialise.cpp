@@ -45,6 +45,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
         }
     }
 
+    //Print() << "Here" << std::endl;
+
     int s=0;
 
     Real x,y,z;
@@ -298,7 +300,7 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         Config cfg;
 
-        std::cout << "File: " << settingsFile << std::endl;
+        //std::cout << "File: " << settingsFile << std::endl;
 
         try
         {
@@ -601,7 +603,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         if(x < initial.interface)
         {
             s=0;
@@ -610,7 +612,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * 2D Sod
@@ -630,7 +632,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * RateStick
      *****************************************/
 
-    {
+    /*{
         Real radius       = initial.interface;
         Real startOfTube  = initial.interface;
         Real endOfBooster = 2.0*initial.interface;
@@ -663,7 +665,69 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=1;
         }
-    }
+    }*/
+
+    /******************************************
+     * Udaykunar Groove
+     *****************************************/
+    /*{
+
+        Real shock = initial.interface-16E-3;
+        Real interface = initial.interface;
+        Real radius = 15E-3;
+
+        if(y < shock)
+        {
+            s=1;
+        }
+        else if(y < interface)
+        {
+            if( (y-interface)*(y-interface) + (x)*(x) < radius*radius  )
+            {
+                s=3;
+            }
+            else
+            {
+                s=2;
+            }
+        }
+        else
+        {
+            s=3;
+        }
+    }*/
+
+    /******************************************
+     * Udaykunar Groove 2D
+     *****************************************/
+    /*{
+
+        Real shock = initial.interface-16E-3;
+        Real interface = initial.interface;
+        Real radius = 15E-3;
+        Real middle = 25E-3;
+
+
+        if(y < shock)
+        {
+            s=1;
+        }
+        else if(y < interface)
+        {
+            if( (y-interface)*(y-interface) + (x)*(x) < radius*radius  )
+            {
+                s=3;
+            }
+            else
+            {
+                s=2;
+            }
+        }
+        else
+        {
+            s=3;
+        }
+    }*/
 
 
 }

@@ -69,6 +69,8 @@ void  BoxAccessCellArray::conservativeToPrimitive()
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
+    checkLimits(accessPattern.conservativeVariables);
+
     Real kineticEnergy;
 
     for    		(int k = lo.z; k <= hi.z; ++k)
@@ -119,6 +121,9 @@ void  BoxAccessCellArray::conservativeToPrimitive()
             }
         }
     }
+
+    checkLimits(accessPattern.primitiveVariables);
+
 }
 
 void  BoxAccessCellArray::primitiveToConservative()
@@ -127,6 +132,8 @@ void  BoxAccessCellArray::primitiveToConservative()
     const auto hi = ubound(box);
 
     Real kineticEnergy;
+
+    checkLimits(accessPattern.primitiveVariables);
 
     for    		(int k = lo.z; k <= hi.z; ++k)
     {
@@ -171,6 +178,9 @@ void  BoxAccessCellArray::primitiveToConservative()
             }
         }
     }
+
+    checkLimits(accessPattern.conservativeVariables);
+
 }
 
 void BoxAccessCellArray::stressTensor(int i, int j, int k)
@@ -656,4 +666,114 @@ bool BoxAccessCellArray::cellIsMostlyFluid(int i, int j, int k)
     }
 
     return TotalSolid <= 0.5 ;
+}
+
+void BoxAccessCellArray::checkAndAmendVariable(MaterialSpecifier& m, int i, int j, int k)
+{
+    if(std::isnan((*this)(i,j,k,m)))
+    {
+        smoothFromNeighbours(m,i,j,k);
+    }
+    else if((*this)(i,j,k,m) < accessPattern.limits[m.var].first)
+    {
+        //smoothFromNeighbours(m,i,j,k);
+
+        (*this)(i,j,k,m) = accessPattern.limits[m.var].first;
+
+        return;
+    }
+    else if((*this)(i,j,k,m) > accessPattern.limits[m.var].second)
+    {
+        //smoothFromNeighbours(m,i,j,k);
+
+        (*this)(i,j,k,m) = accessPattern.limits[m.var].second;
+
+        return;
+    }
+
+    return;
+}
+
+void BoxAccessCellArray::checkLimits(Vector<MaterialSpecifier>& list)
+{
+    if(!checking)
+    {
+        return;
+    }
+
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    for(auto n : list)
+    {
+        for    		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for     (int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    checkAndAmendVariable(n,i,j,k);
+                }
+            }
+        }
+    }
+}
+
+void BoxAccessCellArray::checkLimits(MaterialSpecifier& m)
+{
+    if(!checking)
+    {
+        return;
+    }
+
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    for    		(int k = lo.z; k <= hi.z; ++k)
+    {
+        for     (int j = lo.y; j <= hi.y; ++j)
+        {
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+                checkAndAmendVariable(m,i,j,k);
+            }
+        }
+    }
+}
+
+void BoxAccessCellArray::smoothFromNeighbours(MaterialSpecifier& m, int i, int j, int k)
+{
+    Real sum     = 0.0;
+    int  counter = 0;
+
+    Vector<int> pm {-1,0,1};
+
+    for(auto nk : pm)
+    {
+        for(auto nj : pm)
+        {
+            for(auto ni : pm)
+            {
+                if(ni == 0 && nj == 0 && nk == 0)
+                {
+                    continue;
+                }
+                else if(!(std::isnan(neighbour(ni,nj,nk,i,j,k,m))))
+                {
+                    sum += neighbour(ni,nj,nk,i,j,k,m);
+
+                    counter++;
+                }
+            }
+        }
+    }
+
+    if(counter > 0)
+    {
+        (*this)(i,j,k,m) = (1.0/counter)*(sum);
+    }
+    else
+    {
+        amrex::Abort("Couldn't smooth from Neighbours");
+    }
 }

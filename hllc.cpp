@@ -168,35 +168,18 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                 {
-                    Print() << "Nan in Wavespeeds " << std::endl;
-                    Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
-                    Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
-                    Print() << "a " <<  UL(SOUNDSPEED) << " " << UR(SOUNDSPEED)  << std::endl;
-                    Print() << "u " <<  UL(VELOCITY,0,d) << " " << UR(VELOCITY,0,d)  << std::endl;
-                    Print() << "rho "<< std::endl;
+                    UL.parent->checkLimits(UL.accessPattern.allVariables);
+                    UR.parent->checkLimits(UL.accessPattern.allVariables);
 
-                    for(int m=0;m<parameters.numberOfMaterials;m++)
+                    SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
+                    SL = -SR;
+
+                    Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
+
+                    if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                     {
-                        Print() <<  UL(RHO_K,m) << " " << UR(RHO_K,m)  << std::endl;
+                        amrex::Abort("Nan in wavespeeds before flux");
                     }
-
-                    Print() << "alpha "<< std::endl;
-
-                    for(int m=0;m<parameters.numberOfMaterials;m++)
-                    {
-                        Print() <<  UL(ALPHA,m) << " " << UR(ALPHA,m)  << std::endl;
-                    }
-
-                    Print() << "a k "<< std::endl;
-
-                    for(int m=0;m<parameters.numberOfMaterials;m++)
-                    {
-                        Print() <<  UL.parent->accessPattern.materialInfo[m].EOS->getSoundSpeedContribution(*UL.parent,i,j,k,m) << " " << UR.parent->accessPattern.materialInfo[m].EOS->getSoundSpeedContribution(*UR.parent,i,j,k,m)  << std::endl;
-                    }
-
-                    Print() << "p " <<  UL(P) << " " << UR(P)  << std::endl;
-
-                    exit(1);
                 }
 
                 fluxbox(i,j,k,USTAR) = Sstar;
@@ -369,7 +352,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     Print() << "Nan in Wavespeeds " << std::endl;
                     Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
                     Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
-                    exit(1);
+                    amrex::Abort("Nan in waveSpeeds");
                 }
 
             }
@@ -520,6 +503,8 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
             }
         }
     }
+
+    U1box.checkLimits(Ubox.accessPattern.conservativeVariables);
 }
 
 /** van Leer slope limiter used in MUSCL extrapolation.
@@ -570,6 +555,9 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             }
         }
     }
+
+    UL.checkLimits(U.accessPattern.primitiveVariables);
+    UR.checkLimits(U.accessPattern.primitiveVariables);
 
     return;
 }

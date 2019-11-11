@@ -57,7 +57,7 @@ void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1,
 
 /** Adds the reactive source term with RK2.
  */
-void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt)
+void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt, MultiFab& S_new)
 {
     if(parameters.numberOfMixtures > 0)
     {
@@ -66,7 +66,7 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-        for(MFIter mfi(U1.data); mfi.isValid(); ++mfi )
+        for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
 

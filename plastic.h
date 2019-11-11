@@ -16,7 +16,7 @@ public:
 
     bool    overYieldStress(Real& J, BoxAccessCellArray& U, int i, int j, int k, int m);
     void  	boxPlasticUpdate(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt);
-    void  	plasticUpdate   (CellArray& U,          ParameterStruct& parameters, Real dt);
+    void  	plasticUpdate   (CellArray& U,          ParameterStruct& parameters, Real dt, MultiFab &S_new);
 
     Vector<Real> yieldStress;
 

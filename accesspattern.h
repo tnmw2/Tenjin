@@ -28,11 +28,12 @@ public:
     AccessPattern(ParameterStruct &parameters);
 
     void define(ParameterStruct &parameters);
-    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Variable var, int materialNumber, int rowNumber, int colNumber);
+    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Real lo, Real hi, Variable var, int materialNumber, int rowNumber, int colNumber);
 
     int& operator[](Variable var);
 
     std::map<Variable,int> data;
+    std::map<Variable,std::pair<Real,Real> > limits;
 
     Vector<MaterialSpecifier>   conservativeVariables;
     Vector<MaterialSpecifier>   primitiveVariables;

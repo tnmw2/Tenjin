@@ -140,8 +140,12 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
 
                         min         = std::min(U.left(d,i,j,k,ALPHARHO,m),U.right(d,i,j,k,ALPHARHO,m));
                         max         = std::max(U.left(d,i,j,k,ALPHARHO,m),U.right(d,i,j,k,ALPHARHO,m))-min;
+
                         theta       = sgn<Real,Real>(U.right(d,i,j,k,ALPHARHO,m)-U.left(d,i,j,k,ALPHARHO,m));
 
+                         C = (U(i,j,k,ALPHARHO,m)-min+epsilon)/(max+epsilon);
+                         B = std::exp(theta*beta*((2.0*C)-1.0));
+                         A = ( (B/coshBeta)-1.0 )/tanhBeta;
 
                         UTHINC_R(i,j,k,ALPHARHO,m) = min + (max/2.0)*(1.0+ theta*((tanhBeta+A)/(1.0+A*tanhBeta)) );
                         UTHINC_L(i,j,k,ALPHARHO,m) = min + (max/2.0)*(1.0+ theta*A);
@@ -164,7 +168,11 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                     TBVMUSCL = TBV(UL,UR,UTHINC_L,UTHINC_R,UL,      UR,      d,i,j,k,MaterialSpecifier(ALPHA,m));
                     TBVTHINC = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,MaterialSpecifier(ALPHA,m));
 
-                    if( mixedCellFlag(i,j,k) && TBVTHINC < TBVMUSCL)
+                    TBVMUSCLRHO = TBV(UL,UR,UTHINC_L,UTHINC_R,UL,      UR,      d,i,j,k,MaterialSpecifier(ALPHARHO,m));
+                    TBVTHINCRHO = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,MaterialSpecifier(ALPHARHO,m));
+
+
+                    if( mixedCellFlag(i,j,k) && TBVTHINC < TBVMUSCL && TBVTHINCRHO < TBVMUSCLRHO)
                     {
                        TBVFlag(i,j,k,m) = 1;
 
@@ -191,11 +199,11 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         UL(i,j,k,ALPHA,m)	= UTHINC_L(i,j,k,ALPHA,m);
                         UR(i,j,k,ALPHA,m)	= UTHINC_R(i,j,k,ALPHA,m);
 
-                        /*UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
+                        UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
                         UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
 
                         UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
-                        UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);*/
+                        UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
                     }
                 }
             }
