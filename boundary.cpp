@@ -23,7 +23,7 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
 
                         if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
                         {
-                            bc[n].setLo(dir, BCType::reflect_odd);
+                            bc[n].setLo(dir, BCType::reflect_odd); //reflect_odd
                         }
                         else
                         {

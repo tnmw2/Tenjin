@@ -32,8 +32,8 @@ int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
  * the new AMR_HLLC functions
  * -----------------------------------------------------------*/
 
-void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d);
-void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d);
+void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
+void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
 
@@ -100,7 +100,7 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 				{
 					for (int i = lo.x; i <= hi.x; ++i)
 					{
-                        if(n.var == V_TENSOR)
+                        if(n.var == V_TENSOR || n.var == ALPHA)
                         {
                             xFlux(i,j,k,n) *= 0.0;
                         }
@@ -131,7 +131,7 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 				{
 					for (int i = lo.x; i <= hi.x; ++i)
 					{
-                        if(n.var == V_TENSOR)
+                        if(n.var == V_TENSOR || n.var == ALPHA)
                         {
                             yFlux(i,j,k,n) *= 0.0;
                         }
@@ -148,12 +148,13 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 		
 }
 
-void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, Real dt, Real time)
+void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
 {
     Direction_enum d; 
 
-    FillDomainBoundary(U.data, geom, bc);
+
     U.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U.data, geom, bc);
 
     U.conservativeToPrimitive();
 
@@ -229,11 +230,13 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
         }
 
 
-        FillDomainBoundary(UL.data, geom, bc);
-        FillDomainBoundary(UR.data, geom, bc);
 
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
+
+        FillDomainBoundary(UL.data, geom, bc);
+        FillDomainBoundary(UR.data, geom, bc);
+
         
 
         /*-------------------------------------------------------------
@@ -260,11 +263,11 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
             if(parameters.SOLID)
             {
-                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d);
+                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d,dx,prob_lo);
             }
             else
             {
-                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
+                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,dx,prob_lo);
             }
 
             update(fluxbox, Ubox, U1box, parameters,d,dt,dx);
@@ -272,10 +275,12 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
         }
     }
 
-    U1.conservativeToPrimitive();
 
-    FillDomainBoundary(U1.data, geom, bc);
+
     U1.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U1.data, geom, bc);
+
+    U1.conservativeToPrimitive();
 
 }
 
@@ -329,11 +334,11 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         BoxArray ba = S_new.boxArray();
         ba.surroundingNodes(j);
         fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
-        fluxes [j].setVal(0.0);
+        //fluxes [j].setVal(0.0);
         fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
-        fluxes1[j].setVal(0.0);
+        //fluxes1[j].setVal(0.0);
         fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
-        fluxes2[j].setVal(0.0);
+        //fluxes2[j].setVal(0.0);
     }
 
 
@@ -372,7 +377,9 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     FillPatch(*this, SStarStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
     MultiFab Sgrad(grids, dmap, parameters.Ncomp, ONEGHOST);
     FillPatch(*this, Sgrad, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-          
+
+    //CellArray U_new (S_new,accessPattern,parameters);
+
     CellArray U (S0,accessPattern,parameters);
     CellArray U1(S1,accessPattern,parameters);
     CellArray U2(S2,accessPattern,parameters);
@@ -384,11 +391,37 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     CellArray MUSCLgrad(Sgrad,accessPattern,parameters);
 
     THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
+
+
+    if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
+    }
     
-    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,dt,time);
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,dt,time);
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
+    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+
+    /*if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U1,parameters,dx,dt,prob_lo,S_new);
+    }*/
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    //MultiFab::Copy(S_new, U2.data, 0, 0, S_new.nComp(), S_new.nGrow());
+    //FillPatch(*this, U2.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+
+    /*if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U2,parameters,dx,dt,prob_lo,S_new);
+    }*/
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+
+    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
+    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
 
     if(do_reflux)
     {
@@ -412,26 +445,25 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     if(parameters.RADIAL)
     {
-        geometricSourceTerm(U1,parameters,dx,dt,prob_lo,S_new);
+        geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
     }
 
     if(parameters.SOLID)
     {
-        //U1.cleanUpV();
+        U1.cleanUpV();
     }
-
 
     {
         U1.cleanUpAlpha();
     }
 
-    FillDomainBoundary(U1.data, geom, bc);
-    U1.data.FillBoundary(geom.periodicity());
 
+    U1.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U1.data, geom, bc);
 
     MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
 
-    
     if (do_reflux)
     {
 		if (current)
@@ -628,15 +660,18 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
 
     for(auto n : accessPattern.refineVariables)
     {
-        for 		(int k = lo.z; k <= hi.z; ++k)
+        if(!(n.var == VELOCITY && (n.row == 0 || n.row == 2)))
         {
-            for 	(int j = lo.y; j <= hi.y; ++j)
+            for 		(int k = lo.z; k <= hi.z; ++k)
             {
-                for (int i = lo.x; i <= hi.x; ++i)
+                for 	(int j = lo.y; j <= hi.y; ++j)
                 {
-                    if(grad(i,j,k,n) > levelGradientCoefficients[level])
+                    for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        tagarr(i,j,k) = TagBox::SET;
+                        if(grad(i,j,k,n) > levelGradientCoefficients[level])
+                        {
+                            tagarr(i,j,k) = TagBox::SET;
+                        }
                     }
                 }
             }

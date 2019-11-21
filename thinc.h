@@ -28,6 +28,8 @@ public:
     int& TBVFlag        (int i, int j, int k, int m);
 
     void THINCreconstruction(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, ParameterStruct& parameters, const Real *dx, Direction_enum d);
+    void cautiousTHINCreconstruction(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, ParameterStruct& parameters, const Real *dx, Direction_enum d);
+
 
 };
 

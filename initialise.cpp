@@ -2,6 +2,7 @@
 
 void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStruct& initial, ParameterStruct& parameters);
 void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters);
+Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx);
 
 /** Convert a c++ string to a char array for file I/O operations
  */
@@ -49,6 +50,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
     int s=0;
 
+    Real volfrac;
+
     Real x,y,z;
 
     for 		(int k = lo.z; k <= hi.z; ++k)
@@ -67,7 +70,9 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                 AMR_chooseStateBasedOnInitialCondition(s,x,y,z,initial,parameters);
 
+
                 //Print()<< s << " ";
+
 
                 for (int m = 0; m < parameters.numberOfMaterials; m++)
                 {
@@ -94,7 +99,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-
+                U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -603,7 +609,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -612,7 +618,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -670,11 +676,11 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove
      *****************************************/
-    /*{
+    {
 
-        Real shock = initial.interface-16E-3;
+        Real shock = 0.5E-3;
         Real interface = initial.interface;
-        Real radius = 15E-3;
+        Real radius = 4E-3; //15E-3;
 
         if(y < shock)
         {
@@ -695,7 +701,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=3;
         }
-    }*/
+    }
 
     /******************************************
      * Udaykunar Groove 2D
@@ -732,3 +738,37 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
 
 }
 
+Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx)
+{
+
+        Real shock = 0.5E-3;
+        Real interface = initial.interface;
+        Real radius = 4E-3; //15E-3;
+
+        int sub = 11;
+        int counter = 0.0;
+
+        if(y < shock)
+        {
+            return 0.999999;
+        }
+        else if(y < interface)
+        {
+            for(int row = -(sub-1)/2; row< (sub+1)/2; row++)
+            {
+                for(int col = -(sub-1)/2; col < (sub+1)/2; col++)
+                {
+                    if( (y+((Real)col)/((Real)sub)*dx[1]-interface)*(y+((Real)col)/((Real)sub)*dx[1]-interface) + (x+((Real)row/((Real)sub))*dx[0])*(x+((Real)row/((Real)sub))*dx[0]) < radius*radius  )
+                    {
+                        counter++;
+                    }
+                }
+            }
+
+            return 0.999998*(1.0 - ((Real) counter)/((Real) sub*sub))+0.000001;
+        }
+        else
+        {
+            return 0.000001;
+        }
+}

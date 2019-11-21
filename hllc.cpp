@@ -4,7 +4,14 @@
  */
 double getSstar(Cell& UL, Cell& UR, Real SL, Real SR, int i, int j, int k, Direction_enum d)
 {
-    return (-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d)))/(UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)));
+    if( std::abs(UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d))) < 1E-10 )
+    {
+        return 0.0;
+    }
+    else
+    {
+        return (-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d)))/(UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)));
+    }
 }
 
 /** Calculates the HLLC intermediate state.
@@ -130,7 +137,7 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
 
 /** Calculates the HLLC fluxes.
  */
-void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d)
+void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo)
 {
     const auto lo = lbound(ULbox.box);
     const auto hi = ubound(ULbox.box);
@@ -168,17 +175,78 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                 {
+                    UL.parent->checking = 1;
+                    UR.parent->checking = 1;
+
                     UL.parent->checkLimits(UL.accessPattern.allVariables);
                     UR.parent->checkLimits(UL.accessPattern.allVariables);
+
+                    UL.parent->conservativeToPrimitive();
+                    UR.parent->conservativeToPrimitive();
+
+                    UL.parent->checking = 0;
+                    UR.parent->checking = 0;
 
                     SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
                     SL = -SR;
 
                     Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
-                    if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
+                    if(std::isnan(SL) || std::isnan(SR))
                     {
-                        amrex::Abort("Nan in wavespeeds before flux");
+                        amrex::Abort("Nan in SL SR wavespeeds before flux");
+                    }
+
+                    if(std::isnan(Sstar))
+                    {
+                        if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
+                        {
+                            if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)))
+                            {
+                                if(std::isnan(UR(P)) || std::isnan(UL(P)))
+                                {
+                                    amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, p");
+                                }
+                                else
+                                {
+                                    if( (UR(ALPHA,0) < UR(ALPHA,1)) && (UL(ALPHA,0) < UL(ALPHA,1)))
+                                    {
+                                        for(int row = 0; row<3;row++)
+                                        {
+                                            for(int col = 0; col<3;col++)
+                                            {
+                                                UR(SIGMA,0,row,col) = -UR(P)*delta<Real>(row,col);
+                                                UL(SIGMA,0,row,col) = -UL(P)*delta<Real>(row,col);
+                                            }
+                                        }
+
+                                        Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
+
+                                     }
+                                    else
+                                    {
+                                        amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, not p, in solid");
+                                    }
+                                }
+
+                            }
+                            else if(std::isnan(UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
+                            {
+                                amrex::Abort("Nan in Sstar wavespeed before flux: num, RHOU or vel");
+                            }
+                            else
+                            {
+                                Sstar = 0.0;
+                            }
+                        }
+                        else if(std::isnan((UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)))))
+                        {
+                            amrex::Abort("Nan in Sstar wavespeed before flux: den");
+                        }
+                        else
+                        {
+                            Sstar = 0.0;
+                        }
                     }
                 }
 
@@ -364,7 +432,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
 /** Calculates the HLLC fluxes.
  */
-void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d)
+void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo)
 {
     const auto lo = lbound(ULbox.box);
     const auto hi = ubound(ULbox.box);
@@ -564,7 +632,7 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
 
 /** Calculate the HLLC flux and update new array
  */
-void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc, THINCArray& THINC)
+/*void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc, THINCArray& THINC)
 {
     Direction_enum d;
 
@@ -575,25 +643,25 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         d = (Direction_enum)dir;
 
         UL = U;
-        UR = U;
+        UR = U;*/
 
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
          * -----------------------------------------------------------*/
-#ifdef _OPENMP
+/*#ifdef _OPENMP
 #pragma omp parallel
 #endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
-
+*/
             /*-------------------------------------------------------------
              * Data can't be accessed straight from a Multifab so we make
              * some wrappers to hold the FArrayBoxes that can access the
              * data called BoxAccessCellArray.
              * -----------------------------------------------------------*/
 
-            BoxAccessCellArray  Ubox(mfi,bx,U);
+/*            BoxAccessCellArray  Ubox(mfi,bx,U);
             BoxAccessCellArray  ULbox(mfi,bx,UL);
             BoxAccessCellArray  URbox(mfi,bx,UR);
 
@@ -633,12 +701,12 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
         UL.data.FillBoundary(geom.periodicity());
         UR.data.FillBoundary(geom.periodicity());
 
-
+*/
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
 
-#ifdef _OPENMP
+/*#ifdef _OPENMP
 #pragma omp parallel
 #endif
         for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
@@ -658,11 +726,11 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
             if(parameters.SOLID)
             {
-                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d);
+                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d,parameters.dx.dataPtr());
             }
             else
             {
-                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d);
+                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,parameters.dx.dataPtr());
             }
 
             update(fluxbox, Ubox, U1box, parameters,d,parameters.dt,parameters.dx.dataPtr());
@@ -680,11 +748,11 @@ void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellA
 
 
 
-}
+}*/
 
 /** 2nd Order Runge-Kutta time integration
  */
-void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc, THINCArray &THINC)
+/*void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc, THINCArray &THINC)
 {
     HLLCadvance(U,  U1, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
 
@@ -692,6 +760,6 @@ void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, C
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
-}
+}*/
 
 
