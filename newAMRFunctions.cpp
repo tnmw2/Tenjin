@@ -400,23 +400,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-
-    /*if(parameters.RADIAL)
-    {
-        geometricSourceTerm(U1,parameters,dx,dt,prob_lo,S_new);
-    }*/
-
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
-
-    //MultiFab::Copy(S_new, U2.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U2.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-
-    /*if(parameters.RADIAL)
-    {
-        geometricSourceTerm(U2,parameters,dx,dt,prob_lo,S_new);
-    }*/
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
