@@ -46,8 +46,6 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
         }
     }
 
-    //Print() << "Here" << std::endl;
-
     int s=0;
 
     Real volfrac;
@@ -66,13 +64,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
             {
                 x = prob_lo[0] + (Real(i)+0.5)*dx[0];
 
-                //chooseStateBasedOnInitialCondition(s,i,j,k,initial,parameters);
 
                 AMR_chooseStateBasedOnInitialCondition(s,x,y,z,initial,parameters);
-
-
-                //Print()<< s << " ";
-
 
                 for (int m = 0; m < parameters.numberOfMaterials; m++)
                 {
@@ -99,8 +92,9 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-                U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
+                // Need for UdaykumarGroove Test
+                //U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                //U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -609,8 +603,8 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
-        if(x < initial.interface)
+    {
+        if(y < initial.interface)
         {
             s=0;
         }
@@ -618,7 +612,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * 2D Sod
@@ -676,7 +670,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove
      *****************************************/
-    {
+    /*{
 
         Real shock = 0.5E-3;
         Real interface = initial.interface;
@@ -701,7 +695,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=3;
         }
-    }
+    }*/
 
     /******************************************
      * Udaykunar Groove 2D

@@ -22,7 +22,9 @@ SOURCES += main.cpp \
     plastic.cpp \
     AmrLevelAdv.cpp \
     newAMRFunctions.cpp \
-    LevelBldAdv.cpp
+    LevelBldAdv.cpp \
+    levelset.cpp \
+    boxaccesslevelset.cpp
 
 HEADERS += \
     simulationheader.h \
@@ -38,7 +40,8 @@ HEADERS += \
     flux.h \
     plastic.h \
     Adv_F.H \
-    AmrLevelAdv.H
+    AmrLevelAdv.H \
+    levelset.h
 
 DISTFILES += \
     Make.package \

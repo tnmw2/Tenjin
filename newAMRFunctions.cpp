@@ -23,6 +23,7 @@ PlasticEOS      AmrLevelAdv::plastic;
 AccessPattern 	AmrLevelAdv::accessPattern(AmrLevelAdv::parameters);
 Vector<Real>    AmrLevelAdv::levelGradientCoefficients;
 Vector<BCRec>   AmrLevelAdv::bc;
+Vector<BCRec>   AmrLevelAdv::levelSet_bc;
 
 int      AmrLevelAdv::NUM_STATE       = 1;  // One variable in the state
 int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
@@ -43,9 +44,16 @@ void AmrLevelAdv::initData ()
 
     const Real* dx      = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
-    MultiFab& S_new     = get_new_data(Phi_Type);
+    const Real time     = state[Phi_Type].curTime();
 
-    if (verbose)
+    MultiFab& S_new     = get_new_data(Phi_Type);
+    MultiFab& S_LS      = get_new_data(LevelSet_Type);
+
+    MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+    FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+
+    if(verbose)
     {
         amrex::Print() << "Initializing the data at level " << level << std::endl;
     }
@@ -56,10 +64,14 @@ void AmrLevelAdv::initData ()
      * position instead of array coordinates
      * -----------------------------------------------------------*/
      
-    CellArray U(S_new,accessPattern,parameters); 
+    CellArray U(S_new,accessPattern,parameters);
+    LevelSet LS(S_LS,parameters);
+    LevelSet LS_temp(S_LS_0,parameters);
+
      
     setInitialConditions(U,parameters,initial,dx,prob_lo);
-    
+    LS.initialise(dx,prob_lo);
+
 
     #ifdef AMREX_PARTICLES
     init_particles();
@@ -334,11 +346,8 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         BoxArray ba = S_new.boxArray();
         ba.surroundingNodes(j);
         fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes [j].setVal(0.0);
         fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes1[j].setVal(0.0);
         fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes2[j].setVal(0.0);
     }
 
 
@@ -350,6 +359,8 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     /*------------------------------------------------------------
      * States with Two Ghost Cells:
      * -----------------------------------------------------------*/
+
+
     int TWOGHOST = 2;
 
     MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
@@ -378,8 +389,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     MultiFab Sgrad(grids, dmap, parameters.Ncomp, ONEGHOST);
     FillPatch(*this, Sgrad, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
 
-    //CellArray U_new (S_new,accessPattern,parameters);
-
     CellArray U (S0,accessPattern,parameters);
     CellArray U1(S1,accessPattern,parameters);
     CellArray U2(S2,accessPattern,parameters);
@@ -392,36 +401,48 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
 
+    /*-------------------------------------------------------------
+     * Levelset
+     * -----------------------------------------------------------*/
+
+    int LSGHOST = 1;
+
+    MultiFab& S_LS  = get_new_data(LevelSet_Type);
+    FillPatch(*this, S_LS  , 0, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, LSGHOST);
+    FillPatch(*this, S_LS_0, LSGHOST, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    MultiFab S_LS_1(grids, dmap, parameters.NLevelSets, LSGHOST);
+    FillPatch(*this, S_LS_1, LSGHOST, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    MultiFab S_LS_2(grids, dmap, parameters.NLevelSets, LSGHOST);
+    FillPatch(*this, S_LS_2, LSGHOST, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    MultiFab::Copy(S_LS_0, S_LS, 0, 0, parameters.NLevelSets, LSGHOST);
+
+    LevelSet LS0(S_LS_0,parameters);
+    LevelSet LS1(S_LS_1,parameters);
+    LevelSet LS2(S_LS_2,parameters);
 
     if(parameters.RADIAL)
     {
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }
+
+    LS1.advanceLevelSet(S_new,U,LS0,dt,dx,levelSet_bc,geom);
     
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-
-    /*if(parameters.RADIAL)
-    {
-        geometricSourceTerm(U1,parameters,dx,dt,prob_lo,S_new);
-    }*/
+    LS2.advanceLevelSet(S_new,U1,LS1,dt,dx,levelSet_bc,geom);
 
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    //MultiFab::Copy(S_new, U2.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U2.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-
-    /*if(parameters.RADIAL)
-    {
-        geometricSourceTerm(U2,parameters,dx,dt,prob_lo,S_new);
-    }*/
-
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
-    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab::LinComb(S_LS_1,0.5,S_LS_0,0,0.5,S_LS_2,0,0,LS0.data.nComp(),0);
+    MultiFab::Copy(S_LS, S_LS_1, 0, 0, S_LS.nComp(), S_LS.nGrow());
+    FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
 
     if(do_reflux)
     {
@@ -783,7 +804,12 @@ void AmrLevelAdv::variableSetUp ()
 
     read_params();
 
-    desc_lst.addDescriptor(Phi_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.Ncomp,&cell_cons_interp);
+    desc_lst.addDescriptor(Phi_Type     ,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.Ncomp,        &cell_cons_interp);
+    desc_lst.addDescriptor(LevelSet_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.NLevelSets,   &cell_cons_interp);
+
+    /*------------------------------------------------------------
+     * Thermodynamic variables
+     *------------------------------------------------------------*/
 
     bc.resize(parameters.Ncomp);
 
@@ -791,8 +817,33 @@ void AmrLevelAdv::variableSetUp ()
     
     for(int n = 0; n<parameters.Ncomp; n++)
     {
-        desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
+        desc_lst.setComponent(Phi_Type,      n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
 	}
+
+    /*------------------------------------------------------------
+     * Level set
+     *------------------------------------------------------------*/
+
+    Vector<std::string> LevelSetNames(parameters.NLevelSets);
+
+    levelSet_bc.resize(parameters.NLevelSets);
+
+
+    for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
+    {
+        for(int n = 0; n<parameters.NLevelSets; n++)
+        {
+            levelSet_bc[n].setLo(dir, BCType::foextrap);
+            levelSet_bc[n].setHi(dir, BCType::foextrap);
+        }
+    }
+
+    for(int n = 0; n<parameters.NLevelSets; n++)
+    {
+        LevelSetNames[n] = "Levelset " + std::to_string(n);
+
+        desc_lst.setComponent(LevelSet_Type, n, LevelSetNames[n] , levelSet_bc[n] , StateDescriptor::BndryFunc(phifill));
+    }
 }
 
 void AmrLevelAdv::read_params ()
@@ -822,10 +873,107 @@ void AmrLevelAdv::read_params ()
     
     parameters.Ncomp = accessPattern.variableNames.size();
 
+    parameters.NLevelSets = 1;
+
     Geometry const* gg = AMReX::top()->getDefaultGeometry();
 
     // This tutorial code only supports Cartesian coordinates.
     if (! gg->IsCartesian()) {
 	amrex::Abort("Please set geom.coord_sys = 0");
     }
+}
+
+void AmrLevelAdv::post_timestep (int iteration)
+{
+    int finest_level = parent->finestLevel();
+
+    if (do_reflux && level < finest_level)
+    {
+        reflux();
+    }
+
+    if(1)
+    {
+
+        const Real time         = state[Phi_Type].curTime();
+        const Real* dx          = geom.CellSize();
+        const Real* prob_lo     = geom.ProbLo();
+
+        MultiFab& S_new         = get_new_data(Phi_Type);
+        MultiFab& S_LS          = get_new_data(LevelSet_Type);
+
+        MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+        FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+        LevelSet LS(S_LS_0,parameters);
+        CellArray U(S_new,accessPattern,parameters);
+
+        LS.data.FillBoundary(geom.periodicity());
+        FillDomainBoundary(LS.data, geom, levelSet_bc);
+
+        LS.resetLevelSet(S_new);
+
+        LS.data.FillBoundary(geom.periodicity());
+        FillDomainBoundary(LS.data, geom, levelSet_bc);
+
+        int forward   =  1;
+        int backward  = -1;
+
+        int positive  =  1;
+        int negative  = -1;
+
+        for(int it = 0; it < 20 ; it++)
+        {
+            int sweepingDone = 1;
+
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, positive);
+
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, negative);
+
+            for(int n = 0; n < parameters.NLevelSets; n++)
+            {
+                if( LS.data.max(n) > 1E19 || LS.data.min(n) < -1E19 )
+                {
+                    sweepingDone *= 0;
+                }
+            }
+
+            if(it == 10)
+                break;
+
+            /*if(sweepingDone)
+            {
+                break;
+            }*/
+        }
+
+        MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());
+        FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
+    }
+
+
+    if(level < finest_level)
+    {
+        avgDown();
+    }
+
+#ifdef AMREX_PARTICLES
+    if(TracerPC)
+    {
+        const int ncycle = parent->nCycle(level);
+
+        if (iteration < ncycle || level == 0)
+        {
+            int ngrow = (level == 0) ? 0 : iteration;
+
+        TracerPC->Redistribute(level, TracerPC->finestLevel(), ngrow);
+        }
+    }
+#endif
 }

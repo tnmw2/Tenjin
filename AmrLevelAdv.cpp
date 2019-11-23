@@ -124,8 +124,10 @@ AmrLevelAdv::init (AmrLevel &old)
     setTimeLevel(cur_time,dt_old,dt_new);
 
     MultiFab& S_new = get_new_data(Phi_Type);
-
     FillPatch(old, S_new, 0, cur_time, Phi_Type, 0, parameters.Ncomp);
+
+    MultiFab& S_LS  = get_new_data(LevelSet_Type);
+    FillPatch(old, S_LS , 0, cur_time, LevelSet_Type, 0, parameters.NLevelSets);
 }
 
 //
@@ -143,6 +145,10 @@ AmrLevelAdv::init ()
     setTimeLevel(cur_time,dt_old,dt);
     MultiFab& S_new = get_new_data(Phi_Type);
     FillCoarsePatch(S_new, 0, cur_time, Phi_Type, 0, parameters.Ncomp);
+
+    setTimeLevel(cur_time,dt_old,dt);
+    MultiFab& S_LS  = get_new_data(LevelSet_Type);
+    FillCoarsePatch(S_LS, 0, cur_time, LevelSet_Type, 0, parameters.NLevelSets);
 }
 
 //
@@ -275,38 +281,7 @@ AmrLevelAdv::computeNewDt (int                   finest_level,
     }
 }
 
-//
-//Do work after timestep().
-//
-void
-AmrLevelAdv::post_timestep (int iteration)
-{
-    //
-    // Integration cycle on fine level grids is complete
-    // do post_timestep stuff here.
-    //
-    int finest_level = parent->finestLevel();
 
-    if (do_reflux && level < finest_level)
-        reflux();
-
-    if (level < finest_level)
-        avgDown();
-
-#ifdef AMREX_PARTICLES    
-    if (TracerPC)
-      {
-        const int ncycle = parent->nCycle(level);
-	
-        if (iteration < ncycle || level == 0)
-	  {
-            int ngrow = (level == 0) ? 0 : iteration;
-	    
-	    TracerPC->Redistribute(level, TracerPC->finestLevel(), ngrow);
-	  }
-      }
-#endif
-}
 
 //
 //Do work after regrid().
@@ -378,6 +353,8 @@ AmrLevelAdv::avgDown ()
 {
     if (level == parent->finestLevel()) return;
     avgDown(Phi_Type);
+    avgDown(LevelSet_Type);
+
 }
 
 void

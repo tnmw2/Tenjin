@@ -121,6 +121,7 @@ struct ParameterStruct
     int Nghost;
     int numberOfMaterials;
     int numberOfMixtures;
+    int NLevelSets;
 
     int max_grid_size;
 

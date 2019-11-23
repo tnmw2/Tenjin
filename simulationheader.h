@@ -23,6 +23,7 @@ using namespace amrex;
 #include "structdefinitions.h"
 #include "accesspattern.h"
 #include "equationofstate.h"
+#include "levelset.h"
 #include "cellarray.h"
 #include "cell.h"
 #include "thinc.h"

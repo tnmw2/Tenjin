@@ -18,6 +18,7 @@
 #endif
 
 enum StateType { Phi_Type = 0,
+                 LevelSet_Type,
                  NUM_STATE_TYPE };
 
 //
@@ -190,6 +191,7 @@ protected:
 
     static Vector<Real>    levelGradientCoefficients;
     static Vector<BCRec>   bc;
+    static Vector<BCRec>   levelSet_bc;
     
     static amrex::Real     advectionVeloctiy;
 
