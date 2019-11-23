@@ -419,7 +419,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     MultiFab S_LS_2(grids, dmap, parameters.NLevelSets, LSGHOST);
     FillPatch(*this, S_LS_2, LSGHOST, time, LevelSet_Type, 0, parameters.NLevelSets);
 
-    MultiFab::Copy(S_LS_0, S_LS, 0, 0, parameters.NLevelSets, LSGHOST);
 
     LevelSet LS0(S_LS_0,parameters);
     LevelSet LS1(S_LS_1,parameters);
@@ -430,11 +429,12 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }
 
-    LS1.advanceLevelSet(S_new,U,LS0,dt,dx,levelSet_bc,geom);
-    
+
+    LS1.advanceLevelSet(SL,U,LS0,dt,dx,levelSet_bc,geom);
+
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    LS2.advanceLevelSet(S_new,U1,LS1,dt,dx,levelSet_bc,geom);
+    LS2.advanceLevelSet(SL,U1,LS1,dt,dx,levelSet_bc,geom);
 
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
 
@@ -442,6 +442,10 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     MultiFab::LinComb(S_LS_1,0.5,S_LS_0,0,0.5,S_LS_2,0,0,LS0.data.nComp(),0);
     MultiFab::Copy(S_LS, S_LS_1, 0, 0, S_LS.nComp(), S_LS.nGrow());
+
+    S_LS.FillBoundary(geom.periodicity());
+    FillDomainBoundary(S_LS, geom, levelSet_bc);
+
     FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
 
     if(do_reflux)
@@ -892,7 +896,7 @@ void AmrLevelAdv::post_timestep (int iteration)
         reflux();
     }
 
-    if(1)
+    if(0)
     {
 
         const Real time         = state[Phi_Type].curTime();
@@ -922,19 +926,19 @@ void AmrLevelAdv::post_timestep (int iteration)
         int positive  =  1;
         int negative  = -1;
 
-        for(int it = 0; it < 20 ; it++)
+        for(int it = 0; it < 10 ; it++)
         {
             int sweepingDone = 1;
 
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  positive);
             LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  positive);
             LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, positive);
 
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  negative);
             LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  negative);
             LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, negative);
 
             for(int n = 0; n < parameters.NLevelSets; n++)
             {
@@ -944,13 +948,13 @@ void AmrLevelAdv::post_timestep (int iteration)
                 }
             }
 
-            if(it == 10)
-                break;
+            //if(it == 10)
+              //  break;
 
-            /*if(sweepingDone)
+            if(sweepingDone)
             {
                 break;
-            }*/
+            }
         }
 
         MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());

@@ -24,11 +24,9 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
                 {
                     x = prob_lo[0] + (Real(i)+0.5)*dx[0];
 
-                    //(*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
+                    (*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
 
-
-
-                    (*this)(i,j,k,n) = 0.5- y;
+                    //(*this)(i,j,k,n) = 0.5- y;
                 }
             }
         }
@@ -331,25 +329,20 @@ void BoxAccessLevelSet::fastSweep(const Real* dx, int dir, int sense, int sign)
 
 bool BoxAccessLevelSet::cellIsNextToAnInterface(int i, int j, int k, int n)
 {
-    Vector<int> pm {-1,0,1};
+    Vector<int> pm {-1,1};
 
-    //for(auto nk : pm)
-    //{
-        for(auto nj : pm)
+    for(auto dif : pm)
+    {
+        if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i+dif,j,k,n))) )
         {
-            for(auto ni : pm)
-            {
-                if(ni == 0 && nj == 0)// && nk == 0)
-                {
-                    continue;
-                }
-                else if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i+ni,j+nj,k,n))) )
-                {
-                    return true;
-                }
-            }
+            return true;
         }
-    //}
+        if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j+dif,k,n))) )
+        {
+            return true;
+        }
+    }
+
 
     return false;
 }
