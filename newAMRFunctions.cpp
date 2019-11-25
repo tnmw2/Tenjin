@@ -896,7 +896,7 @@ void AmrLevelAdv::post_timestep (int iteration)
         reflux();
     }
 
-    if(0)
+    if(1)
     {
 
         const Real time         = state[Phi_Type].curTime();
@@ -930,15 +930,15 @@ void AmrLevelAdv::post_timestep (int iteration)
         {
             int sweepingDone = 1;
 
-            LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  positive);
+            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  positive);
 
-            LS.sweep(S_new,dx,geom,levelSet_bc,y,forward,  negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,forward,  negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,y,backward, negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,x,backward, negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  negative);
+            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  negative);
 
             for(int n = 0; n < parameters.NLevelSets; n++)
             {
@@ -951,10 +951,10 @@ void AmrLevelAdv::post_timestep (int iteration)
             //if(it == 10)
               //  break;
 
-            if(sweepingDone)
+            /*if(sweepingDone)
             {
                 break;
-            }
+            }*/
         }
 
         MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());

@@ -3,6 +3,7 @@
 void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStruct& initial, ParameterStruct& parameters);
 void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters);
 Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx);
+Real densityWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx, Real top, Real bottom);
 
 /** Convert a c++ string to a char array for file I/O operations
  */
@@ -92,11 +93,14 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
+                U(i,j,k,RHO_K,0) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.125);
+                U(i,j,k,P) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.1);
+
                 // Need for UdaykumarGroove Test
                 //U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
                 //U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
 
-                U(i,j,k,P)             = initial.p[s];
+                //U(i,j,k,P)             = initial.p[s];
 
                 U(i,j,k,VELOCITY,0,0)  = initial.u[s];
                 U(i,j,k,VELOCITY,0,1)  = initial.v[s];
@@ -765,4 +769,28 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
         {
             return 0.000001;
         }
+}
+
+Real densityWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx, Real top, Real bottom)
+{
+
+        Real interface = initial.interface;
+        Real radius = 0.2;
+
+        int sub = 11;
+        int counter = 0.0;
+
+
+        for(int row = -(sub-1)/2; row< (sub+1)/2; row++)
+        {
+            for(int col = -(sub-1)/2; col < (sub+1)/2; col++)
+            {
+                if( (y+((Real)col)/((Real)sub)*dx[1]-interface)*(y+((Real)col)/((Real)sub)*dx[1]-interface) + (x+((Real)row/((Real)sub))*dx[0]-interface)*(x+((Real)row/((Real)sub))*dx[0]-interface) < radius*radius  )
+                {
+                    counter++;
+                }
+            }
+        }
+
+        return (top-bottom)*(((Real) counter)/((Real) sub*sub))+bottom;
 }

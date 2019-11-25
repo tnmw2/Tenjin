@@ -43,7 +43,7 @@ public:
     Real  levelSetDerivative     (BoxAccessLevelSet& LS, Real v, const Real* dx, int dir, int i, int j, int k, int n);
     Real  D1                     (BoxAccessLevelSet& LS, int dir, int i, int j, int k, int n, int sign, const Real *dx);
     void  resetLevelSet          ();
-    void  fastSweep              (const Real *dx, int dir, int sense, int sign);
+    void  fastSweep              (const Real *dx, int xsense, int ysense, int sign);
     bool  cellIsNextToAnInterface(int i, int j, int k, int n);
 
 

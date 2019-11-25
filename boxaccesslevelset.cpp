@@ -123,199 +123,148 @@ void BoxAccessLevelSet::resetLevelSet()
     }
 }
 
-void BoxAccessLevelSet::fastSweep(const Real* dx, int dir, int sense, int sign)
+bool customComparator(int i, int lim, int sense)
+{
+    if(sense > 0)
+    {
+        return i<=lim;
+    }
+    else
+    {
+        return i>=lim;
+    }
+}
+
+void customChanger(int& i, int sense)
+{
+    if(sense > 0)
+    {
+        i++;
+    }
+    else
+    {
+        i--;
+    }
+
+    return;
+}
+
+void BoxAccessLevelSet::fastSweep(const Real* dx, int xsense, int ysense, int sign)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
-
-
-    IntVect extra(AMREX_D_DECL(0,0,0));
-
-    for(int n = 0; n < 3 ;n++)
-    {
-        extra[n] = 0;
-    }
-
-    extra[dir]=1;
 
     Real phix,phiy;
     Real phinew;
     Real discriminant;
 
-    Real dx2 = dx[0]*dx[0];
-    Real dy2 = dx[1]*dx[1];
+    int xlo,xhi,ylo,yhi;
 
-    if(sense > 0)
+    if(xsense > 0)
     {
-        for             (int n = 0; n < NLevelSets; n++)
-        {
-            for 		(int k = lo.z; k <= hi.z; ++k)
-            {
-                for 	(int j = lo.y; j <= hi.y; ++j)
-                {
-                    for (int i = lo.x; i <= hi.x; ++i)
-                    {
-                        if(sign == 1)
-                        {
-                            if((sgn<Real,int>((*this)(i,j,k,n)) > 0) && (sgn<Real,int>((*this)(i+extra[0],j+extra[1],k+extra[2],n)) > 0) && (sgn<Real,int>((*this)(i-extra[0],j-extra[1],k-extra[2],n)) > 0))
-                            {
-
-                                phix = std::min((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
-                                phiy = std::min((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
-
-                                discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
-
-
-                                if(discriminant < 0.0)
-                                {
-                                    if(std::abs(phix) < std::abs(phiy))
-                                    {
-                                        discriminant = (1.0/dx2);
-
-                                        phinew = phix+sqrt(discriminant)*dx2;
-                                    }
-                                    else
-                                    {
-                                        discriminant = (1.0/dy2);
-
-                                        phinew = phiy+sqrt(discriminant)*dy2;
-                                    }
-                                }
-                                else
-                                {
-                                    phinew = ((phix/dx2+phiy/dy2)+sqrt(discriminant))/(1.0/dx2+1.0/dy2);
-                                }
-
-                                if(phinew < (*this)(i,j,k,n))
-                                {
-                                    (*this)(i,j,k,n) = phinew;
-                                }
-                            }
-                        }
-                        else if(sign == -1)
-                        {
-                            if((sgn<Real,int>((*this)(i,j,k,n)) < 0) && (sgn<Real,int>((*this)(i+extra[0],j+extra[1],k+extra[2],n)) < 0) && (sgn<Real,int>((*this)(i-extra[0],j-extra[1],k-extra[2],n)) < 0))
-                            {
-
-                                phix = std::max((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
-                                phiy = std::max((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
-
-                                discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
-
-
-                                if(discriminant < 0.0)
-                                {
-                                    if(std::abs(phix) < std::abs(phiy))
-                                    {
-                                        discriminant = (1.0/dx2);
-
-                                        phinew = phix-sqrt(discriminant)*dx2;
-                                    }
-                                    else
-                                    {
-                                        discriminant = (1.0/dy2);
-
-                                        phinew = phiy-sqrt(discriminant)*dy2;
-                                    }
-                                }
-                                else
-                                {
-                                    phinew = ((phix/dx2+phiy/dy2)-sqrt(discriminant))/(1.0/dx2+1.0/dy2);
-                                }
-
-                                if(phinew > (*this)(i,j,k,n))
-                                {
-                                    (*this)(i,j,k,n) = phinew;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        xlo = lo.x;
+        xhi = hi.x;
     }
     else
     {
-        for             (int n = 0; n < NLevelSets; n++)
+        xlo = hi.x;
+        xhi = lo.x;
+    }
+
+    if(ysense > 0)
+    {
+        ylo = lo.y;
+        yhi = hi.y;
+    }
+    else
+    {
+        ylo = hi.y;
+        yhi = lo.y;
+    }
+
+    Real dx2 = dx[0]*dx[0];
+    Real dy2 = dx[1]*dx[1];
+
+
+    for             (int n = 0; n < NLevelSets; n++)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
         {
-            for 		(int k = hi.z; k >= lo.z; --k)
+            for 	(int j = ylo; customComparator(j,yhi,ysense) ; customChanger(j,ysense))
             {
-                for 	(int j = hi.y; j >= lo.y; --j)
+                for (int i = xlo; customComparator(i,xhi,xsense) ; customChanger(i,xsense))
                 {
-                    for (int i = hi.x; i >= lo.x; --i)
+                    if(sign == 1)
                     {
-                        if(sign == 1)
+                        if((sgn<Real,int>((*this)(i,j,k,n)) > 0) && !cellIsNextToAnInterface(i,j,k,n))
                         {
-                            if((sgn<Real,int>((*this)(i,j,k,n)) > 0) && (sgn<Real,int>((*this)(i+extra[0],j+extra[1],k+extra[2],n)) > 0) && (sgn<Real,int>((*this)(i-extra[0],j-extra[1],k-extra[2],n)) > 0))
+
+                            phix = std::min((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
+                            phiy = std::min((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
+
+                            discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
+
+
+                            if(discriminant < 0.0)
                             {
-
-                                phix = std::min((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
-                                phiy = std::min((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
-
-                                discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
-
-
-                                if(discriminant < 0.0)
+                                if(std::abs(phix) < std::abs(phiy))
                                 {
-                                    if(std::abs(phix) < std::abs(phiy))
-                                    {
-                                        discriminant = (1.0/dx2);
+                                    discriminant = (1.0/dx2);
 
-                                        phinew = phix+sqrt(discriminant)*dx2;
-                                    }
-                                    else
-                                    {
-                                        discriminant = (1.0/dy2);
-
-                                        phinew = phiy+sqrt(discriminant)*dy2;
-                                    }
+                                    phinew = phix+sqrt(discriminant)*dx2;
                                 }
                                 else
                                 {
-                                    phinew = ((phix/dx2+phiy/dy2)+sqrt(discriminant))/(1.0/dx2+1.0/dy2);
-                                }
+                                    discriminant = (1.0/dy2);
 
-                                if(phinew < (*this)(i,j,k,n))
-                                {
-                                    (*this)(i,j,k,n) = phinew;
+                                    phinew = phiy+sqrt(discriminant)*dy2;
                                 }
                             }
-                        }
-                        else if(sign == -1)
-                        {
-                            if((sgn<Real,int>((*this)(i,j,k,n)) < 0) && (sgn<Real,int>((*this)(i+extra[0],j+extra[1],k+extra[2],n)) < 0) && (sgn<Real,int>((*this)(i-extra[0],j-extra[1],k-extra[2],n)) < 0))
+                            else
                             {
+                                phinew = ((phix/dx2+phiy/dy2)+sqrt(discriminant))/(1.0/dx2+1.0/dy2);
+                            }
 
-                                phix = std::max((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
-                                phiy = std::max((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
+                            if(phinew < (*this)(i,j,k,n))
+                            {
+                                (*this)(i,j,k,n) = phinew;
+                            }
+                        }
+                    }
+                    else if(sign == -1)
+                    {
+                        if((sgn<Real,int>((*this)(i,j,k,n)) < 0) && !cellIsNextToAnInterface(i,j,k,n))
+                        {
 
-                                discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
+                            phix = std::max((*this)(i+1,j  ,k  ,n),(*this)(i-1,j  ,k  ,n));
+                            phiy = std::max((*this)(i  ,j+1,k  ,n),(*this)(i  ,j-1,k  ,n));
+
+                            discriminant = (phix/dx2+phiy/dy2)*(phix/dx2+phiy/dy2)-(1.0/dx2+1.0/dy2)*( (phix*phix/dx2+phiy*phiy/dy2)  -1.0);
 
 
-                                if(discriminant < 0.0)
+                            if(discriminant < 0.0)
+                            {
+                                if(std::abs(phix) < std::abs(phiy))
                                 {
-                                    if(std::abs(phix) < std::abs(phiy))
-                                    {
-                                        discriminant = (1.0/dx2);
+                                    discriminant = (1.0/dx2);
 
-                                        phinew = phix-sqrt(discriminant)*dx2;
-                                    }
-                                    else
-                                    {
-                                        discriminant = (1.0/dy2);
-
-                                        phinew = phiy-sqrt(discriminant)*dy2;
-                                    }
+                                    phinew = phix-sqrt(discriminant)*dx2;
                                 }
                                 else
                                 {
-                                    phinew = ((phix/dx2+phiy/dy2)-sqrt(discriminant))/(1.0/dx2+1.0/dy2);
-                                }
+                                    discriminant = (1.0/dy2);
 
-                                if(phinew > (*this)(i,j,k,n))
-                                {
-                                    (*this)(i,j,k,n) = phinew;
+                                    phinew = phiy-sqrt(discriminant)*dy2;
                                 }
+                            }
+                            else
+                            {
+                                phinew = ((phix/dx2+phiy/dy2)-sqrt(discriminant))/(1.0/dx2+1.0/dy2);
+                            }
+
+                            if(phinew > (*this)(i,j,k,n))
+                            {
+                                (*this)(i,j,k,n) = phinew;
                             }
                         }
                     }
