@@ -1039,7 +1039,7 @@ void AmrLevelAdv::resetLevelSet_ALL_LEVELS()
 {
     int finest_level = parent->finestLevel();
 
-    for (int i = 0; i <= finest_level; i++)
+    for (int i = 0; i <= level; i++) //finest_level
     {
         getLevel(i).resetLevelSet();
     }
@@ -1049,7 +1049,7 @@ void AmrLevelAdv::sweepLevelSet_ALL_LEVELS()
 {
     int finest_level = parent->finestLevel();
 
-    for (int i = 0; i <= finest_level; i++)
+    for (int i = 0; i <= level; i++)
     {
         getLevel(i).sweepLevelSet();
     }
