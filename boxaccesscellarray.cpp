@@ -56,21 +56,7 @@ void  BoxAccessCellArray::conservativeToPrimitive()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                for(int m = 0; m < numberOfMaterials ; m++)
-                {
-                    kineticEnergy = 0.0;
-
-                    for(int row = 0; row < numberOfComponents ; row++)
-                    {
-                        (*this)(i,j,k,VELOCITY,m,row) = (*this)(i,j,k,RHOU,m,row)/(*this)(i,j,k,RHO,m);
-
-                        kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
-                    }
-
-                    (*this)(i,j,k,P,m) = ((*this)(i,j,k,TOTAL_E,m)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k,m)+ getEffectiveNonThermalPressure(i,j,k,m))/(getEffectiveInverseGruneisen(i,j,k,m));
-
-                    stressTensor(i,j,k,m);
-                }
+                (*this).conservativeToPrimitive(i,j,k);
             }
         }
     }
@@ -94,28 +80,57 @@ void  BoxAccessCellArray::primitiveToConservative()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                for(int m = 0; m < numberOfMaterials ; m++)
-                {
-
-                    kineticEnergy = 0.0;
-
-                    for(int row = 0; row < numberOfComponents ; row++)
-                    {
-                        (*this)(i,j,k,RHOU,m,row) = (*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,RHO,m);
-
-                        kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
-                    }
-
-                    (*this)(i,j,k,TOTAL_E,m) = (*this)(i,j,k,P,m)*getEffectiveInverseGruneisen(i,j,k,m) + getEffectiveNonThermalInternalEnergy(i,j,k,m) - getEffectiveNonThermalPressure(i,j,k,m) + kineticEnergy;
-
-                    stressTensor(i,j,k,m);
-                }
+                (*this).primitiveToConservative(i,j,k);
             }
         }
     }
 
     checkLimits(accessPattern.conservativeVariables);
 
+}
+
+void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
+{
+    Real kineticEnergy;
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        kineticEnergy = 0.0;
+
+        for(int row = 0; row < numberOfComponents ; row++)
+        {
+            (*this)(i,j,k,VELOCITY,m,row) = (*this)(i,j,k,RHOU,m,row)/(*this)(i,j,k,RHO,m);
+
+            kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
+        }
+
+        (*this)(i,j,k,P,m) = ((*this)(i,j,k,TOTAL_E,m)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k,m)+ getEffectiveNonThermalPressure(i,j,k,m))/(getEffectiveInverseGruneisen(i,j,k,m));
+
+        stressTensor(i,j,k,m);
+    }
+
+    return;
+}
+
+void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
+{
+    Real kineticEnergy;
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        kineticEnergy = 0.0;
+
+        for(int row = 0; row < numberOfComponents ; row++)
+        {
+            (*this)(i,j,k,RHOU,m,row) = (*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,RHO,m);
+
+            kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
+        }
+
+        (*this)(i,j,k,TOTAL_E,m) = (*this)(i,j,k,P,m)*getEffectiveInverseGruneisen(i,j,k,m) + getEffectiveNonThermalInternalEnergy(i,j,k,m) - getEffectiveNonThermalPressure(i,j,k,m) + kineticEnergy;
+
+        stressTensor(i,j,k,m);
+    }
 }
 
 void BoxAccessCellArray::stressTensor(int i, int j, int k, int m)
@@ -163,6 +178,14 @@ void BoxAccessCellArray::getSoundSpeed()
                 }
             }
         }
+    }
+}
+
+void BoxAccessCellArray::getSoundSpeed(int i, int j, int k)
+{
+    for(int m=0; m<numberOfMaterials;m++)
+    {
+        (*this)(i,j,k,SOUNDSPEED,m) = sqrt(std::max(1E-10,accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)));
     }
 }
 
@@ -684,7 +707,9 @@ void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int
 
     Vector< Vector<Real> > B(2, Vector<Real>(2));
 
-    for(auto n : accessPattern.material_conservativeVariables[m])
+
+
+    for(auto n : accessPattern.material_primitiveVariables[m])
     {
         for(int row = 0; row< 2;row++)
         {
@@ -713,11 +738,27 @@ void BoxAccessCellArray::rotateFrameSoXPointsAlongNormal(int i, int j, int k, Re
 {
     //Just a rotation matrix (nx,ny //-ny,nx)
 
-    Real normalMom  = (*this)(i,j,k,RHOU,m,0)* nx +(*this)(i,j,k,RHOU,m,1)*ny;
-    Real tangentMom = (*this)(i,j,k,RHOU,m,0)*-ny +(*this)(i,j,k,RHOU,m,1)*nx;
+    Real normalVel  = (*this)(i,j,k,VELOCITY,m,0)* nx +(*this)(i,j,k,VELOCITY,m,1)*ny;
+    Real tangentVel = (*this)(i,j,k,VELOCITY,m,0)*-ny +(*this)(i,j,k,VELOCITY,m,1)*nx;
 
-    (*this)(i,j,k,RHOU,m,0) = normalMom;
-    (*this)(i,j,k,RHOU,m,1) = tangentMom;
+    (*this)(i,j,k,VELOCITY,m,0) = normalVel;
+    (*this)(i,j,k,VELOCITY,m,1) = tangentVel;
+
+    return;
+}
+
+void BoxAccessCellArray::rotateFrameBack(int i, int j, int k, Real nx, Real ny)
+{
+    //Just a rotation matrix (nx,-ny //ny,nx)
+
+    for(int m = 0; m<numberOfMaterials;m++)
+    {
+        Real normalVel  = (*this)(i,j,k,VELOCITY,m,0)* nx +(*this)(i,j,k,VELOCITY,m,1)*-ny;
+        Real tangentVel = (*this)(i,j,k,VELOCITY,m,0)* ny +(*this)(i,j,k,VELOCITY,m,1)* nx;
+
+        (*this)(i,j,k,VELOCITY,m,0) = normalVel;
+        (*this)(i,j,k,VELOCITY,m,1) = tangentVel;
+    }
 
     return;
 }

@@ -46,6 +46,8 @@ public:
     Vector<MaterialSpecifier>   cellVariables;
 
     Vector< Vector<MaterialSpecifier> > material_conservativeVariables;
+    Vector< Vector<MaterialSpecifier> > material_primitiveVariables;
+
 
 };
 

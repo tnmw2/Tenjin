@@ -346,7 +346,7 @@ void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n
 
 void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
 {
-    static const Real probe_length = 1.0;
+    static const Real probe_length = 1.5;
 
     px[0] = ix - probe_length*dx[0]*nx;
     px[1] = ix + probe_length*dx[0]*nx;

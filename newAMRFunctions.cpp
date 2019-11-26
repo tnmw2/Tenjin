@@ -429,7 +429,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS2(S_LS_2,parameters);
 
 
-    //setGhostFluidValues(S_new,U,UL,UR,ULStar,URStar,LS0,dx,prob_lo);
+    //setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters);
 
     /*if(parameters.RADIAL)
     {

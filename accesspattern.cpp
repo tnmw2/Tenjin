@@ -24,10 +24,12 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
                                         material_conservativeVariables[m].push_back(MaterialSpecifier(var,m,row,col));
                         break;
                     case PRIMITIVE:     primitiveVariables.push_back(MaterialSpecifier(var,m,row,col));
+                                        material_primitiveVariables[m].push_back(MaterialSpecifier(var,m,row,col));
                         break;
                     case BOTH:          conservativeVariables.push_back(MaterialSpecifier(var,m,row,col));
                                         material_conservativeVariables[m].push_back(MaterialSpecifier(var,m,row,col));
                                         primitiveVariables.push_back(MaterialSpecifier(var,m,row,col));
+                                        material_primitiveVariables[m].push_back(MaterialSpecifier(var,m,row,col));
                         break;
                     case NEITHER:
                         break;
@@ -70,9 +72,13 @@ void AccessPattern::define(ParameterStruct& parameters)
     refineVariables.clear();
     variableNames.clear();
     cellVariables.clear();
-    material_conservativeVariables.clear();
 
+    material_conservativeVariables.clear();
     material_conservativeVariables.resize(parameters.numberOfMaterials);
+
+    material_primitiveVariables.clear();
+    material_primitiveVariables.resize(parameters.numberOfMaterials);
+
 
     Real c   = 3E8;
     Real min = 1E-20;

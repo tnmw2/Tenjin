@@ -46,7 +46,7 @@ void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt, MultiFab &S_new);
 
-void setGhostFluidValues(MultiFab& S_new, CellArray& U, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, LevelSet& LS0, const Real *dx, const Real *prob_lo);
+void setGhostFluidValues(MultiFab& S_new, CellArray& U, CellArray& UL, CellArray& UR, CellArray& UStar, LevelSet& LS0, const Real *dx, const Real *prob_lo, ParameterStruct &parameters);
 
 #endif // SIMULATIONHEADER
 
