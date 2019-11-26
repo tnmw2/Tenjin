@@ -172,7 +172,7 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
     U1 = U;
 
-    for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
+    for(int dir = 0; dir <AMREX_SPACEDIM  ; dir++)
     {
         d = (Direction_enum)dir;
 
@@ -273,14 +273,14 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             BoxAccessCellArray UStarStarbox(mfi,bx,UStarStar);
             BoxAccessCellArray fluxbox(bx,flux_fab,U); 
 
-            if(parameters.SOLID)
+            /*if(parameters.SOLID)
             {
                 calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d,dx,prob_lo);
             }
             else
-            {
+            {*/
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,dx,prob_lo);
-            }
+            //}
 
             update(fluxbox, Ubox, U1box, parameters,d,dt,dx);
 
@@ -348,6 +348,10 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
         fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
         fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+
+        /*fluxes [j].setVal(0.0);
+        fluxes1[j].setVal(0.0);
+        fluxes2[j].setVal(0.0);*/
     }
 
 
@@ -424,10 +428,13 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS1(S_LS_1,parameters);
     LevelSet LS2(S_LS_2,parameters);
 
-    if(parameters.RADIAL)
+
+    //setGhostFluidValues(S_new,U,UL,UR,ULStar,URStar,LS0,dx,prob_lo);
+
+    /*if(parameters.RADIAL)
     {
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
-    }
+    }*/
 
 
     LS1.advanceLevelSet(SL,U,LS0,dt,dx,levelSet_bc,geom);
@@ -448,7 +455,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
 
-    if(do_reflux)
+    /*if(do_reflux)
     {
         for (int j = 0; j < BL_SPACEDIM; j++)
         {
@@ -456,30 +463,30 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         }
 
         ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
-    }
+    }*/
 
-    if(parameters.REACTIVE)
+    /*if(parameters.REACTIVE)
     {
         reactiveUpdate(U,U1,U2,parameters,dt,S_new);
-    }
+    }*/
 
-    if(parameters.PLASTIC)
+    /*if(parameters.PLASTIC)
     {
         plastic.plasticUpdate(U1,parameters,dt,S_new);
-    }
+    }*/
 
-    if(parameters.RADIAL)
+    /*if(parameters.RADIAL)
     {
         geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
-    }
+    }*/
 
-    if(parameters.SOLID)
+    /*if(parameters.SOLID)
     {
         U1.cleanUpV();
-    }
+    }*/
 
     {
-        U1.cleanUpAlpha();
+        //U1.cleanUpAlpha();
     }
 
 
@@ -534,8 +541,11 @@ Real AmrLevelAdv::estTimeStep (Real)
     const Real cur_time = state[Phi_Type].curTime();
     
     MultiFab& S_new = get_new_data(Phi_Type);
-    
-    CellArray U(S_new,accessPattern,parameters);
+    MultiFab& S_LS  = get_new_data(LevelSet_Type);
+
+    CellArray U (S_new,accessPattern,parameters);
+    LevelSet  LS(S_LS ,parameters);
+
 
 #ifdef _OPENMP
 #pragma omp parallel reduction(min:dt_est)
@@ -546,6 +556,7 @@ Real AmrLevelAdv::estTimeStep (Real)
 			const Box& bx = mfi.tilebox();
 
             BoxAccessCellArray  Ubox(mfi,bx,U);
+            BoxAccessLevelSet   LSbox(mfi,bx,LS);
             
 			const auto lo = lbound(bx);
 			const auto hi = ubound(bx);
@@ -560,7 +571,14 @@ Real AmrLevelAdv::estTimeStep (Real)
 					{
 						for(int n=0;n<AMREX_SPACEDIM;n++)
 						{
-							dt_est = std::min(dt_est, dx[n] / (Ubox(i,j,k,SOUNDSPEED) + fabs(Ubox(i,j,k,VELOCITY,0,n)))); //(advectionVeloctiy));//
+                            if(LSbox(i,j,k)>0.0)
+                            {
+                                dt_est = std::min(dt_est, dx[n] / (Ubox(i,j,k,SOUNDSPEED,0) + fabs(Ubox(i,j,k,VELOCITY,0,n))));
+                            }
+                            else
+                            {
+                                dt_est = std::min(dt_est, dx[n] / (Ubox(i,j,k,SOUNDSPEED,1) + fabs(Ubox(i,j,k,VELOCITY,1,n))));
+                            }
 						}
 					}
 				}
@@ -676,12 +694,14 @@ void C_state_error_grad(Array4<char> const& tagarr, const Box& box, BoxAccessCel
 
 }
 
-void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, BoxAccessLevelSet& LS, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
     int m = 0;
+
+    Real levelSetTolerance = 1.5*std::max(dx[0],dx[1]);
 
     for(auto n : accessPattern.refineVariables)
     {
@@ -705,6 +725,23 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
         m++;
     }
 
+    for(int n = 0; n < LS.NLevelSets; n++)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    if( std::abs(LS(i,j,k,n)) < levelSetTolerance)
+                    {
+                        tagarr(i,j,k) = TagBox::SET;
+                    }
+                }
+            }
+        }
+    }
+
     return;
 
 }
@@ -721,7 +758,14 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
     const Real* dx        = geom.CellSize();
     const Real* prob_lo   = geom.ProbLo();
 
-    MultiFab& S_new = get_new_data(Phi_Type);
+    MultiFab& S_new         = get_new_data(Phi_Type);
+    MultiFab& S_LS          = get_new_data(LevelSet_Type);
+
+    MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+    FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    LevelSet LS(S_LS_0,parameters);
+
     
     // State with ghost cells
     MultiFab Sborder(grids, dmap, parameters.Ncomp, NUM_GROW);
@@ -776,12 +820,13 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 			
             BoxAccessCellArray 			Ubox(mfi,bx,U);
             BoxAccessCellArray 			gradbox(mfi,bx,grad);
+            BoxAccessLevelSet 			LSbox(mfi,bx,LS);
 
             TagBox&    tagfab	  		= tags[mfi];
             
             Array4<char> const& tagarr 	= tagfab.array();
             
-            C_state_error_diff(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
+            C_state_error_diff(tagarr,bx,Ubox,gradbox,LSbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
             
         }
 	}
@@ -896,8 +941,12 @@ void AmrLevelAdv::post_timestep (int iteration)
         reflux();
     }
 
-    if(1)
+    int REINITIALISE = 1;
+
+    if(REINITIALISE)
     {
+        resetLevelSet_ALL_LEVELS();
+
 
         const Real time         = state[Phi_Type].curTime();
         const Real* dx          = geom.CellSize();
@@ -912,15 +961,19 @@ void AmrLevelAdv::post_timestep (int iteration)
         LevelSet LS(S_LS_0,parameters);
         CellArray U(S_new,accessPattern,parameters);
 
-        LS.data.FillBoundary(geom.periodicity());
+        resetLevelSet_ALL_LEVELS();
+
+        sweepLevelSet_ALL_LEVELS();
+
+        /*LS.data.FillBoundary(geom.periodicity());
         FillDomainBoundary(LS.data, geom, levelSet_bc);
 
         LS.resetLevelSet(S_new);
 
         LS.data.FillBoundary(geom.periodicity());
-        FillDomainBoundary(LS.data, geom, levelSet_bc);
+        FillDomainBoundary(LS.data, geom, levelSet_bc);*/
 
-        int forward   =  1;
+        /*int forward   =  1;
         int backward  = -1;
 
         int positive  =  1;
@@ -946,7 +999,7 @@ void AmrLevelAdv::post_timestep (int iteration)
                 {
                     sweepingDone *= 0;
                 }
-            }
+            }*/
 
             //if(it == 10)
               //  break;
@@ -955,10 +1008,10 @@ void AmrLevelAdv::post_timestep (int iteration)
             {
                 break;
             }*/
-        }
+        /*}
 
         MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());
-        FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
+        FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);*/
     }
 
 
@@ -980,4 +1033,107 @@ void AmrLevelAdv::post_timestep (int iteration)
         }
     }
 #endif
+}
+
+void AmrLevelAdv::resetLevelSet_ALL_LEVELS()
+{
+    int finest_level = parent->finestLevel();
+
+    for (int i = 0; i <= finest_level; i++)
+    {
+        getLevel(i).resetLevelSet();
+    }
+}
+
+void AmrLevelAdv::sweepLevelSet_ALL_LEVELS()
+{
+    int finest_level = parent->finestLevel();
+
+    for (int i = 0; i <= finest_level; i++)
+    {
+        getLevel(i).sweepLevelSet();
+    }
+}
+
+void AmrLevelAdv::resetLevelSet()
+{
+    const Real time         = state[Phi_Type].curTime();
+
+    MultiFab& S_new         = get_new_data(Phi_Type);
+    MultiFab& S_LS          = get_new_data(LevelSet_Type);
+
+    MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+    FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    LevelSet LS(S_LS_0,parameters);
+
+    //LS.data.FillBoundary(geom.periodicity());
+    //FillDomainBoundary(LS.data, geom, levelSet_bc);
+
+    LS.resetLevelSet(S_new);
+
+    LS.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(LS.data, geom, levelSet_bc);
+
+    MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());
+
+
+}
+
+void AmrLevelAdv::sweepLevelSet()
+{
+    const Real time         = state[Phi_Type].curTime();
+    const Real* dx          = geom.CellSize();
+    const Real* prob_lo     = geom.ProbLo();
+
+    MultiFab& S_new         = get_new_data(Phi_Type);
+    MultiFab& S_LS          = get_new_data(LevelSet_Type);
+
+    MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+    FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+    LevelSet LS(S_LS_0,parameters);
+    CellArray U(S_new,accessPattern,parameters);
+
+
+    int forward   =  1;
+    int backward  = -1;
+
+    int positive  =  1;
+    int negative  = -1;
+
+    for(int it = 0; it < 10 ; it++)
+    {
+        int sweepingDone = 1;
+
+        LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   positive);
+        LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   positive);
+        LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  positive);
+        LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  positive);
+
+        LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   negative);
+        LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   negative);
+        LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  negative);
+        LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  negative);
+
+        for(int n = 0; n < parameters.NLevelSets; n++)
+        {
+            if( LS.data.max(n) > 1E19 || LS.data.min(n) < -1E19 )
+            {
+                sweepingDone *= 0;
+            }
+        }
+
+        //if(it == 10)
+         //   break;
+
+        if(sweepingDone && it > 10)
+        {
+            break;
+        }
+    }
+
+    MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());
+    FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);
+
 }

@@ -156,12 +156,12 @@ struct InitialStruct
     Real startT;
     Real finalT;
 
-    Vector<Real> u;
-    Vector<Real> v;
-    Vector<Real> w;
-    Vector<Real> p;
     Vector<Vector<Real> > F;
     Vector<Vector<Real> > rho;
+    Vector<Vector<Real> > u;
+    Vector<Vector<Real> > v;
+    Vector<Vector<Real> > w;
+    Vector<Vector<Real> > p;
     Vector<Vector<Real> > alpha;
     Vector<Vector<Real> > lambda;
     Real interface;
@@ -192,6 +192,11 @@ struct InitialStruct
         {
             F[i].resize(9);
             rho[i].resize(parameters.numberOfMaterials);
+            u[i].resize(parameters.numberOfMaterials);
+            v[i].resize(parameters.numberOfMaterials);
+            w[i].resize(parameters.numberOfMaterials);
+            p[i].resize(parameters.numberOfMaterials);
+
             alpha[i].resize(parameters.numberOfMaterials);
             lambda[i].resize(parameters.numberOfMaterials);
         }

@@ -165,7 +165,7 @@ AmrLevelAdv::initialTimeStep ()
 //
 void
 AmrLevelAdv::computeInitialDt (int                   finest_level,
-	  	               int                   sub_cycle,
+                               int                   sub_cycle,
                                Vector<int>&           n_cycle,
                                const Vector<IntVect>& ref_ratio,
                                Vector<Real>&          dt_level,
@@ -178,7 +178,9 @@ AmrLevelAdv::computeInitialDt (int                   finest_level,
         return;
 
     Real dt_0 = 1.0e+100;
+
     int n_factor = 1;
+
     for (int i = 0; i <= finest_level; i++)
     {
         dt_level[i] = getLevel(i).initialTimeStep();
@@ -209,7 +211,7 @@ AmrLevelAdv::computeInitialDt (int                   finest_level,
 //
 void
 AmrLevelAdv::computeNewDt (int                   finest_level,
-		           int                   sub_cycle,
+                           int                   sub_cycle,
                            Vector<int>&           n_cycle,
                            const Vector<IntVect>& ref_ratio,
                            Vector<Real>&          dt_min,

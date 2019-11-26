@@ -24,7 +24,8 @@ SOURCES += main.cpp \
     newAMRFunctions.cpp \
     LevelBldAdv.cpp \
     levelset.cpp \
-    boxaccesslevelset.cpp
+    boxaccesslevelset.cpp \
+    ghostfluid.cpp
 
 HEADERS += \
     simulationheader.h \

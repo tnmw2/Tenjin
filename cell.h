@@ -22,38 +22,28 @@ class Material
 
     Material(){}
 
+    void allocateSpace();
+
 
     Material_type		phase;
 
 
     //Thermodynamic Data ----------------
 
-    Real*	alpha;
-    Real* 	rho;
-    Real*	alphaRho;
-    Real*   lambda;
-    Real*   alphaRhoLambda;
-    Real*   epsilon;
-    Real*   alphaRhoEpsilon;
+    Real*           rho;
+    Vector<Real*>   rhoU;
+    Vector<Real*>   u;
+    Real*           E;
+    Real*           p;
+    Vector<Real*>   sigma;
 
-
+    Real*           a;
+    Real*           uStar;
 };
 
 class Cell
 {
 public:
-
-    Real* rho;
-    Vector<Real*> rhoU;
-    Real* E;
-    Vector<Real*> u;
-    Real* p;
-    Vector<Real*> sigma;
-    Vector<Real*> V;
-    Vector<Real*> VStar;
-
-    Real* a;
-    Real* uStar;
 
     Material_type phase;
 
@@ -65,8 +55,7 @@ public:
 
     Cell(BoxAccessCellArray& U, int i, int j, int k,Material_type _phase);
 
-
-    Real&  operator()(Variable var, int mat=0, int row=0, int col=0);
+    Real&  operator()(Variable var, int mat, int row=0, int col=0);
     Real&  operator()(MaterialSpecifier m);
 
     void  assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m);

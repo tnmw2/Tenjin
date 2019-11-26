@@ -45,6 +45,8 @@ public:
 
     Vector<MaterialSpecifier>   cellVariables;
 
+    Vector< Vector<MaterialSpecifier> > material_conservativeVariables;
+
 };
 
 #endif // ACCESSPATTERN_H

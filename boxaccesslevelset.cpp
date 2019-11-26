@@ -26,7 +26,7 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
 
                     (*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
 
-                    //(*this)(i,j,k,n) = 0.5- y;
+                    //(*this)(i,j,k,n) = 0.5- x;
                 }
             }
         }
@@ -109,7 +109,7 @@ void BoxAccessLevelSet::resetLevelSet()
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    if(cellIsNextToAnInterface(i,j,k,n))//((sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j-1,k,n))) ||  (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j+1,k,n)))) //
+                    if(cellIsNextToAnInterface(i,j,k,n))
                     {
                         continue;
                     }
@@ -276,22 +276,82 @@ void BoxAccessLevelSet::fastSweep(const Real* dx, int xsense, int ysense, int si
     return;
 }
 
-bool BoxAccessLevelSet::cellIsNextToAnInterface(int i, int j, int k, int n)
+bool BoxAccessLevelSet::cellIsNextToAnInterface(int i, int j, int k, int n, int limiter)
 {
     Vector<int> pm {-1,1};
 
-    for(auto dif : pm)
+
+    if(limiter<0)
     {
-        if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i+dif,j,k,n))) )
+        for(auto dif : pm)
         {
-            return true;
+            if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i+dif,j,k,n))) )
+            {
+                return true;
+            }
+            if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j+dif,k,n))) )
+            {
+                return true;
+            }
         }
-        if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j+dif,k,n))) )
+    }
+    else
+    {
+        if(limiter == x)
         {
-            return true;
+            for(auto dif : pm)
+            {
+                if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i+dif,j,k,n))) )
+                {
+                    return true;
+                }
+            }
+        }
+        if(limiter == y)
+        {
+            for(auto dif : pm)
+            {
+                if( (sgn<Real,int>((*this)(i,j,k,n)) != sgn<Real,int>((*this)(i,j+dif,k,n))) )
+                {
+                    return true;
+                }
+            }
         }
     }
 
 
     return false;
 }
+
+void BoxAccessLevelSet::calculateNormal(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny)
+{
+    nx = ((*this)(i+1,j,   k,n)-(*this)(i-1,j,  k,n))/(2.0*dx[0]);
+    ny = ((*this)(i   ,j+1,k,n)-(*this)(i,  j-1,k,n))/(2.0*dx[1]);
+
+    Real norm = sqrt(nx*nx+ny*ny);
+
+    nx = nx/norm;
+    ny = ny/norm;
+
+    return;
+}
+
+void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& cx, Real& cy, Real& ix, Real& iy)
+{
+    ix = cx + std::abs((*this)(i,j,k,n))*nx;
+    iy = cy + std::abs((*this)(i,j,k,n))*ny;
+
+    return;
+}
+
+void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
+{
+    static const Real probe_length = 1.0;
+
+    px[0] = ix - probe_length*dx[0]*nx;
+    px[1] = ix + probe_length*dx[0]*nx;
+
+    py[0] = iy - probe_length*dx[1]*ny;
+    py[1] = iy + probe_length*dx[1]*ny;
+}
+

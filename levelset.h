@@ -37,14 +37,19 @@ public:
 
     void initialise(const Real* dx, const Real* prob_lo);
 
-    Real& operator()(int i, int j, int k, int mat);
+    Real& operator()(int i, int j, int k, int mat=0);
 
-    void  advanceLevelSet        (BoxAccessCellArray& U, BoxAccessLevelSet& LS, Real dt, const Real* dx);
-    Real  levelSetDerivative     (BoxAccessLevelSet& LS, Real v, const Real* dx, int dir, int i, int j, int k, int n);
-    Real  D1                     (BoxAccessLevelSet& LS, int dir, int i, int j, int k, int n, int sign, const Real *dx);
-    void  resetLevelSet          ();
-    void  fastSweep              (const Real *dx, int xsense, int ysense, int sign);
-    bool  cellIsNextToAnInterface(int i, int j, int k, int n);
+    void  advanceLevelSet           (BoxAccessCellArray& U, BoxAccessLevelSet& LS, Real dt, const Real* dx);
+    Real  levelSetDerivative        (BoxAccessLevelSet& LS, Real v, const Real* dx, int dir, int i, int j, int k, int n);
+    Real  D1                        (BoxAccessLevelSet& LS, int dir, int i, int j, int k, int n, int sign, const Real *dx);
+    void  resetLevelSet             ();
+    void  fastSweep                 (const Real *dx, int xsense, int ysense, int sign);
+    bool  cellIsNextToAnInterface   (int i , int j , int k, int n, int limiter=-1);
+    void  calculateNormal           (int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny);
+    void calculateInterpolationPoint(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& cx, Real& cy, Real& ix, Real& iy);
+    void calculateProbes            (int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py);
+
+
 
 
 };

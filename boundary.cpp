@@ -8,7 +8,7 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
     {
         for(int n = 0; n < parameters.Ncomp; ++n)
         {
-            if(initial.lowBoundary[dir] == REFLECTIVE)
+            /*if(initial.lowBoundary[dir] == REFLECTIVE)
             {
                 if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
                 {
@@ -69,11 +69,11 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
                 }
             }
             else
-            {
+            {*/
                 bc[n].setLo(dir, BCType::foextrap);
-            }
+            //}
 
-            if(initial.highBoundary[dir] == REFLECTIVE)
+            /*if(initial.highBoundary[dir] == REFLECTIVE)
             {
                 if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
                 {
@@ -134,9 +134,9 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
                 }
             }
             else
-            {
+            {*/
                 bc[n].setHi(dir, BCType::foextrap);
-            }
+            //}
         }
     }
 }

@@ -130,6 +130,11 @@ public:
     //
     virtual void post_timestep (int iteration) override;
 
+    void resetLevelSet_ALL_LEVELS();
+    void resetLevelSet();
+
+    void sweepLevelSet_ALL_LEVELS();
+    void sweepLevelSet();
     //
     //Do work after regrid().
     //

@@ -2,17 +2,12 @@
 
 Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : phase(_phase), accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
 {
-    rhoU.resize(numberOfComponents);
-    u.resize(numberOfComponents);
-    sigma.resize(numberOfComponents*numberOfComponents);
-
-    if(phase == solid)
-    {
-        V.resize(numberOfComponents*numberOfComponents);
-        VStar.resize(numberOfComponents*numberOfComponents);
-    }
-
     materials.resize(U.numberOfMaterials);
+
+    for(int n = 0; n< U.numberOfMaterials; n++)
+    {
+        materials[n].allocateSpace();
+    }
 
     for(auto n : accessPattern.cellVariables)
     {
@@ -29,39 +24,21 @@ Real& Cell::operator()(MaterialSpecifier m)
 {
     switch(m.var)
     {
-    case ALPHA:             return *(materials[m.mat].alpha);
+    case RHO:               return *(materials[m.mat].rho);
         break;
-    case ALPHARHO:          return *(materials[m.mat].alphaRho);
+    case RHOU:              return *(materials[m.mat].rhoU[m.row]);
         break;
-    case RHO_K:             return *(materials[m.mat].rho);
+    case TOTAL_E:           return *(materials[m.mat].E);
         break;
-    case RHO:               return *rho;
+    case VELOCITY:          return *(materials[m.mat].u[m.row]);
         break;
-    case RHOU:              return *(rhoU[m.row]);
+    case P:                 return *(materials[m.mat].p);
         break;
-    case TOTAL_E:           return *E;
+    case SOUNDSPEED:        return *(materials[m.mat].a);
         break;
-    case VELOCITY:          return *(u[m.row]);
+    case USTAR:             return *(materials[m.mat].uStar);
         break;
-    case P:                 return *p;
-        break;
-    case SOUNDSPEED:        return *a;
-        break;
-    case USTAR:             return *uStar;
-        break;
-    case LAMBDA:            return *(materials[m.mat].lambda);
-        break;
-    case ALPHARHOLAMBDA:    return *(materials[m.mat].alphaRhoLambda);
-        break;
-    case SIGMA:             return *(sigma[m.row*numberOfComponents+m.col]);
-        break;
-    case V_TENSOR:          return *(V[m.row*numberOfComponents+m.col]);
-        break;
-    case VSTAR:             return *(VStar[m.row*numberOfComponents+m.col]);
-        break;
-    case EPSILON:           return *(materials[m.mat].epsilon);
-        break;
-    case ALPHARHOEPSILON:   return *(materials[m.mat].alphaRhoEpsilon);
+    case SIGMA:             return *(materials[m.mat].sigma[m.row*numberOfComponents+m.col]);
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
@@ -72,39 +49,21 @@ void Cell::assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpe
 {
     switch(m.var)
     {
-    case ALPHA:           materials[m.mat].alpha                    = &U(i,j,k,m);
+    case RHO:             (materials[m.mat].rho)                                     = &U(i,j,k,m);
         break;
-    case ALPHARHO:        (materials[m.mat].alphaRho)               = &U(i,j,k,m);
+    case RHOU:            (materials[m.mat].rhoU[m.row])                             = &U(i,j,k,m);
         break;
-    case RHO_K:           (materials[m.mat].rho)                    = &U(i,j,k,m);
+    case TOTAL_E:         (materials[m.mat].E)                                       = &U(i,j,k,m);
         break;
-    case RHO:             rho                                       = &U(i,j,k,m);
+    case VELOCITY:        (materials[m.mat].u[m.row])                                = &U(i,j,k,m);
         break;
-    case RHOU:            (rhoU[m.row])                             = &U(i,j,k,m);
+    case P:               (materials[m.mat].p)                                       = &U(i,j,k,m);
         break;
-    case TOTAL_E:         E                                         = &U(i,j,k,m);
+    case SOUNDSPEED:      (materials[m.mat].a)                                       = &U(i,j,k,m);
         break;
-    case VELOCITY:        (u[m.row])                                = &U(i,j,k,m);
+    case USTAR:           (materials[m.mat].uStar)                                   = &U(i,j,k,m);
         break;
-    case P:               p                                         = &U(i,j,k,m);
-        break;
-    case SOUNDSPEED:      a                                         = &U(i,j,k,m);
-        break;
-    case USTAR:           uStar                                     = &U(i,j,k,m);
-        break;
-    case LAMBDA:          (materials[m.mat].lambda)                 = &U(i,j,k,m);
-        break;
-    case ALPHARHOLAMBDA:  (materials[m.mat].alphaRhoLambda)         = &U(i,j,k,m);
-        break;
-    case SIGMA:           (sigma[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
-        break;
-    case V_TENSOR:        (V[m.row*numberOfComponents+m.col])       = &U(i,j,k,m);
-        break;
-    case VSTAR:           (VStar[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
-        break;
-    case EPSILON:         (materials[m.mat].epsilon)                = &U(i,j,k,m);
-        break;
-    case ALPHARHOEPSILON: (materials[m.mat].alphaRhoEpsilon)        = &U(i,j,k,m);
+    case SIGMA:           (materials[m.mat].sigma[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
@@ -138,4 +97,11 @@ bool Cell::contains_nan()
 
     return false;
 
+}
+
+void Material::allocateSpace()
+{
+    rhoU.resize(3);
+    u.resize(3);
+    sigma.resize(9);
 }

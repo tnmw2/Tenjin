@@ -70,7 +70,37 @@ public:
 
 };
 
-class MixtureEOS : public MieGruneisenEOS
+class SINGLEMATERIAL_MieGruneisenEOS : public MieGruneisenEOS
+{
+
+public:
+
+    ~SINGLEMATERIAL_MieGruneisenEOS(){}
+
+    SINGLEMATERIAL_MieGruneisenEOS(){}
+
+    SINGLEMATERIAL_MieGruneisenEOS(Real gamma, Real _pref, Real _eref, Real _CV);
+
+    virtual void define(Vector<Real>& params);
+    virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearPressure                  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
+    virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
+    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real componentShearModulus          (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
+};
+
+
+/*class MixtureEOS : public MieGruneisenEOS
 {
 
 public:
@@ -103,9 +133,9 @@ public:
     MieGruneisenEOS first;
     MieGruneisenEOS second;
 
-};
+};*/
 
-class RomenskiiSolidEOS : public MieGruneisenEOS
+/*class RomenskiiSolidEOS : public MieGruneisenEOS
 {
 
 public:
@@ -140,9 +170,9 @@ public:
     Real EOSbeta;
     Real G0;
 
-};
+};*/
 
-class WilkinsSolidEOS : public MieGruneisenEOS
+/*class WilkinsSolidEOS : public MieGruneisenEOS
 {
 
 public:
@@ -175,6 +205,6 @@ public:
     Real e1,e2,e3,e4,e5;
     Real G0;
 
-};
+};*/
 
 #endif // EQUATIONOFSTATE_H

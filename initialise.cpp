@@ -70,55 +70,25 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                 for (int m = 0; m < parameters.numberOfMaterials; m++)
                 {
-                    U(i,j,k,ALPHA,m)    = initial.alpha[s][m];
-                    U(i,j,k,RHO_K,m)    = initial.rho[s][m];
+                    U(i,j,k,RHO,m)    = initial.rho[s][m];
 
+                    U(i,j,k,P,m)      = initial.p[s][m];
 
-                    if(U.accessPattern.materialInfo[m].mixture)
-                    {
-                        U(i,j,k,RHO_MIX,m,0)    = initial.rho[s][m];
-                        U(i,j,k,RHO_MIX,m,1)    = initial.rho[s][m];
-                        U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
-                    }
+                    U(i,j,k,VELOCITY,m,0)  = initial.u[s][m];
+                    U(i,j,k,VELOCITY,m,1)  = initial.v[s][m];
+                    U(i,j,k,VELOCITY,m,2)  = initial.w[s][m];
 
-
-                    if(parameters.materialInfo[m].phase == solid)
-                    {
-                        U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][0]);
-                    }
-
-                    if(parameters.PLASTIC)
-                    {
-                        U(i,j,k,EPSILON,m) = 0.0;
-                    }
+                    U(i,j,k,P,m) += U.getEffectiveNonThermalPressure(i,j,k,m)/U.getEffectiveInverseGruneisen(i,j,k,m);
                 }
 
-                U(i,j,k,RHO_K,0) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.125);
-                U(i,j,k,P) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.1);
+                //U(i,j,k,RHO_K,0) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.125);
+                //U(i,j,k,P) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.1);
 
                 // Need for UdaykumarGroove Test
                 //U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
                 //U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
 
                 //U(i,j,k,P)             = initial.p[s];
-
-                U(i,j,k,VELOCITY,0,0)  = initial.u[s];
-                U(i,j,k,VELOCITY,0,1)  = initial.v[s];
-                U(i,j,k,VELOCITY,0,2)  = initial.w[s];
-
-                if(parameters.SOLID)
-                {
-                    for(int row = 0; row<U.numberOfComponents; row++)
-                    {
-                        for(int col = 0; col<U.numberOfComponents; col++)
-                        {
-                            U(i,j,k,V_TENSOR,0,row,col) = V[s][row*U.numberOfComponents+col];
-                        }
-                    }
-                }
-
-                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
-
             }
         }
     }
@@ -164,7 +134,7 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
     temp.push_back(materialname[m]["eref"]);
     temp.push_back(materialname[m]["CV"]);
 
-    if(EOSstring == "RomenskiiSolid")
+    /*if(EOSstring == "RomenskiiSolid")
     {
         parameters.materialInfo[m].EOS = new RomenskiiSolidEOS();
 
@@ -215,6 +185,10 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             parameters.materialInfo[m].EOS = new MieGruneisenEOS();
         }
     }
+    else */if(EOSstring == "SINGLEMATERIAL_MieGruneisen")
+    {
+        parameters.materialInfo[m].EOS = new SINGLEMATERIAL_MieGruneisenEOS();
+    }
     else
     {
         std::cout << "No valid EOS selected for material " << m << std::endl;
@@ -258,31 +232,13 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
 
     for(int m=0;m<parameters.numberOfMaterials;m++)
     {
-        initial.alpha[s][m] = state[s]["material"][m]["alpha"];
+        initial.rho[s][m] = state[s]["material"][m]["rho"];
+        initial.p  [s][m] = state[s]["material"][m]["p"];
+        initial.u  [s][m] = state[s]["material"][m]["u"];
+        initial.v  [s][m] = state[s]["material"][m]["v"];
+        initial.w  [s][m] = state[s]["material"][m]["w"];
 
-        if(parameters.materialInfo[m].mixture)
-        {
-            initial.lambda[s][m] = state[s]["material"][m]["lambda"];
-            initial.rho[s][m] = state[s]["material"][m]["rhoa"];
-        }
-        else if(parameters.materialInfo[m].phase == fluid)
-        {
-            initial.rho[s][m] = state[s]["material"][m]["rho"];
-        }
-        else
-        {
-            for(int i=0;i<9;i++)
-            {
-                initial.F[s][i] = state[s]["material"][m]["F"][i];
-            }
-        }
     }
-
-    initial.p[s] = state[s]["p"];
-    initial.u[s] = state[s]["u"];
-    initial.v[s] = state[s]["v"];
-    initial.w[s] = state[s]["w"];
-
     return;
 }
 
@@ -397,7 +353,7 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
     }
     catch( SettingException except)
     {
-        std::cout << except.getPath() << std::endl;
+        Print() << except.getPath() << std::endl;
     }
 
     return;
@@ -608,7 +564,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * 1D RP
      *****************************************/
     /*{
-        if(y < initial.interface)
+        if(x < initial.interface)
         {
             s=0;
         }

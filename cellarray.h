@@ -78,11 +78,11 @@ public:
     void  conservativeToPrimitive();
     void  primitiveToConservative();
 
-    void stressTensor                           (int i, int j, int k);
+    void stressTensor                           (int i, int j, int k, int m);
 
-    Real getEffectiveInverseGruneisen           (int i, int j, int k);
-    Real getEffectiveNonThermalPressure         (int i, int j, int k);
-    Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k);
+    Real getEffectiveInverseGruneisen           (int i, int j, int k, int m);
+    Real getEffectiveNonThermalPressure         (int i, int j, int k, int m);
+    Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k, int m);
 
     void getSoundSpeed();
     Real transverseWaveSpeed(int i, int j, int k);
@@ -106,7 +106,8 @@ public:
 
     bool cellIsMostlyFluid(int i, int j, int k);
 
-
+    void bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m);
+    void rotateFrameSoXPointsAlongNormal(int i, int j, int k, Real nx, Real ny, int m);
 };
 
 

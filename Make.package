@@ -1,4 +1,4 @@
-CEXE_sources += main.cpp timestep.cpp cellarray.cpp initialise.cpp boxaccesscellarray.cpp hllc.cpp print.cpp cell.cpp accesspattern.cpp reactive.cpp tensor.cpp thinc.cpp equationofstate.cpp boundary.cpp flux.cpp radial.cpp plastic.cpp AmrLevelAdv.cpp newAMRFunctions.cpp LevelBldAdv.cpp levelset.cpp boxaccesslevelset.cpp
+CEXE_sources += main.cpp timestep.cpp cellarray.cpp initialise.cpp boxaccesscellarray.cpp hllc.cpp print.cpp cell.cpp accesspattern.cpp reactive.cpp tensor.cpp thinc.cpp equationofstate.cpp boundary.cpp flux.cpp radial.cpp plastic.cpp AmrLevelAdv.cpp newAMRFunctions.cpp LevelBldAdv.cpp levelset.cpp boxaccesslevelset.cpp ghostfluid.cpp
 
 f90EXE_sources += bc_fill_nd.f90
 
