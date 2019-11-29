@@ -46,9 +46,11 @@ public:
     void  fastSweep                 (const Real *dx, int xsense, int ysense, int sign);
     bool  cellIsNextToAnInterface   (int i , int j , int k, int n, int limiter=-1);
     void  calculateNormal           (int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny);
-    void calculateInterpolationPoint(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& cx, Real& cy, Real& ix, Real& iy);
-    void calculateProbes            (int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py);
+    void  calculateInterpolationPoint(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& cx, Real& cy, Real& ix, Real& iy);
+    void  calculateProbes            (int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py);
 
+    bool customComparator(int i, int lim, int sense);
+    void customChanger(int& i, int sense);
 
 
 

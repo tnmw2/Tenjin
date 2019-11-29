@@ -41,6 +41,31 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
     }
 }
 
+int BoxAccessCellArray::getArrayPosition(MaterialSpecifier& m)
+{
+    switch(m.var)
+    {
+        case RHO:               return (accessPattern[m.var]+m.mat);
+            break;
+        case RHOU:              return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
+            break;
+        case TOTAL_E:           return (accessPattern[m.var]+m.mat);
+            break;
+        case VELOCITY:          return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
+            break;
+        case P:                 return (accessPattern[m.var]+m.mat);
+            break;
+        case SOUNDSPEED:        return (accessPattern[m.var]+m.mat);
+            break;
+        case USTAR:             return (accessPattern[m.var]+m.mat);
+            break;
+        case SIGMA:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        default: Print() << "Incorrect Access variable " << m.var << "in boxaccesscellarray" << std::endl;
+        exit(1);
+    }
+}
+
 void  BoxAccessCellArray::conservativeToPrimitive()
 {
     const auto lo = lbound(box);
@@ -673,26 +698,108 @@ void BoxAccessCellArray::smoothFromNeighbours(MaterialSpecifier& m, int i, int j
     }
 }
 
-void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m)
+void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m,Vector<int>& corner_x, Vector<int>& corner_y, Vector<Real>& xdiff, Vector<Real>& ydiff, Vector<Real>& B)
 {
+    //Print() << "HERE" << std::endl;
 
-    //Print()<<"Starting interpolation "<< std::endl;
+    //Print()<<"probe:\t " << probe_x << " " << probe_y << std::endl;
 
-    Vector<int> corner_x(2);
-    Vector<int> corner_y(2);
+    int incell;
 
-    corner_x[0] = ( remainder((probe_x-prob_lo[0])/dx[0],1.0) < 0.5 ? (int)((probe_x-prob_lo[0])/dx[0])-1 : (int)((probe_x-prob_lo[0])/dx[0]));
-    corner_x[1] = corner_x[0]+1;
+    if((probe_x-prob_lo[0]) > 0.0)
+    {
+       incell = (int)((probe_x-prob_lo[0])/dx[0]);
 
-    corner_y[0] = ( remainder((probe_y-prob_lo[1])/dx[1],1.0) < 0.5 ? (int)((probe_y-prob_lo[1])/dx[1])-1 : (int)((probe_y-prob_lo[1])/dx[1]));
-    corner_y[1] = corner_y[0]+1;
+       if(probe_x > (prob_lo[0] + (Real(incell)+0.5)*dx[0]))
+       {
+           corner_x[0] = incell;
+           corner_x[1] = corner_x[0]+1;
+       }
+       else
+       {
+           corner_x[0] = incell-1;
+           corner_x[1] = corner_x[0]+1;
+       }
+    }
+    else
+    {
+       incell = (int)((probe_x-prob_lo[0])/dx[0]) -1;
+
+       if(probe_x > (prob_lo[0] + (Real(incell)+0.5)*dx[0]))
+       {
+           corner_x[0] = incell;
+           corner_x[1] = corner_x[0]+1;
+       }
+       else
+       {
+           corner_x[0] = incell-1;
+           corner_x[1] = corner_x[0]+1;
+       }
+    }
+
+    if((probe_y-prob_lo[1]) > 0.0)
+    {
+       incell = (int)((probe_y-prob_lo[1])/dx[1]);
+
+       if(probe_y > (prob_lo[1] + (Real(incell)+0.5)*dx[1]))
+       {
+           corner_y[0] = incell;
+           corner_y[1] = corner_y[0]+1;
+       }
+       else
+       {
+           corner_y[0] = incell-1;
+           corner_y[1] = corner_y[0]+1;
+       }
+    }
+    else
+    {
+       incell = (int)((probe_y-prob_lo[1])/dx[1]) -1;
+
+       if(probe_y > (prob_lo[1] + (Real(incell)+0.5)*dx[1]))
+       {
+           corner_y[0] = incell;
+           corner_y[1] = corner_y[0]+1;
+       }
+       else
+       {
+           corner_y[0] = incell-1;
+           corner_y[1] = corner_y[0]+1;
+       }
+    }
+
+
+
+    /*if((probe_x-prob_lo[0]) > 0.0)
+    {
+        corner_x[0] = ( remainder((probe_x-prob_lo[0])/dx[0],1.0) < 0.5 ? (int)((probe_x-prob_lo[0])/dx[0])-1 : (int)((probe_x-prob_lo[0])/dx[0]));
+        corner_x[1] = corner_x[0]+1;
+    }
+    else
+    {
+        corner_x[0] = ( remainder(-(probe_x-prob_lo[0])/dx[0],1.0) < 0.5 ? (int)((probe_x-prob_lo[0])/dx[0])-1 : (int)((probe_x-prob_lo[0])/dx[0]));
+        corner_x[1] = corner_x[0]+1;
+    }*/
+
+    /*if((probe_y-prob_lo[1]) > 0.0)
+    {
+        corner_y[0] = ( ((probe_y-prob_lo[1])/dx[1]) < 0.5 ? (int)((probe_y-prob_lo[1])/dx[1])-1 : (int)((probe_y-prob_lo[1])/dx[1]));
+
+        Print() << (probe_y-prob_lo[1])/dx[1] << " " << corner_y[0] << std::endl;
+        corner_y[1] = corner_y[0]+1;
+        Print() << corner_y[1] << std::endl;
+
+        Print() << "int test "<< (int)(3.2) << " " << (int)(-3.2) << std::endl;
+
+    }
+    else
+    {
+        corner_y[0] = ( remainder(-(probe_y-prob_lo[1])/dx[1],1.0) < 0.5 ? (int)((probe_y-prob_lo[1])/dx[1])-1 : (int)((probe_y-prob_lo[1])/dx[1]));
+        corner_y[1] = corner_y[0]+1;
+    }*/
 
     //Print()<<"corners_x:\t " << corner_x[0] << " " << corner_x[1] << std::endl;
     //Print()<<"corners_y:\t " << corner_y[0] << " " << corner_y[1] << std::endl;
-
-
-    Vector<Real> xdiff(2);
-    Vector<Real> ydiff(2);
 
     xdiff[0] = prob_lo[0] + (Real(corner_x[1])+0.5)*dx[0] - probe_x;
     xdiff[1] = prob_lo[0] + (Real(corner_x[0])+0.5)*dx[0] - probe_x;
@@ -703,20 +810,40 @@ void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int
     //Print()<<"xdiff:\t " << xdiff[0] << " " << xdiff[1] << std::endl;
     //Print()<<"ydiff:\t " << ydiff[0] << " " << ydiff[1] << std::endl;
 
+    if((sgn<Real,int>(xdiff[0]) == sgn<Real,int>(xdiff[1])) || (sgn<Real,int>(ydiff[0]) == sgn<Real,int>(ydiff[1])) )
+    {
 
-
-    Vector< Vector<Real> > B(2, Vector<Real>(2));
-
+        //Print() << dx[1] << std::endl;
+        //
+        //Print() << "y " << probe_y << " " << prob_lo[1] + (Real(corner_y[1])+0.5)*dx[1] << " " << prob_lo[1] + (Real(corner_y[0])+0.5)*dx[1] << std::endl;
+        //Print() <<  remainder((probe_y-prob_lo[1])/dx[1],1.0) << std::endl;
+        //
+        //Print() << probe_y << " " << prob_lo[1] << " " << dx[1] << " " <<  (probe_y-prob_lo[1])/dx[1] << " so  " <<  (int)((probe_y-prob_lo[1])/dx[1]) << " " << corner_y[1]<< std::endl;
+        Abort("Sign error in interpolation");
+    }
 
 
     for(auto n : accessPattern.material_primitiveVariables[m])
     {
+        //Print() << "B" << std::endl;
+
         for(int row = 0; row< 2;row++)
         {
             for(int col = 0; col < 2; col++)
             {
-                B[row][col] = U(corner_x[row],corner_y[col],k,n);
+                if(row == col)
+                {
+                    B[row*2+col] = U(corner_x[row],corner_y[col],k,n);
+                }
+                else
+                {
+                    B[row*2+col] = -U(corner_x[row],corner_y[col],k,n);
+                }
+
+                //Print() << B[row*2+col]<< " ";
             }
+
+            //Print() << std::endl;
         }
 
         (*this)(i,j,k,n) = 0.0;
@@ -725,11 +852,14 @@ void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int
         {
             for(int col = 0; col < 2; col++)
             {
-                (*this)(i,j,k,n) +=  B[row][col]*xdiff[row]*ydiff[col];
+                (*this)(i,j,k,n) +=  B[row*2+col]*xdiff[row]*ydiff[col];
             }
         }
 
         (*this)(i,j,k,n) *= 1.0/(dx[0]*dx[1]);
+
+
+        //Print() <<accessPattern.variableNames[accessPattern[n.var]] << " " << (*this)(i,j,k,n) << std::endl;
     }
 
 }
@@ -762,3 +892,4 @@ void BoxAccessCellArray::rotateFrameBack(int i, int j, int k, Real nx, Real ny)
 
     return;
 }
+

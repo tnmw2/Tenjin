@@ -38,7 +38,6 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
         UStar(VELOCITY,m,row)     = UStar(RHOU,m,row)/UStar(RHO,m);
     }
 
-
     UStar(TOTAL_E,m)      = multiplier*U(RHO,m)*(U(TOTAL_E,m)/U(RHO,m) + (Sstar-U(VELOCITY,m,d))*(Sstar - (U(SIGMA,m,d,d))/(U(RHO,m)*(SK-U(VELOCITY,m,d))) ));
 
     return;

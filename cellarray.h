@@ -32,12 +32,17 @@ public:
     CellArray&  operator+(CellArray& U);
     bool        contains_nan();
 
+    int getArrayPosition(MaterialSpecifier& m);
+
 
     MultiFab& data;
 
     AccessPattern& accessPattern;
 
     int numberOfMaterials;
+
+    static const int numberOfComponents = 3;
+
 
 
 
@@ -73,6 +78,8 @@ public:
     Real& operator()(int i, int j, int k, MaterialSpecifier& m);
     Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
+
+    int getArrayPosition(MaterialSpecifier& m);
 
 
     void  conservativeToPrimitive();
@@ -111,7 +118,7 @@ public:
 
     bool cellIsMostlyFluid(int i, int j, int k);
 
-    void bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m);
+    void bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m, Vector<int> &corner_x, Vector<int> &corner_y, Vector<Real> &xdiff, Vector<Real> &ydiff, Vector<Real> &B);
     void rotateFrameSoXPointsAlongNormal(int i, int j, int k, Real nx, Real ny, int m);
     void rotateFrameBack(int i, int j, int k, Real nx, Real ny);
 };

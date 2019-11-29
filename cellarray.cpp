@@ -1,4 +1,5 @@
 #include "cellarray.h"
+#include "simulationheader.h"
 
 CellArray::CellArray(MultiFab& S, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(S), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
 
@@ -116,5 +117,29 @@ bool CellArray::contains_nan()
     return checker;
 }
 
+int CellArray::getArrayPosition(MaterialSpecifier& m)
+{
+    switch(m.var)
+    {
+        case RHO:               return (accessPattern[m.var]+m.mat);
+            break;
+        case RHOU:              return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
+            break;
+        case TOTAL_E:           return (accessPattern[m.var]+m.mat);
+            break;
+        case VELOCITY:          return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
+            break;
+        case P:                 return (accessPattern[m.var]+m.mat);
+            break;
+        case SOUNDSPEED:        return (accessPattern[m.var]+m.mat);
+            break;
+        case USTAR:             return (accessPattern[m.var]+m.mat);
+            break;
+        case SIGMA:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        default: Print() << "Incorrect Access variable " << m.var << "in boxaccesscellarray" << std::endl;
+        exit(1);
+    }
+}
 
 

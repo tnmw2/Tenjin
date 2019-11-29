@@ -429,13 +429,14 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS2(S_LS_2,parameters);
 
 
-    //setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters);
+    setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
+
+    U = U1;
 
     /*if(parameters.RADIAL)
     {
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }*/
-
 
     LS1.advanceLevelSet(SL,U,LS0,dt,dx,levelSet_bc,geom);
 
@@ -964,54 +965,6 @@ void AmrLevelAdv::post_timestep (int iteration)
         resetLevelSet_ALL_LEVELS();
 
         sweepLevelSet_ALL_LEVELS();
-
-        /*LS.data.FillBoundary(geom.periodicity());
-        FillDomainBoundary(LS.data, geom, levelSet_bc);
-
-        LS.resetLevelSet(S_new);
-
-        LS.data.FillBoundary(geom.periodicity());
-        FillDomainBoundary(LS.data, geom, levelSet_bc);*/
-
-        /*int forward   =  1;
-        int backward  = -1;
-
-        int positive  =  1;
-        int negative  = -1;
-
-        for(int it = 0; it < 10 ; it++)
-        {
-            int sweepingDone = 1;
-
-            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  positive);
-            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  positive);
-
-            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  forward,   negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,backward, forward,   negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,backward, backward,  negative);
-            LS.sweep(S_new,dx,geom,levelSet_bc,forward,  backward,  negative);
-
-            for(int n = 0; n < parameters.NLevelSets; n++)
-            {
-                if( LS.data.max(n) > 1E19 || LS.data.min(n) < -1E19 )
-                {
-                    sweepingDone *= 0;
-                }
-            }*/
-
-            //if(it == 10)
-              //  break;
-
-            /*if(sweepingDone)
-            {
-                break;
-            }*/
-        /*}
-
-        MultiFab::Copy(S_LS, S_LS_0, 0, 0, S_LS.nComp(), S_LS.nGrow());
-        FillPatch(*this, S_LS, 0, time, LevelSet_Type, 0, parameters.NLevelSets);*/
     }
 
 

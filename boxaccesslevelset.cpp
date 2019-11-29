@@ -26,7 +26,7 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
 
                     (*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
 
-                    //(*this)(i,j,k,n) = 0.5- x;
+                    //(*this)(i,j,k,n) = (1.0-(x+y))/sqrt(2.0);
                 }
             }
         }
@@ -123,7 +123,7 @@ void BoxAccessLevelSet::resetLevelSet()
     }
 }
 
-bool customComparator(int i, int lim, int sense)
+bool BoxAccessLevelSet::customComparator(int i, int lim, int sense)
 {
     if(sense > 0)
     {
@@ -135,7 +135,7 @@ bool customComparator(int i, int lim, int sense)
     }
 }
 
-void customChanger(int& i, int sense)
+void BoxAccessLevelSet::customChanger(int& i, int sense)
 {
     if(sense > 0)
     {
@@ -328,6 +328,13 @@ void BoxAccessLevelSet::calculateNormal(int i , int j , int k, int n, const Real
     nx = ((*this)(i+1,j,   k,n)-(*this)(i-1,j,  k,n))/(2.0*dx[0]);
     ny = ((*this)(i   ,j+1,k,n)-(*this)(i,  j-1,k,n))/(2.0*dx[1]);
 
+    if(std::isnan(nx) || std::isnan(ny))
+    {
+        Print() << i << " " << j << std::endl;
+        Print() << nx << " " << ny << std::endl;
+        Abort("Nan in normal calculation");
+    }
+
     Real norm = sqrt(nx*nx+ny*ny);
 
     nx = nx/norm;
@@ -346,7 +353,7 @@ void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n
 
 void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
 {
-    static const Real probe_length = 1.5;
+    static const Real probe_length = 1.0;
 
     px[0] = ix - probe_length*dx[0]*nx;
     px[1] = ix + probe_length*dx[0]*nx;
