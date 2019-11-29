@@ -702,101 +702,69 @@ void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int
 {
     //Print() << "HERE" << std::endl;
 
-    //Print()<<"probe:\t " << probe_x << " " << probe_y << std::endl;
-
-    int incell;
+    int incell_x,incell_y;
 
     if((probe_x-prob_lo[0]) > 0.0)
     {
-       incell = (int)((probe_x-prob_lo[0])/dx[0]);
+       incell_x = (int)((probe_x-prob_lo[0])/dx[0]);
 
-       if(probe_x > (prob_lo[0] + (Real(incell)+0.5)*dx[0]))
+       if(probe_x > (prob_lo[0] + (Real(incell_x)+0.5)*dx[0]))
        {
-           corner_x[0] = incell;
+           corner_x[0] = incell_x;
            corner_x[1] = corner_x[0]+1;
        }
        else
        {
-           corner_x[0] = incell-1;
+           corner_x[0] = incell_x-1;
            corner_x[1] = corner_x[0]+1;
        }
     }
     else
     {
-       incell = (int)((probe_x-prob_lo[0])/dx[0]) -1;
+       incell_x = (int)((probe_x-prob_lo[0])/dx[0]) -1;
 
-       if(probe_x > (prob_lo[0] + (Real(incell)+0.5)*dx[0]))
+       if(probe_x > (prob_lo[0] + (Real(incell_x)+0.5)*dx[0]))
        {
-           corner_x[0] = incell;
+           corner_x[0] = incell_x;
            corner_x[1] = corner_x[0]+1;
        }
        else
        {
-           corner_x[0] = incell-1;
+           corner_x[0] = incell_x-1;
            corner_x[1] = corner_x[0]+1;
        }
     }
 
     if((probe_y-prob_lo[1]) > 0.0)
     {
-       incell = (int)((probe_y-prob_lo[1])/dx[1]);
+       incell_y = (int)((probe_y-prob_lo[1])/dx[1]);
 
-       if(probe_y > (prob_lo[1] + (Real(incell)+0.5)*dx[1]))
+       if(probe_y > (prob_lo[1] + (Real(incell_y)+0.5)*dx[1]))
        {
-           corner_y[0] = incell;
+           corner_y[0] = incell_y;
            corner_y[1] = corner_y[0]+1;
        }
        else
        {
-           corner_y[0] = incell-1;
+           corner_y[0] = incell_y-1;
            corner_y[1] = corner_y[0]+1;
        }
     }
     else
     {
-       incell = (int)((probe_y-prob_lo[1])/dx[1]) -1;
+       incell_y = (int)((probe_y-prob_lo[1])/dx[1]) -1;
 
-       if(probe_y > (prob_lo[1] + (Real(incell)+0.5)*dx[1]))
+       if(probe_y > (prob_lo[1] + (Real(incell_y)+0.5)*dx[1]))
        {
-           corner_y[0] = incell;
+           corner_y[0] = incell_y;
            corner_y[1] = corner_y[0]+1;
        }
        else
        {
-           corner_y[0] = incell-1;
+           corner_y[0] = incell_y-1;
            corner_y[1] = corner_y[0]+1;
        }
     }
-
-
-
-    /*if((probe_x-prob_lo[0]) > 0.0)
-    {
-        corner_x[0] = ( remainder((probe_x-prob_lo[0])/dx[0],1.0) < 0.5 ? (int)((probe_x-prob_lo[0])/dx[0])-1 : (int)((probe_x-prob_lo[0])/dx[0]));
-        corner_x[1] = corner_x[0]+1;
-    }
-    else
-    {
-        corner_x[0] = ( remainder(-(probe_x-prob_lo[0])/dx[0],1.0) < 0.5 ? (int)((probe_x-prob_lo[0])/dx[0])-1 : (int)((probe_x-prob_lo[0])/dx[0]));
-        corner_x[1] = corner_x[0]+1;
-    }*/
-
-    /*if((probe_y-prob_lo[1]) > 0.0)
-    {
-        corner_y[0] = ( ((probe_y-prob_lo[1])/dx[1]) < 0.5 ? (int)((probe_y-prob_lo[1])/dx[1])-1 : (int)((probe_y-prob_lo[1])/dx[1]));
-
-        Print() << (probe_y-prob_lo[1])/dx[1] << " " << corner_y[0] << std::endl;
-        corner_y[1] = corner_y[0]+1;
-        Print() << corner_y[1] << std::endl;
-
-        Print() << "int test "<< (int)(3.2) << " " << (int)(-3.2) << std::endl;
-
-    }
-    else
-    {
-        corner_y[0] = ( remainder(-(probe_y-prob_lo[1])/dx[1],1.0) < 0.5 ? (int)((probe_y-prob_lo[1])/dx[1])-1 : (int)((probe_y-prob_lo[1])/dx[1]));
-        corner_y[1] = corner_y[0]+1;
-    }*/
 
     //Print()<<"corners_x:\t " << corner_x[0] << " " << corner_x[1] << std::endl;
     //Print()<<"corners_y:\t " << corner_y[0] << " " << corner_y[1] << std::endl;
@@ -812,6 +780,18 @@ void BoxAccessCellArray::bilinearInterpolation(BoxAccessCellArray& U, int i, int
 
     if((sgn<Real,int>(xdiff[0]) == sgn<Real,int>(xdiff[1])) || (sgn<Real,int>(ydiff[0]) == sgn<Real,int>(ydiff[1])) )
     {
+        Print()<<"xdiff:\t "  << xdiff[0] << " " << xdiff[1] << std::endl;
+        Print()<<"ydiff:\t "  << ydiff[0] << " " << ydiff[1] << std::endl;
+
+        Print()<<"corners_x:\t "  << corner_x[0] << " " << corner_x[1] << std::endl;
+        Print()<<"corners_y:\t "  << corner_y[0] << " " << corner_y[1] << std::endl;
+
+        Print()<<"incell:\t "  << incell_x << " " << incell_y << std::endl;
+        Print()<<"probe :\t "  << probe_x  << " " << probe_y  << std::endl;
+
+        Print() << dx[0] << std::endl;
+
+
 
         //Print() << dx[1] << std::endl;
         //

@@ -396,7 +396,7 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
 /** Calculates the HLLC fluxes.
  */
-void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo)
+void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo, BoxAccessLevelSet& LS)
 {
     const auto lo = lbound(ULbox.box);
     const auto hi = ubound(ULbox.box);
@@ -421,44 +421,47 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                 for(int m = 0; m < parameters.numberOfMaterials; m++)
                 {
-                    SR[m] = std::max(std::abs(UL(VELOCITY,m,d))+UL(SOUNDSPEED,m),std::abs(UR(VELOCITY,m,d))+UR(SOUNDSPEED,m));
-                    SL[m] = -SR[m];
-
-                    Sstar[m] = getSstar(UL,UR,SL[m],SR[m],i,j,k,d,m);
-
-                    fluxbox(i,j,k,USTAR,m) = Sstar[m];
-
-                    if(SL[m]>=0.0)
+                    if(LS.cellIsValid(i,j,k,m) || LS.cellIsNearInterface(i,j,k,dx))
                     {
-                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        SR[m] = std::max(std::abs(UL(VELOCITY,m,d))+UL(SOUNDSPEED,m),std::abs(UR(VELOCITY,m,d))+UR(SOUNDSPEED,m));
+                        SL[m] = -SR[m];
+
+                        Sstar[m] = getSstar(UL,UR,SL[m],SR[m],i,j,k,d,m);
+
+                        fluxbox(i,j,k,USTAR,m) = Sstar[m];
+
+                        if(SL[m]>=0.0)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UL,d);
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UL,d);
+                            }
                         }
-                    }
-                    else if(Sstar[m]>=0.0)
-                    {
-                        getStarState(UL,UStar,SL[m],Sstar[m],parameters,d,m);
-
-                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        else if(Sstar[m]>=0.0)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL[m]*(UStar(n)-UL(n));
+                            getStarState(UL,UStar,SL[m],Sstar[m],parameters,d,m);
+
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UL,d)+SL[m]*(UStar(n)-UL(n));
+                            }
+
                         }
-
-                    }
-                    else if(SR[m]>=0.0)
-                    {
-                        getStarState(UR,UStar,SR[m],Sstar[m],parameters,d,m);
-
-                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        else if(SR[m]>=0.0)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR[m]*(UStar(n)-UR(n));
+                            getStarState(UR,UStar,SR[m],Sstar[m],parameters,d,m);
+
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR[m]*(UStar(n)-UR(n));
+                            }
                         }
-                    }
-                    else
-                    {
-                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        else
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UR,d);
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UR,d);
+                            }
                         }
                     }
                 }
@@ -487,7 +490,10 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n));
+                    //if(LS.cellIsValid(i,j,k,n.mat) || LS.cellIsNearInterface(i,j,k,dx))
+                    //{
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n));
+                    //}
                 }
             }
         }

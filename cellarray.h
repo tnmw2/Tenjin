@@ -4,6 +4,7 @@
 #include "amrexheader.h"
 #include "structdefinitions.h"
 #include "accesspattern.h"
+#include "levelset.h"
 
 
 /** \class CellArray

@@ -1,4 +1,5 @@
 #include "levelset.h"
+#include "tensor.h"
 
 BoxAccessLevelSet::BoxAccessLevelSet(MFIter& mfi, const Box& bx, LevelSet &U) : box{bx}, fab{U.data[mfi]}, NLevelSets{U.NLevelSets}{}
 
@@ -38,44 +39,19 @@ Real& BoxAccessLevelSet::operator()(int i, int j, int k, int n)
     return (fab.array())(i, j, k, n);
 }
 
-void  BoxAccessLevelSet::advanceLevelSet(BoxAccessCellArray& U, BoxAccessLevelSet& LS, Real dt, const Real* dx)
-{
-    const auto lo = lbound(box);
-    const auto hi = ubound(box);
-
-    for             (int n = 0; n < NLevelSets; n++)
-    {
-        for 		(int k = lo.z; k <= hi.z; ++k)
-        {
-            for 	(int j = lo.y; j <= hi.y; ++j)
-            {
-                for (int i = lo.x; i <= hi.x; ++i)
-                {
-                    (*this)(i,j,k,n) = LS(i,j,k,n);
-
-                    for(int row = 0; row < AMREX_SPACEDIM; row++)
-                    {
-                        (*this)(i,j,k,n) -= dt*(U(i,j,k,VELOCITY,0,row)*levelSetDerivative(LS,U(i,j,k,VELOCITY,0,row),dx,row,i,j,k,n));
-                    }
-                }
-            }
-        }
-    }
-}
-
-Real BoxAccessLevelSet::levelSetDerivative(BoxAccessLevelSet& LS, Real v, const Real* dx, int dir, int i, int j, int k, int n)
+Real BoxAccessLevelSet::levelSetDerivative(Real v, const Real* dx, int dir, int i, int j, int k, int n)
 {
     if(v > 0.0)
     {
-        return D1(LS,dir,i,j,k,n,-1,dx);
+        return D1(dir,i,j,k,n,-1,dx);
     }
     else
     {
-        return D1(LS,dir,i,j,k,n,1,dx);
+        return D1(dir,i,j,k,n,1,dx);
     }
 }
 
-Real BoxAccessLevelSet::D1(BoxAccessLevelSet& LS, int dir, int i, int j, int k, int n, int sign, const Real* dx)
+Real BoxAccessLevelSet::D1(int dir, int i, int j, int k, int n, int sign, const Real* dx)
 {
     IntVect extra(AMREX_D_DECL(0,0,0));
 
@@ -88,11 +64,11 @@ Real BoxAccessLevelSet::D1(BoxAccessLevelSet& LS, int dir, int i, int j, int k, 
 
     if(sign>0)
     {
-       return (LS(i+extra[0],j+extra[1],k+extra[2],n)-LS(i,j,k,n))/dx[dir];
+       return ((*this)(i+extra[0],j+extra[1],k+extra[2],n)-(*this)(i,j,k,n))/dx[dir];
     }
     else
     {
-       return (LS(i,j,k,n)-LS(i-extra[0],j-extra[1],k-extra[2],n))/dx[dir];
+       return ((*this)(i,j,k,n)-(*this)(i-extra[0],j-extra[1],k-extra[2],n))/dx[dir];
     }
 }
 
@@ -340,6 +316,13 @@ void BoxAccessLevelSet::calculateNormal(int i , int j , int k, int n, const Real
     nx = nx/norm;
     ny = ny/norm;
 
+    if((std::abs(nx) > 1.0) || (std::abs(ny) > 1.0) )
+    {
+        Print() << i << " " << j << std::endl;
+        Print() << nx << " " << ny << std::endl;
+        Abort("Normal is not normalised");
+    }
+
     return;
 }
 
@@ -360,5 +343,31 @@ void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real
 
     py[0] = iy - probe_length*dx[1]*ny;
     py[1] = iy + probe_length*dx[1]*ny;
+
+    if( (std::abs(px[0]-ix) > 2.0*dx[0]) || (std::abs(px[1]-ix) > 2.0*dx[0]))
+    {
+        Abort("Error in probe calculation");
+    }
+    if( (std::abs(py[0]-iy) > 2.0*dx[1]) || (std::abs(py[1]-iy) > 2.0*dx[1]))
+    {
+        Abort("Error in probe calculation");
+    }
+
 }
 
+bool BoxAccessLevelSet::cellIsValid(int i, int j, int k, int m)
+{
+    if(m == 0)
+    {
+        return ((*this)(i,j,k,0) > 0.0);
+    }
+    else
+    {
+        return ((*this)(i,j,k,0) < 0.0);
+    }
+}
+
+bool BoxAccessLevelSet::cellIsNearInterface(int i, int j, int k, const Real* dx)
+{
+    return (std::abs((*this)(i,j,k,0)) < 5.0*dx[0]);
+}

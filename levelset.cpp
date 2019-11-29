@@ -1,4 +1,4 @@
-#include "simulationheader.h"
+#include "levelset.h"
 
 LevelSet::LevelSet(MultiFab& S, ParameterStruct& parameters) : data(S), NLevelSets(parameters.NLevelSets){}
 
@@ -17,29 +17,6 @@ void LevelSet::initialise(const Real* dx, const Real* prob_lo)
     }
 
 
-}
-
-void  LevelSet::advanceLevelSet(MultiFab& S, CellArray& U, LevelSet& LS, Real dt, const Real* dx, Vector<BCRec>& LevelSet_bc, Geometry& geom)
-{
-    LS.data.FillBoundary(geom.periodicity());
-    FillDomainBoundary(LS.data, geom, LevelSet_bc);
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    for(MFIter mfi(S); mfi.isValid(); ++mfi)
-    {
-        const Box& bx = mfi.validbox();
-
-        BoxAccessCellArray baca(mfi,bx,U);
-        BoxAccessLevelSet  bals_new(mfi,bx,(*this));
-        BoxAccessLevelSet  bals_old(mfi,bx,LS);
-
-        bals_new.advanceLevelSet(baca,bals_old,dt,dx);
-    }
-
-    data.FillBoundary(geom.periodicity());
-    FillDomainBoundary(data, geom, LevelSet_bc);
 }
 
 void  LevelSet::resetLevelSet(MultiFab& S_new)

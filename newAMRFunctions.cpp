@@ -34,7 +34,7 @@ int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
  * -----------------------------------------------------------*/
 
 void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
-void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
+void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo, BoxAccessLevelSet& LS);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
 
@@ -160,7 +160,7 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 		
 }
 
-void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time, LevelSet& LS)
 {
     Direction_enum d; 
 
@@ -271,7 +271,9 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             BoxAccessCellArray ULStarbox(mfi,bx,ULStar);
             BoxAccessCellArray URStarbox(mfi,bx,URStar);
             BoxAccessCellArray UStarStarbox(mfi,bx,UStarStar);
-            BoxAccessCellArray fluxbox(bx,flux_fab,U); 
+            BoxAccessCellArray fluxbox(bx,flux_fab,U);
+
+            BoxAccessLevelSet LSbox(mfi,bx,LS);
 
             /*if(parameters.SOLID)
             {
@@ -279,7 +281,7 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             }
             else
             {*/
-                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,dx,prob_lo);
+                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,dx,prob_lo,LSbox);
             //}
 
             update(fluxbox, Ubox, U1box, parameters,d,dt,dx);
@@ -294,6 +296,57 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
     U1.conservativeToPrimitive();
 
+}
+
+void AmrLevelAdv::advanceLevelSet(MultiFab& S, CellArray& U, LevelSet& LS0, LevelSet& LS1, Real dt, const Real* dx)
+{
+    LS0.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(LS0.data, geom, levelSet_bc);
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    for(MFIter mfi(S); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        BoxAccessCellArray baca(mfi,bx,U);
+        BoxAccessLevelSet  bals_new(mfi,bx,LS1);
+        BoxAccessLevelSet  bals_old(mfi,bx,LS0);
+
+        boxAdvanceLevelSet(baca,bals_old,bals_new,dt,dx);
+    }
+
+    LS1.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(LS1.data, geom, levelSet_bc);
+}
+
+void AmrLevelAdv::boxAdvanceLevelSet(BoxAccessCellArray& U, BoxAccessLevelSet& LS0, BoxAccessLevelSet& LS1, Real dt, const Real* dx)
+{
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    for             (int n = 0; n < LS0.NLevelSets; n++)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    LS1(i,j,k,n) = LS0(i,j,k,n);
+
+                    if(LS0.cellIsNearInterface(i,j,k,dx))
+                    {
+                        for(int row = 0; row < AMREX_SPACEDIM; row++)
+                        {
+                            LS1(i,j,k,n) -= dt*(U(i,j,k,VELOCITY,0,row)*LS0.levelSetDerivative(U(i,j,k,VELOCITY,0,row),dx,row,i,j,k,n));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
@@ -428,8 +481,8 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS1(S_LS_1,parameters);
     LevelSet LS2(S_LS_2,parameters);
 
-
-    setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
+    //if(nStep() < 1)
+        setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
 
     U = U1;
 
@@ -438,13 +491,13 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }*/
 
-    LS1.advanceLevelSet(SL,U,LS0,dt,dx,levelSet_bc,geom);
+    advanceLevelSet(SL,U,LS0,LS1,dt,dx);
 
-    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
 
-    LS2.advanceLevelSet(SL,U1,LS1,dt,dx,levelSet_bc,geom);
+    advanceLevelSet(SL,U1,LS1,LS2,dt,dx);
 
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time,LS2);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
@@ -941,6 +994,7 @@ void AmrLevelAdv::post_timestep (int iteration)
     {
         reflux();
     }
+
 
     int REINITIALISE = 1;
 

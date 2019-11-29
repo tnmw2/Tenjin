@@ -96,7 +96,12 @@ public:
     //
 	// My own HLLC
 	//
-    void AMR_HLLCadvance(MultiFab& S, CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, THINCArray& THINCArr, ParameterStruct& parameters, const Real* dx, const Real *prob_lo, Real dt, Real time);
+    void AMR_HLLCadvance(MultiFab& S, CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, THINCArray& THINCArr, ParameterStruct& parameters, const Real* dx, const Real *prob_lo, Real dt, Real time, LevelSet& LS);
+    //
+    // My own LevelSet Update
+    //
+    void advanceLevelSet(MultiFab& S, CellArray& U, LevelSet& LS0, LevelSet& LS1, Real dt, const Real* dx);
+    void boxAdvanceLevelSet(BoxAccessCellArray& U, BoxAccessLevelSet& LS0, BoxAccessLevelSet& LS1, Real dt, const Real* dx);
     //
     //Estimate time step.
     //

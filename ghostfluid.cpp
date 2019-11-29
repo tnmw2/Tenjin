@@ -62,7 +62,7 @@ void fastSweep(BoxAccessCellArray& U, BoxAccessLevelSet& LS, const Real* dx, int
             {
                 for (int i = xlo; LS.customComparator(i,xhi,xsense) ; LS.customChanger(i,xsense))
                 {
-                    if( (sgn<Real,int>(LS(i,j,k,0)) != sgn<int,int>(sign)) && !LS.cellIsNextToAnInterface(i,j,k,0))
+                    if( (sgn<Real,int>(LS(i,j,k,0)) != sgn<int,int>(sign)) && !LS.cellIsNextToAnInterface(i,j,k,0)  &&  LS.cellIsNearInterface(i,j,k,dx))
                     {
                         phix = ( std::abs(LS(i-1,j  ,k,0)) < std::abs(LS(i+1,j  ,k,0)) ? U(i-1,j  ,k,n) : U(i+1,j  ,k,n));
                         phiy = ( std::abs(LS(i  ,j-1,k,0)) < std::abs(LS(i  ,j+1,k,0)) ? U(i  ,j-1,k,n) : U(i  ,j+1,k,n));
@@ -282,18 +282,21 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
                 }
                 else
                 {
-                    if(LS0(i,j,k,0) > 0.0)
+                    if(LS0.cellIsNearInterface(i,j,k,dx))
                     {
-                        for(auto n : U.accessPattern.material_primitiveVariables[1])
+                        if(LS0(i,j,k,0) > 0.0)
                         {
-                            U1(i,j,k,n) = 1E20;
+                            for(auto n : U.accessPattern.material_primitiveVariables[1])
+                            {
+                                U1(i,j,k,n) = 1E20;
+                            }
                         }
-                    }
-                    else
-                    {
-                        for(auto n : U.accessPattern.material_primitiveVariables[0])
+                        else
                         {
-                            U1(i,j,k,n) = 1E20;
+                            for(auto n : U.accessPattern.material_primitiveVariables[0])
+                            {
+                                U1(i,j,k,n) = 1E20;
+                            }
                         }
                     }
                 }
