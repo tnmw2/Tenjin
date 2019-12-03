@@ -3,9 +3,9 @@
 void pressureBased_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
-    Real sigma = 20.0   ;//10.0;
+    Real sigma = 20.0;//      //20.0   ;//10.0;
     Real nu    = 0.5;
-    Real n     = 1.2;
+    Real n     = 2.5;
 
     if(U(i,j,k,ALPHA,m) < 0.5)
     {
@@ -54,6 +54,35 @@ void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1,
 
 }
 
+void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
+{
+
+    Real sigma = 20.0;
+    Real nu    = 0.5;
+    Real n     = 1.5;
+
+    //Print() << U(i,j,k,ALPHARHOLAMBDA,m) << " " << dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n)) << std::endl;
+
+    Real before = U(i,j,k,ALPHARHOLAMBDA,m);
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+    }
+
+    U(i,j,k,ALPHARHOLAMBDA,m) -=  dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow( ((U(i,j,k,P) > 1E6 ? U(i,j,k,P) : 0.0)/1E6),n));
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+    }
+
+    /*if(std::isnan(dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n))))
+    {
+        Print() << before << " " << U(i,j,k,ALPHARHOLAMBDA,m) << " "  << dt << " " << sigma << " " <<std::pow(U(i,j,k,ALPHARHO,m),1.0-nu) << " " <<std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu) << " " <<std::pow((U(i,j,k,P)/1E6),n) << std::endl;
+    }*/
+}
+
 
 /** Adds the reactive source term with RK2.
  */
@@ -87,10 +116,21 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
                         {
                             for (int i = lo.x; i <= hi.x; ++i)
                             {
+                                if(U1box(i,j,k,ALPHA,m) < 0.5 )// && U1box(i,j,k,ALPHARHOLAMBDA,m) < 0.9)
+                                {
+                                    //Abort("Exploding outside");
+                                    U1box(i,j,k,ALPHARHOLAMBDA,m) = Ubox(i,j,k,ALPHARHOLAMBDA,m);
+
+                                    continue;
+                                }
+
                                 pressureBased_UpdateMassFraction(Ubox,U1box,parameters,dt,i,j,k,m);
+
                                 pressureBased_UpdateMassFraction(U1box,U2box,parameters,dt,i,j,k,m);
 
                                 U1box(i,j,k,ALPHARHOLAMBDA,m) = ((Ubox(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0))+(U2box(i,j,k,ALPHARHOLAMBDA,m)*(1.0/2.0)));
+
+
                             }
                         }
                     }
@@ -98,6 +138,35 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
             }
 
             U1box.conservativeToPrimitive();
+        }
+    }
+}
+
+
+void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt)
+{
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    for                 (int m = 0;    m < parameters.numberOfMaterials; m++)
+    {
+        if(U.accessPattern.materialInfo[m].mixture)
+        {
+            for    		(int k = lo.z; k <= hi.z; ++k)
+            {
+                for     (int j = lo.y; j <= hi.y; ++j)
+                {
+                    for (int i = lo.x; i <= hi.x; ++i)
+                    {
+                        if(U(i,j,k,ALPHA,m) < 0.5 )
+                        {
+                            continue;
+                        }
+
+                        pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                    }
+                }
+            }
         }
     }
 }

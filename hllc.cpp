@@ -194,59 +194,45 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     if(std::isnan(SL) || std::isnan(SR))
                     {
-                        amrex::Abort("Nan in SL SR wavespeeds before flux");
+                        Vector<Real> err;
+
+                        err.push_back(SL);
+                        err.push_back(SR);
+
+                        std::string message = "Nan in SL SR wavespeeds before flux: ";
+
+                        customAbort(err,message);
                     }
 
                     if(std::isnan(Sstar))
                     {
-                        if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
-                        {
-                            if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)))
-                            {
-                                if(std::isnan(UR(P)) || std::isnan(UL(P)))
-                                {
-                                    amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, p");
-                                }
-                                else
-                                {
-                                    if( (UR(ALPHA,0) < UR(ALPHA,1)) && (UL(ALPHA,0) < UL(ALPHA,1)))
-                                    {
-                                        for(int row = 0; row<3;row++)
-                                        {
-                                            for(int col = 0; col<3;col++)
-                                            {
-                                                UR(SIGMA,0,row,col) = -UR(P)*delta<Real>(row,col);
-                                                UL(SIGMA,0,row,col) = -UL(P)*delta<Real>(row,col);
-                                            }
-                                        }
 
-                                        Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
+                        Vector<Real> err;
 
-                                     }
-                                    else
-                                    {
-                                        amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, not p, in solid");
-                                    }
-                                }
+                        err.push_back(prob_lo[0] + (Real(i)+0.5)*dx[0]);
+                        err.push_back(prob_lo[1] + (Real(j)+0.5)*dx[1]);
+                        err.push_back(Sstar);
+                        err.push_back(UL(SIGMA,0,d,d));
+                        err.push_back(UR(SIGMA,0,d,d));
+                        err.push_back(UL(P));
+                        err.push_back(UR(P));
+                        err.push_back(UL(V_TENSOR,0,d,d));
+                        err.push_back(UR(V_TENSOR,0,d,d));
+                        err.push_back(UL(RHOU,0,d));
+                        err.push_back(UR(RHOU,0,d));
+                        err.push_back(UL(VELOCITY,0,d));
+                        err.push_back(UR(VELOCITY,0,d));
+                        err.push_back(UL(RHO));
+                        err.push_back(UR(RHO));
+                        err.push_back(SL);
+                        err.push_back(SR);
 
-                            }
-                            else if(std::isnan(UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
-                            {
-                                amrex::Abort("Nan in Sstar wavespeed before flux: num, RHOU or vel");
-                            }
-                            else
-                            {
-                                Sstar = 0.0;
-                            }
-                        }
-                        else if(std::isnan((UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)))))
-                        {
-                            amrex::Abort("Nan in Sstar wavespeed before flux: den");
-                        }
-                        else
-                        {
-                            Sstar = 0.0;
-                        }
+                        err.push_back(UL.parent->operator()(UL.parent_i,UL.parent_j,k,P));
+
+                        std::string message = "Nan in Sstar wavespeed before flux at: ";
+
+                        customAbort(err,message);
+
                     }
                 }
 
@@ -572,6 +558,23 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
         }
     }
 
+    /*for 		    (int k = lo.z; k <= hi.z; ++k)
+    {
+        for 	    (int j = lo.y; j <= hi.y; ++j)
+        {
+            for     (int i = lo.x; i <= hi.x; ++i)
+            {
+                for (int m = 0   ; m < parameters.numberOfMaterials; ++m)
+                {
+
+                    U1box(i,j,k,NORM,m,0) = Ubox(i,j,k,NORM,m,0);
+                    U1box(i,j,k,NORM,m,1) = Ubox(i,j,k,NORM,m,1);
+
+                }
+            }
+        }
+    }*/
+
     U1box.checkLimits(Ubox.accessPattern.conservativeVariables);
 }
 
@@ -606,6 +609,19 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
+                    /*if(n.var == VELOCITY)
+                    {
+                        if(U(i,j,k,n) != 0.0)
+                        {
+                            Vector<Real> a(1);
+
+                            a[0] = U(i,j,k,n);
+                            std::string message  = "Velocity nonzero: ";
+
+                            customAbort(a,message);
+                        }
+                    }*/
+
                     r = (U(i,j,k,n)-U.left(d,i,j,k,n))/(U.right(d,i,j,k,n)-U(i,j,k,n));
 
                     if(std::isinf(r) || std::isnan(r))

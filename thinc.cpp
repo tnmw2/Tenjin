@@ -25,7 +25,7 @@ bool mixedCell(Real C, BoxAccessCellArray& U, Direction_enum d, int m, int i, in
 
 /** Estimates the local interface normal using Young's method in 2D.
  */
-Real youngsInterfaceConstruction(Real nx, Real ny, BoxAccessCellArray& U, ParameterStruct& parameters, Direction_enum d,const Real* dx, int m, int i, int j, int k)
+Real youngsInterfaceConstruction(Real& nx, Real& ny, BoxAccessCellArray& U, ParameterStruct& parameters, Direction_enum d,const Real* dx, int m, int i, int j, int k)
 {
     Real norm;
 
@@ -34,21 +34,24 @@ Real youngsInterfaceConstruction(Real nx, Real ny, BoxAccessCellArray& U, Parame
 
     norm = std::sqrt(nx*nx+ny*ny);
 
-    if(norm < 1E-20)
+    nx = nx/norm;
+    ny = ny/norm;
+
+    /*if(norm < 1E-20)
     {
         return 0;
     }
     else
-    {
+    {*/
         if(d==x)
         {
-            return std::abs(nx/norm);
+            return std::abs(nx);
         }
         else
         {
-            return std::abs(ny/norm);
+            return std::abs(ny);
         }
-    }
+    //}
 
 }
 
@@ -96,6 +99,12 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
 
                 for(int m = 0;    m < U.numberOfMaterials;m++)
                 {
+                    /*if(d == x)
+                    {
+                        U(i,j,k,NORM,m,0) = 0.0;
+                        U(i,j,k,NORM,m,1) = 0.0;
+                    }*/
+
                     min         = std::min(U.left(d,i,j,k,ALPHA,m),U.right(d,i,j,k,ALPHA,m));
                     max         = std::max(U.left(d,i,j,k,ALPHA,m),U.right(d,i,j,k,ALPHA,m))-min;
                     theta       = sgn<Real,Real>(U.right(d,i,j,k,ALPHA,m)-U.left(d,i,j,k,ALPHA,m));
@@ -110,8 +119,9 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                     }
 
 
-                    if(mixedCell(C,U,d,m,i,j,k))
+                    if(mixedCell(C,U,d,m,i,j,k) || mixedCellFlag(i,j,k))
                     {
+
                         mixedCellFlag(i,j,k) = 1;
 
                         if(AMREX_SPACEDIM == 2)
@@ -126,6 +136,9 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         {
                             Print() << "Haven't implemented THINC in 3D yet" << std::endl;
                         }
+
+                        /*U(i,j,k,NORM,m,0) = nx;
+                        U(i,j,k,NORM,m,1) = ny;*/
 
                         beta = normalisedVectorComponent*beta0 + 0.01;
 
@@ -173,7 +186,7 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                     TBVTHINCRHO = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,MaterialSpecifier(ALPHARHO,m));
 
 
-                    if( mixedCellFlag(i,j,k) && TBVTHINC < TBVMUSCL && TBVTHINCRHO < TBVMUSCLRHO)
+                    if( mixedCellFlag(i,j,k) && TBVTHINC <= TBVMUSCL && TBVTHINCRHO <= TBVMUSCLRHO)
                     {
                        TBVFlag(i,j,k,m) = 1;
 
@@ -200,11 +213,14 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         UL(i,j,k,ALPHA,m)	= UTHINC_L(i,j,k,ALPHA,m);
                         UR(i,j,k,ALPHA,m)	= UTHINC_R(i,j,k,ALPHA,m);
 
-                        /*UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
-                        UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
+                        if(U.accessPattern.materialInfo[m].phase == fluid)
+                        {
+                            UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
+                            UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
 
-                        UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
-                        UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);*/
+                            UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
+                            UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
+                        }
                     }
                 }
             }
@@ -215,8 +231,6 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
     return;
 
 }
-
-
 
 /** Performs the BVD-THINC update from Deng for the volume fraction.
  */

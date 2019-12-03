@@ -89,9 +89,9 @@ void AccessPattern::define(ParameterStruct& parameters)
     addVariable(n,"sigma",          NEITHER,        CELL, NEITHER, -max,    max,  SIGMA,          1,3,3);
 
 
-    addVariable(n,"rhomix",         NEITHER,        NOTCELL,NEITHER,   min, max,  RHO_MIX,        parameters.numberOfMixtures,2);
-    addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,    0.0, 1.0,  LAMBDA,         parameters.numberOfMixtures);
-    addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,   min, max,  ALPHARHOLAMBDA, parameters.numberOfMixtures);
+    addVariable(n,"rhomix",         NEITHER,        NOTCELL,NEITHER,   min, max,  RHO_MIX,        parameters.numberOfMaterials,2);
+    addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,    0.0, 1.0,  LAMBDA,         parameters.numberOfMaterials);
+    addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,   min, max,  ALPHARHOLAMBDA, parameters.numberOfMaterials);
 
     if(parameters.SOLID)
     {
@@ -107,6 +107,7 @@ void AccessPattern::define(ParameterStruct& parameters)
         }
     }
 
+    //addVariable(n,"n", NEITHER, NOTCELL, NEITHER, -max, max,  NORM, parameters.numberOfMaterials,2);
 }
 
 int& AccessPattern::operator[](Variable var)

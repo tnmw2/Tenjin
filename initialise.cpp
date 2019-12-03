@@ -99,8 +99,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-                U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
+                //U(i,j,k,ALPHA,0) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                //U(i,j,k,ALPHA,1) = 1.0-U(i,j,k,ALPHA,0);
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -204,7 +204,7 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
         {
             parameters.materialInfo[m].EOS = new MixtureEOS();
 
-            parameters.materialInfo[m].mixtureIndex = 0;
+            parameters.materialInfo[m].mixtureIndex = -1;
 
 
             temp.push_back(materialname[m]["adiabaticIndexmix"]);
@@ -676,7 +676,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove
      *****************************************/
-    {
+    /*{
 
         Real shock = 0.5E-3;
         Real interface = initial.interface;
@@ -701,7 +701,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=3;
         }
-    }
+    }*/
 
     /******************************************
      * Udaykunar Groove 2D
@@ -734,6 +734,154 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
             s=3;
         }
     }*/
+
+    /******************************************
+     * Explosive Welding
+     *****************************************/
+
+     {
+
+        Real tanalpha = tan(10.0*3.14159/180.0);
+        Real tandelta = 0.1;
+        Real tandelta2= 1.0;
+
+
+        Real interface = initial.interface;
+
+        Real flyerPlateThickness = 0.5E-3;
+        Real explosiveThickness  = 2.0E-3;
+        Real flyerPlateRampStart = 3E-3;
+        Real flyerPlateRampEnd   = 11.0E-3;
+        Real flyerPlateRampEnd2  = 12.0E-3;
+        Real lengthBeforeRamp    = 2.0E-3;
+        Real boosterThickness    = 0.5E-3;
+        Real chamfer             = 0.4E-3;
+        Real radius              = 0.1E-3;
+
+
+        if(y < interface)
+        {
+            if(x < lengthBeforeRamp + 1E-3)
+            {
+                s = 1;
+            }
+            else if(y < interface - (x-lengthBeforeRamp)*tanalpha)
+            {
+                s = 1;
+            }
+            else
+            {
+                s = 0;
+            }
+
+            if( (x-(lengthBeforeRamp + 1.075E-3))*(x-(lengthBeforeRamp + 1.075E-3))+(y-3.9E-3)*(y-3.9E-3) < radius*radius)
+            {
+                s = 0;
+            }
+        }
+        else
+        {
+            if(y < interface + flyerPlateThickness)
+            {
+                s = 1;
+            }
+            else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness- boosterThickness)
+            {
+                s = 2;
+
+                //if(y > (interface + flyerPlateThickness + chamfer) )
+                //{
+                //    s = 2;
+                //}
+                //else if(x < flyerPlateRampStart+chamfer)
+                //{
+                //    if((x-(flyerPlateRampStart+chamfer))*(x-(flyerPlateRampStart+chamfer))+(y-(interface + flyerPlateThickness + chamfer))*(y-(interface + flyerPlateThickness + chamfer)) < chamfer*chamfer)
+                //    {
+                //        s = 2;
+                //    }
+                //    else
+                //    {
+                //        s = 0;
+                //    }
+                //}
+                //else if(x > (flyerPlateRampEnd-chamfer))
+                //{
+                //    if((x-(flyerPlateRampEnd-chamfer))*(x-(flyerPlateRampEnd-chamfer))+(y-(interface + flyerPlateThickness + chamfer))*(y-(interface + flyerPlateThickness + chamfer)) < chamfer*chamfer)
+                //    {
+                //        s = 2;
+                //    }
+                //    else
+                //    {
+                //        s = 0;
+                //    }
+                //}
+                //else
+                //{
+                //    s = 2;
+                //}
+            }
+            else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness)
+            {
+                if(x < flyerPlateRampStart+chamfer)
+                {
+                    if((x-(flyerPlateRampStart+chamfer))*(x-(flyerPlateRampStart+chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 0;
+                    }
+                }
+                else if(x > (flyerPlateRampEnd-chamfer))
+                {
+                    if((x-(flyerPlateRampEnd-chamfer))*(x-(flyerPlateRampEnd-chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 0;
+                    }
+                }
+                else
+                {
+                    s = 3;
+                }
+            }
+            else
+            {
+                s = 0;
+            }
+        }
+        //else
+        //{
+        //    if(y < interface + flyerPlateThickness)
+        //    {
+        //        s = 1;
+        //    }
+        //    else if( x > flyerPlateRampStart && x < flyerPlateRampEnd && y < (interface + flyerPlateThickness) + tandelta*(x-flyerPlateRampStart))
+        //    {
+        //        s = 1;
+        //    }
+        //    else if( x > flyerPlateRampStart-  10E-3&& x < (flyerPlateRampEnd-1E-3) && y < (interface + flyerPlateThickness + explosiveThickness- boosterThickness) + tandelta*(x-flyerPlateRampStart))
+        //    {
+        //        s = 2;
+        //    }
+        //    else if( x > flyerPlateRampStart - 10E-3 &&  x < (flyerPlateRampEnd-1E-3) && y < (interface + flyerPlateThickness + explosiveThickness) + tandelta*(x-flyerPlateRampStart))
+        //    {
+        //        s = 3;
+        //    }
+        //    else if( x > flyerPlateRampEnd && x < flyerPlateRampEnd2 && y < (interface + flyerPlateThickness) + tandelta*(flyerPlateRampEnd-flyerPlateRampStart) - tandelta2*(x-flyerPlateRampEnd))
+        //    {
+        //        s = 1;
+        //    }
+        //    else
+        //    {
+        //        s = 0;
+        //    }
+        //}
+    }
 
 
 }

@@ -37,6 +37,71 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
 
+void customAbort(Vector<Real>& values, std::string& Message)
+{
+    std::ostringstream stream;
+
+    stream << std::endl;
+
+    for(auto n : values)
+    {
+        stream << n << std::endl;
+    }
+
+    std::string error = Message + stream.str();
+
+    Abort(error);
+}
+
+void smooth(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
+{
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    Real sum     = 0.0;
+    int  counter = 0;
+
+    Vector<int> pm {-1,0,1};
+
+    Vector<MaterialSpecifier> smoothing;
+
+    smoothing.push_back(MaterialSpecifier (ALPHA,0,0,0));
+    smoothing.push_back(MaterialSpecifier (ALPHA,1,0,0));
+    smoothing.push_back(MaterialSpecifier (ALPHA,2,0,0));
+
+    for(auto n : smoothing)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    Real sum     = 0.0;
+                    int  counter = 0;
+
+
+                    for(auto nj : pm)
+                    {
+                        for(auto ni : pm)
+                        {
+                            sum += U.neighbour(ni,nj,0,i,j,k,n);
+
+                            counter++;
+                        }
+                    }
+
+                    /*if(std::abs(((1.0/counter)*(sum) - U1(i,j,k,n))/U1(i,j,k,n)) > 0.1 )
+                    {
+                        Print() << (1.0/counter)*(sum) << " " << U1(i,j,k,n) << std::endl;
+                    }*/
+
+                    U1(i,j,k,n) = (1.0/counter)*(sum);
+                }
+            }
+        }
+    }
+}
 
 void AmrLevelAdv::initData ()
 {
@@ -59,6 +124,33 @@ void AmrLevelAdv::initData ()
     CellArray U(S_new,accessPattern,parameters); 
      
     setInitialConditions(U,parameters,initial,dx,prob_lo);
+
+    /*MultiFab S0(grids, dmap, parameters.Ncomp, 1);
+    FillPatch(*this, S0, 1, 0.0, Phi_Type, 0, parameters.Ncomp);
+    MultiFab S1(grids, dmap, parameters.Ncomp, 1);
+    FillPatch(*this, S1, 1, 0.0, Phi_Type, 0, parameters.Ncomp);
+
+
+    CellArray U1(S0,accessPattern,parameters);
+    CellArray U2(S1,accessPattern,parameters);
+
+
+    for(MFIter mfi(U.data); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        BoxAccessCellArray U1box(mfi,bx,U1);
+        BoxAccessCellArray U2box(mfi,bx,U2);
+
+        smooth(U1box,U2box,parameters, initial,dx,prob_lo);
+
+        U2box.primitiveToConservative();
+    }
+
+    //U = U1;
+
+    MultiFab::Copy(S_new, U2.data, 0, 0, U1.data.nComp(), S_new.nGrow());*/
+
     
 
     #ifdef AMREX_PARTICLES
@@ -272,6 +364,13 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
             update(fluxbox, Ubox, U1box, parameters,d,dt,dx);
 
+            U1box.conservativeToPrimitive();
+
+            if(parameters.REACTIVE)
+            {
+                reactiveUpdateInHLLC(U1box,parameters,dt);
+            }
+
         }
     }
 
@@ -404,10 +503,10 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
-    //MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    //FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    /*MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);*/
 
-    if(do_reflux)
+    /*if(do_reflux)
     {
         for (int j = 0; j < BL_SPACEDIM; j++)
         {
@@ -415,12 +514,12 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         }
 
         ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
-    }
+    }*/
 
-    if(parameters.REACTIVE)
+    /*if(parameters.REACTIVE)
     {
         reactiveUpdate(U,U1,U2,parameters,dt,S_new);
-    }
+    }*/
 
     if(parameters.PLASTIC)
     {

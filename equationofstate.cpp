@@ -311,7 +311,7 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 1000000.0;
+    Real B = 10000.0;
 
     Real p;
 

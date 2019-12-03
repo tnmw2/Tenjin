@@ -40,11 +40,11 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case USTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]));
         break;
-    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex+m.row));
+    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+m.row));
         break;
-    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex));
+    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
-    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.materialInfo[m.mat].mixtureIndex));
+    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
         break;
@@ -59,9 +59,99 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
     case EPSILON:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
     case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    /*case NORM:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*2+m.row));
+        break;*/
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
     }
+}
+
+void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
+{
+    Real kineticEnergy = 0.0;
+
+    (*this)(i,j,k,RHO) = 0.0;
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
+        (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
+
+        if(accessPattern.materialInfo[m].plastic)
+        {
+            (*this)(i,j,k,EPSILON,m) = (*this)(i,j,k,ALPHARHOEPSILON,m)/(*this)(i,j,k,ALPHARHO,m);
+        }
+
+    }
+
+    getHenckyJ2(i,j,k);
+
+    for(int row = 0; row < numberOfComponents ; row++)
+    {
+        (*this)(i,j,k,VELOCITY,0,row) = (*this)(i,j,k,RHOU,0,row)/(*this)(i,j,k,RHO);
+
+        (*this)(i,j,k,VELOCITY,0,row) = (std::abs((*this)(i,j,k,VELOCITY,0,row)) < 1E-10 ? 0.0 :(*this)(i,j,k,VELOCITY,0,row));
+
+        kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
+    }
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        if(accessPattern.materialInfo[m].mixture)
+        {
+            (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
+
+
+            accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
+        }
+    }
+
+    (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k)+ getEffectiveNonThermalPressure(i,j,k))/(getEffectiveInverseGruneisen(i,j,k));
+
+    stressTensor(i,j,k);
+
+}
+
+void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
+{
+
+    Real kineticEnergy = 0.0;
+
+    (*this)(i,j,k,RHO) = 0.0;
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        (*this)(i,j,k,ALPHARHO,m)	 = (*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
+        (*this)(i,j,k,RHO)          += (*this)(i,j,k,ALPHARHO,m);
+
+        if(accessPattern.materialInfo[m].mixture)
+        {
+            (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
+
+            accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
+        }
+
+        if(accessPattern.materialInfo[m].plastic)
+        {
+            (*this)(i,j,k,ALPHARHOEPSILON,m) = (*this)(i,j,k,EPSILON,m)*(*this)(i,j,k,ALPHARHO,m);
+        }
+    }
+
+    getHenckyJ2(i,j,k);
+
+    kineticEnergy = 0.0;
+
+    for(int row = 0; row < numberOfComponents ; row++)
+    {
+        (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
+
+        kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
+    }
+
+    (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;
+
+    stressTensor(i,j,k);
 }
 
 void  BoxAccessCellArray::conservativeToPrimitive()
@@ -71,59 +161,18 @@ void  BoxAccessCellArray::conservativeToPrimitive()
 
     checkLimits(accessPattern.conservativeVariables);
 
-    Real kineticEnergy;
-
     for    		(int k = lo.z; k <= hi.z; ++k)
     {
         for     (int j = lo.y; j <= hi.y; ++j)
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                (*this)(i,j,k,RHO) = 0;
-
-                for(int m = 0; m < numberOfMaterials ; m++)
-                {
-                    (*this)(i,j,k,RHO_K,m)	  = (*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,ALPHA,m);
-                    (*this)(i,j,k,RHO)       += (*this)(i,j,k,ALPHARHO,m);
-
-                    if(accessPattern.materialInfo[m].plastic)
-                    {
-                        (*this)(i,j,k,EPSILON,m) = (*this)(i,j,k,ALPHARHOEPSILON,m)/(*this)(i,j,k,ALPHARHO,m);
-                    }
-
-                }
-
-                getHenckyJ2(i,j,k);
-
-                kineticEnergy = 0.0;
-
-                for(int row = 0; row < numberOfComponents ; row++)
-                {
-                    (*this)(i,j,k,VELOCITY,0,row) = (*this)(i,j,k,RHOU,0,row)/(*this)(i,j,k,RHO);
-
-                    kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
-                }
-
-                for(int m = 0; m < numberOfMaterials ; m++)
-                {
-                    if(accessPattern.materialInfo[m].mixture)
-                    {
-                        (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
-
-
-                        accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
-                    }
-                }
-
-                (*this)(i,j,k,P) = ((*this)(i,j,k,TOTAL_E)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k)+ getEffectiveNonThermalPressure(i,j,k))/(getEffectiveInverseGruneisen(i,j,k));
-
-                stressTensor(i,j,k);
+                conservativeToPrimitive(i,j,k);
             }
         }
     }
 
     checkLimits(accessPattern.primitiveVariables);
-
 }
 
 void  BoxAccessCellArray::primitiveToConservative()
@@ -131,8 +180,6 @@ void  BoxAccessCellArray::primitiveToConservative()
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
-    Real kineticEnergy;
-
     checkLimits(accessPattern.primitiveVariables);
 
     for    		(int k = lo.z; k <= hi.z; ++k)
@@ -141,40 +188,7 @@ void  BoxAccessCellArray::primitiveToConservative()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                (*this)(i,j,k,RHO) = 0;
-
-                for(int m = 0; m < numberOfMaterials ; m++)
-                {
-                    (*this)(i,j,k,ALPHARHO,m)	 = (*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
-                    (*this)(i,j,k,RHO)          += (*this)(i,j,k,ALPHARHO,m);
-
-                    if(accessPattern.materialInfo[m].mixture)
-                    {
-                        (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
-
-                        accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
-                    }
-
-                    if(accessPattern.materialInfo[m].plastic)
-                    {
-                        (*this)(i,j,k,ALPHARHOEPSILON,m) = (*this)(i,j,k,EPSILON,m)*(*this)(i,j,k,ALPHARHO,m);
-                    }
-                }
-
-                getHenckyJ2(i,j,k);
-
-                kineticEnergy = 0.0;
-
-                for(int row = 0; row < numberOfComponents ; row++)
-                {
-                    (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
-
-                    kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
-                }
-
-                (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;
-
-                stressTensor(i,j,k);
+                primitiveToConservative(i,j,k);
             }
         }
     }
@@ -510,23 +524,34 @@ void BoxAccessCellArray::cleanUpV()
                     }
                 }
 
-                //Print() << totalAlpha << std::endl;
-
-                amrexToArray(i,j,k,V_TENSOR,0,tempV);
-
-                squareMatrixMultiplyTranspose(tempV,tempV,temp);
-
-                matrixSquareRoot(tempV,temp);
-
-                norm = std::pow(det(tempV),-1.0/3.0);
-
-                for(int row=0;row<numberOfComponents;row++)
+                /*if(totalSolid < 0.0001)
                 {
-                    for(int col=0;col<numberOfComponents;col++)
+                    for(int row=0;row<numberOfComponents;row++)
                     {
-                        (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
+                        for(int col=0;col<numberOfComponents;col++)
+                        {
+                            (*this)(i,j,k,V_TENSOR,0,row,col) = delta<Real>(row,col);
+                        }
                     }
                 }
+                else
+                {*/
+                    amrexToArray(i,j,k,V_TENSOR,0,tempV);
+
+                    squareMatrixMultiplyTranspose(tempV,tempV,temp);
+
+                    matrixSquareRoot(tempV,temp);
+
+                    norm = std::pow(det(tempV),-1.0/3.0);
+
+                    for(int row=0;row<numberOfComponents;row++)
+                    {
+                        for(int col=0;col<numberOfComponents;col++)
+                        {
+                            (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
+                        }
+                    }
+                //}
 
                 getHenckyJ2(i,j,k);
             }

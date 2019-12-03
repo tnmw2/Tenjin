@@ -28,7 +28,8 @@ enum Variable
     DEVH,
     HJ2,
     EPSILON,
-    ALPHARHOEPSILON
+    ALPHARHOEPSILON //,
+    //NORM
 };
 
 /** Not yet used...

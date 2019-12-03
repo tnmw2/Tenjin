@@ -78,6 +78,9 @@ public:
     void  conservativeToPrimitive();
     void  primitiveToConservative();
 
+    void  conservativeToPrimitive(int i, int j, int k);
+    void  primitiveToConservative(int i, int j, int k);
+
     void stressTensor                           (int i, int j, int k);
 
     Real getEffectiveInverseGruneisen           (int i, int j, int k);

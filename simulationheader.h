@@ -8,6 +8,7 @@
 #include <string>
 #include <limits>
 #include <iostream>
+#include <sstream>
 #include <ctime>
 #include <utility>
 #include <map>
@@ -42,5 +43,10 @@ void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, Initi
 void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *dx, Real dt, const Real *prob_lo, MultiFab &S_new);
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt, MultiFab &S_new);
+void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt);
+
+void customAbort(Vector<Real>& values, std::string& Message);
+
+
 #endif // SIMULATIONHEADER
 
