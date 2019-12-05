@@ -100,7 +100,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 }
 
                 U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -411,7 +411,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         Print() << i << " " << (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]) << std::endl;
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
@@ -422,7 +422,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
             Print() << "HERE" << std::endl;
             s=1;
         }
-    }
+    }*/
 
     /******************************************
      * Wilkins
@@ -635,9 +635,26 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     }*/
 
     /******************************************
+     * Wilkins
+     *****************************************/
+    /*{
+        if(x < initial.interface)
+        {
+            s=0;
+        }
+        else if(x < 2.0*initial.interface)
+        {
+            s=1;
+        }
+        else
+        {
+            s=2;
+        }
+    }*/
+
+    /******************************************
      * RateStick
      *****************************************/
-
     /*{
         Real radius       = initial.interface;
         Real startOfTube  = initial.interface;
@@ -738,7 +755,6 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Explosive Welding
      *****************************************/
-
      {
 
         Real tanalpha = tan(10.0*3.14159/180.0);
@@ -783,42 +799,11 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             if(y < interface + flyerPlateThickness)
             {
-                s = 1;
+                s = 2;
             }
             else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness- boosterThickness)
             {
-                s = 2;
-
-                //if(y > (interface + flyerPlateThickness + chamfer) )
-                //{
-                //    s = 2;
-                //}
-                //else if(x < flyerPlateRampStart+chamfer)
-                //{
-                //    if((x-(flyerPlateRampStart+chamfer))*(x-(flyerPlateRampStart+chamfer))+(y-(interface + flyerPlateThickness + chamfer))*(y-(interface + flyerPlateThickness + chamfer)) < chamfer*chamfer)
-                //    {
-                //        s = 2;
-                //    }
-                //    else
-                //    {
-                //        s = 0;
-                //    }
-                //}
-                //else if(x > (flyerPlateRampEnd-chamfer))
-                //{
-                //    if((x-(flyerPlateRampEnd-chamfer))*(x-(flyerPlateRampEnd-chamfer))+(y-(interface + flyerPlateThickness + chamfer))*(y-(interface + flyerPlateThickness + chamfer)) < chamfer*chamfer)
-                //    {
-                //        s = 2;
-                //    }
-                //    else
-                //    {
-                //        s = 0;
-                //    }
-                //}
-                //else
-                //{
-                //    s = 2;
-                //}
+                s = 3;
             }
             else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness)
             {
@@ -826,7 +811,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 {
                     if((x-(flyerPlateRampStart+chamfer))*(x-(flyerPlateRampStart+chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
                     {
-                        s = 3;
+                        s = 4;
                     }
                     else
                     {
@@ -837,7 +822,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 {
                     if((x-(flyerPlateRampEnd-chamfer))*(x-(flyerPlateRampEnd-chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
                     {
-                        s = 3;
+                        s = 4;
                     }
                     else
                     {
@@ -846,7 +831,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 }
                 else
                 {
-                    s = 3;
+                    s = 4;
                 }
             }
             else
@@ -854,33 +839,6 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 s = 0;
             }
         }
-        //else
-        //{
-        //    if(y < interface + flyerPlateThickness)
-        //    {
-        //        s = 1;
-        //    }
-        //    else if( x > flyerPlateRampStart && x < flyerPlateRampEnd && y < (interface + flyerPlateThickness) + tandelta*(x-flyerPlateRampStart))
-        //    {
-        //        s = 1;
-        //    }
-        //    else if( x > flyerPlateRampStart-  10E-3&& x < (flyerPlateRampEnd-1E-3) && y < (interface + flyerPlateThickness + explosiveThickness- boosterThickness) + tandelta*(x-flyerPlateRampStart))
-        //    {
-        //        s = 2;
-        //    }
-        //    else if( x > flyerPlateRampStart - 10E-3 &&  x < (flyerPlateRampEnd-1E-3) && y < (interface + flyerPlateThickness + explosiveThickness) + tandelta*(x-flyerPlateRampStart))
-        //    {
-        //        s = 3;
-        //    }
-        //    else if( x > flyerPlateRampEnd && x < flyerPlateRampEnd2 && y < (interface + flyerPlateThickness) + tandelta*(flyerPlateRampEnd-flyerPlateRampStart) - tandelta2*(x-flyerPlateRampEnd))
-        //    {
-        //        s = 1;
-        //    }
-        //    else
-        //    {
-        //        s = 0;
-        //    }
-        //}
     }
 
 
@@ -946,7 +904,7 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
         {
             if(x < lengthBeforeRamp + 1E-3)
             {
-                return 0.999998;
+                return 0.999997;
             }
             else if( (x-(lengthBeforeRamp + 1.075E-3))*(x-(lengthBeforeRamp + 1.075E-3))+(y-3.9E-3)*(y-3.9E-3) < radius*radius)
             {
@@ -965,7 +923,7 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
                     }
                 }
 
-                return 0.999997*(((Real) counter)/((Real) sub*sub))+0.000001;
+                return 0.999996*(((Real) counter)/((Real) sub*sub))+0.000001;
             }
             else
             {
@@ -978,7 +936,7 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
         {
             if(y < interface + flyerPlateThickness)
             {
-                return 0.999998;
+                return 0.000001;
             }
             else
             {

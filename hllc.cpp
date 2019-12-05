@@ -609,19 +609,6 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    /*if(n.var == VELOCITY)
-                    {
-                        if(U(i,j,k,n) != 0.0)
-                        {
-                            Vector<Real> a(1);
-
-                            a[0] = U(i,j,k,n);
-                            std::string message  = "Velocity nonzero: ";
-
-                            customAbort(a,message);
-                        }
-                    }*/
-
                     r = (U(i,j,k,n)-U.left(d,i,j,k,n))/(U.right(d,i,j,k,n)-U(i,j,k,n));
 
                     if(std::isinf(r) || std::isnan(r))
@@ -630,6 +617,17 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
                     }
 
                     grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
+
+                    /*if(grad(i,j,k,n) > 0.0)
+                    {
+                        UL(i,j,k,n) = std::max(U(i,j,k,n) - 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].first);
+                        UR(i,j,k,n) = std::min(U(i,j,k,n) + 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].second);
+                    }
+                    else
+                    {
+                        UL(i,j,k,n) = std::min(U(i,j,k,n) - 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].second);
+                        UR(i,j,k,n) = std::max(U(i,j,k,n) + 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].first);
+                    }*/
 
 
                     UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);

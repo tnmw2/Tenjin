@@ -17,7 +17,8 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
     }
     else if(parameters.PLASTIC==2)
     {
-        return std::exp((1.0/c3)*(sqrt(3.0/2.0)*2.0*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew/(c1+c2*std::pow(epsilonFunction(J,Jnew,U,i,j,k,m),n))-1.0));
+
+        return 1.0*std::exp((sqrt(3.0/2.0)*2.0*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew/(c1+c2*std::pow(epsilonFunction(J,Jnew,U,i,j,k,m),n))-1.0)/c3);
     }
     else
     {
@@ -31,7 +32,7 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
  */
 Real PlasticEOS::bisectionFunction(Real Jnew, Real J, BoxAccessCellArray& U, int i, int j, int k, ParameterStruct& parameters, int m, Real dt)
 {
-    return Jnew-J+dt*plasticStrainRate(Jnew,J,U,i,j,k,parameters,m);
+    return Jnew-J+   sqrt(3.0/2.0)*  dt*plasticStrainRate(Jnew,J,U,i,j,k,parameters,m);
 }
 
 Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, ParameterStruct& parameters, int m, Real dt)
@@ -40,13 +41,19 @@ Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, P
     Real JB = J;
     Real Jmid = J*0.5;
 
-    Real tolerance = 1E-5;
+    Real tolerance = 1E-10; //1E-5;
+
+    if(J < tolerance)
+    {
+        return 0.0;
+    }
 
     if(sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m,dt)) == sgn<Real,int>(bisectionFunction(JB,J,U,i,j,k,parameters,m,dt)) )
     {
         Print() << "Error in plastic Bisection " << std::endl;
         exit(1);
     }
+
 
 
     while(true)
@@ -105,11 +112,11 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
             {
                 if(U.cellIsMostlyFluid(i,j,k))
                 {
-                    for(int m=0;m<U.numberOfMaterials;m++)
+                    /*for(int m=0;m<U.numberOfMaterials;m++)
                     {
                         U(i,j,k,EPSILON,m)          = 0.0;
                         U(i,j,k,ALPHARHOEPSILON,m)  = 0.0;
-                    }
+                    }*/
 
                     continue;
                 }
@@ -125,29 +132,29 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
                 {
                     if(U.accessPattern.materialInfo[m].phase == solid)
                     {
-
                         J = sqrt(U(i,j,k,HJ2));
 
+                        Jnew = bisection(U,i,j,k,J,parameters,m,dt);
 
-                        if(overYieldStress(J,U,i,j,k,m))
+                        /*if(overYieldStress(J,U,i,j,k,m))
                         {
-                            Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
+                            //Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
 
-                            //Jnew = bisection(U,i,j,k,J,parameters,m);
-
+                            Jnew = bisection(U,i,j,k,J,parameters,m,dt);
+                            */
                             /*if(parameters.PLASTIC==1)
                             {
-                                U(i,j,k).Jnew[m] = parameters.yieldStress[m]/(sqrt3*U(i,j,k).componentShearModulus(parameters,m));
+                                Jnew = yieldStress[m]/(sqrt(3.0)*U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m));
                             }
                             else
                             {
-                                U(i,j,k).Jnew[m] = bisection(U(i,j,k),U(i,j,k).J[m],parameters,m);
+                                Jnew = bisection(U,i,j,k,J,parameters,m,dt);
                             }*/
-                        }
+                        /*}
                         else
                         {
                             Jnew = J;
-                        }
+                        }*/
 
                         U(i,j,k,EPSILON,m)          += sqrt(2.0/3.0)*(J-Jnew);
                         U(i,j,k,ALPHARHOEPSILON,m)   = U(i,j,k,EPSILON,m)*U(i,j,k,ALPHARHO,m);
