@@ -1,8 +1,33 @@
 #include "simulationheader.h"
 
-THINCArray::THINCArray(BoxArray& ba, DistributionMapping& dm, const int Nghost, ParameterStruct &parameters) : data(ba,dm,parameters.numberOfMaterials+1,Nghost){}
+void THINCArray::addTHINCvariable(Variable var, int materialNumber, int rowNumber, int colNumber)
+{
+    if(materialNumber*rowNumber*colNumber > 0)
+    {
+        for(int m = 0; m < materialNumber ;m++)
+        {
+            for(int row = 0; row < rowNumber ; row++)
+            {
+                for(int col = 0; col < colNumber ; col++)
+                {
+                    THINCvariables.push_back(MaterialSpecifier(var,m,row,col));
+                }
+            }
+        }
+    }
+}
 
-BoxAccessTHINCArray::BoxAccessTHINCArray(MFIter& mfi, const Box &bx, THINCArray &U) : box{bx}, iab{U.data[mfi]}{}
+THINCArray::THINCArray(BoxArray& ba, DistributionMapping& dm, const int Nghost, ParameterStruct &parameters) : data(ba,dm,parameters.numberOfMaterials+1,Nghost)
+{
+    addTHINCvariable(ALPHA,parameters.numberOfMaterials);
+    addTHINCvariable(ALPHARHO,parameters.numberOfMaterials);
+    addTHINCvariable(P);
+    addTHINCvariable(VELOCITY,0,3);
+    //addTHINCvariable(V_TENSOR,0,3,3);
+
+}
+
+BoxAccessTHINCArray::BoxAccessTHINCArray(MFIter& mfi, const Box &bx, THINCArray &U) : box{bx}, iab{U.data[mfi]}, THINCvariables{U.THINCvariables}{}
 
 int& BoxAccessTHINCArray::mixedCellFlag(int i, int j, int k)
 {
@@ -65,20 +90,36 @@ double TBV(BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& U
 
 }
 
+void BoxAccessTHINCArray::variableTHINCreconstruction(MaterialSpecifier& n, BoxAccessCellArray& U, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, Vector<Real>& beta, Vector<Real>& coshBeta, Vector<Real>& tanhBeta, Real epsilon, int i, int j ,int k, Direction_enum d)
+{
+    Real min         = std::min(U.left(d,i,j,k,n),U.right(d,i,j,k,n));
+    Real max         = std::max(U.left(d,i,j,k,n),U.right(d,i,j,k,n))-min;
+
+    Real theta       = sgn<Real,Real>(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
+
+    Real C = (U(i,j,k,n)-min+epsilon)/(max+epsilon);
+    Real B = std::exp(theta*beta[n.mat]*((2.0*C)-1.0));
+    Real A = ( (B/coshBeta[n.mat])-1.0 )/tanhBeta[n.mat];
+
+    UTHINC_R(i,j,k,n) = min + (max/2.0)*(1.0+ theta*((tanhBeta[n.mat]+A)/(1.0+A*tanhBeta[n.mat])) );
+    UTHINC_L(i,j,k,n) = min + (max/2.0)*(1.0+ theta*A);
+}
+
 /** Performs the BVD-THINC update from Deng for the volume fraction.
  */
 void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& UTHINC_L, BoxAccessCellArray& UTHINC_R, ParameterStruct& parameters,const Real* dx, Direction_enum d)
 {
-
-    Real beta;
     Real beta0 = parameters.THINCbeta;
-    Real coshBeta;
-    Real tanhBeta;
-    Real epsilon = 1E-20;
-    Real normalisedVectorComponent;
+    Vector<Real> beta(U.numberOfMaterials);
+    Vector<Real> coshBeta(U.numberOfMaterials);
+    Vector<Real> tanhBeta(U.numberOfMaterials);
 
-    Real nx;
-    Real ny;
+    Real epsilon = 1E-20;
+    Vector<Real> normalisedVectorComponent(U.numberOfMaterials);
+
+    Vector<Real> nx(U.numberOfMaterials);
+    Vector<Real> ny(U.numberOfMaterials);
+
 
     Real min, max, theta;
     Real A, B, C ;
@@ -99,11 +140,6 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
 
                 for(int m = 0;    m < U.numberOfMaterials;m++)
                 {
-                    /*if(d == x)
-                    {
-                        U(i,j,k,NORM,m,0) = 0.0;
-                        U(i,j,k,NORM,m,1) = 0.0;
-                    }*/
 
                     min         = std::min(U.left(d,i,j,k,ALPHA,m),U.right(d,i,j,k,ALPHA,m));
                     max         = std::max(U.left(d,i,j,k,ALPHA,m),U.right(d,i,j,k,ALPHA,m))-min;
@@ -124,47 +160,37 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
 
                         mixedCellFlag(i,j,k) = 1;
 
+                    }
+                }
+
+                if(mixedCellFlag(i,j,k))
+                {
+                    for(int m = 0; m < U.numberOfMaterials;m++)
+                    {
                         if(AMREX_SPACEDIM == 2)
                         {
-                            normalisedVectorComponent = youngsInterfaceConstruction(nx,ny,U,parameters,d,dx,m,i,j,k);
+                            normalisedVectorComponent[m] = youngsInterfaceConstruction(nx[m],ny[m],U,parameters,d,dx,m,i,j,k);
                         }
                         else if(AMREX_SPACEDIM == 1)
                         {
-                            normalisedVectorComponent = 1.0;
+                            normalisedVectorComponent[m] = 1.0;
                         }
                         else
                         {
                             Print() << "Haven't implemented THINC in 3D yet" << std::endl;
                         }
 
-                        /*U(i,j,k,NORM,m,0) = nx;
-                        U(i,j,k,NORM,m,1) = ny;*/
+                        beta[m] = normalisedVectorComponent[m]*beta0 + 0.01;
 
-                        beta = normalisedVectorComponent*beta0 + 0.01;
-
-                        coshBeta = cosh(beta);
-                        tanhBeta = tanh(beta);
-
-                        B = std::exp(theta*beta*((2.0*C)-1.0));
-                        A = ( (B/coshBeta)-1.0 )/tanhBeta;
+                        coshBeta[m] = cosh(beta[m]);
+                        tanhBeta[m] = tanh(beta[m]);
 
 
-                        UTHINC_R(i,j,k,ALPHA,m) = min + (max/2.0)*(1.0+ theta*((tanhBeta+A)/(1.0+A*tanhBeta)) );
-                        UTHINC_L(i,j,k,ALPHA,m) = min + (max/2.0)*(1.0+ theta*A);
+                    }
 
-                        min         = std::min(U.left(d,i,j,k,ALPHARHO,m),U.right(d,i,j,k,ALPHARHO,m));
-                        max         = std::max(U.left(d,i,j,k,ALPHARHO,m),U.right(d,i,j,k,ALPHARHO,m))-min;
-
-                        theta       = sgn<Real,Real>(U.right(d,i,j,k,ALPHARHO,m)-U.left(d,i,j,k,ALPHARHO,m));
-
-                         C = (U(i,j,k,ALPHARHO,m)-min+epsilon)/(max+epsilon);
-                         B = std::exp(theta*beta*((2.0*C)-1.0));
-                         A = ( (B/coshBeta)-1.0 )/tanhBeta;
-
-                        UTHINC_R(i,j,k,ALPHARHO,m) = min + (max/2.0)*(1.0+ theta*((tanhBeta+A)/(1.0+A*tanhBeta)) );
-                        UTHINC_L(i,j,k,ALPHARHO,m) = min + (max/2.0)*(1.0+ theta*A);
-
-
+                    for(auto n : THINCvariables)
+                    {
+                        variableTHINCreconstruction(n,U,UTHINC_L,UTHINC_R,beta,coshBeta,tanhBeta,epsilon,i,j,k,d);
                     }
                 }
             }
@@ -177,55 +203,74 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
         {
             for    (int i = lo.x; i <= hi.x; ++i)
             {
-                for(int m = 0;    m < U.numberOfMaterials;m++)
+                if(mixedCellFlag(i,j,k))
                 {
-                    TBVMUSCL = TBV(UL,UR,UTHINC_L,UTHINC_R,UL,      UR,      d,i,j,k,MaterialSpecifier(ALPHA,m));
-                    TBVTHINC = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,MaterialSpecifier(ALPHA,m));
-
-                    TBVMUSCLRHO = TBV(UL,UR,UTHINC_L,UTHINC_R,UL,      UR,      d,i,j,k,MaterialSpecifier(ALPHARHO,m));
-                    TBVTHINCRHO = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,MaterialSpecifier(ALPHARHO,m));
-
-
-                    if( mixedCellFlag(i,j,k) && TBVTHINC <= TBVMUSCL && TBVTHINCRHO <= TBVMUSCLRHO)
+                    for(int m = 0; m < U.numberOfMaterials;m++)
                     {
-                       TBVFlag(i,j,k,m) = 1;
-
+                        TBVFlag(i,j,k,m) = 1;
                     }
-                    else
-                    {
-                       TBVFlag(i,j,k,m) = 0;
-                    }
-                }
-            }
-        }
-    }
 
-    for    		   (int k = lo.z; k <= hi.z; ++k)
-    {
-        for        (int j = lo.y; j <= hi.y; ++j)
-        {
-            for    (int i = lo.x; i <= hi.x; ++i)
-            {
-                for(int m = 0;    m < U.numberOfMaterials;m++)
-                {
-                    if(TBVFlag(i,j,k,m))
+                    for(auto n : THINCvariables)
                     {
-                        UL(i,j,k,ALPHA,m)	= UTHINC_L(i,j,k,ALPHA,m);
-                        UR(i,j,k,ALPHA,m)	= UTHINC_R(i,j,k,ALPHA,m);
+                        TBVMUSCL = TBV(UL,UR,UTHINC_L,UTHINC_R,UL,      UR,      d,i,j,k,n);
+                        TBVTHINC = TBV(UL,UR,UTHINC_L,UTHINC_R,UTHINC_L,UTHINC_R,d,i,j,k,n);
 
-                        if(U.accessPattern.materialInfo[m].phase == fluid)
+                        if(TBVTHINC < TBVMUSCL)
                         {
-                            UL(i,j,k,ALPHARHO,m)	= UTHINC_L(i,j,k,ALPHARHO,m);
-                            UR(i,j,k,ALPHARHO,m)	= UTHINC_R(i,j,k,ALPHARHO,m);
+                            UL(i,j,k,n) = UTHINC_L(i,j,k,n);
+                            UR(i,j,k,n) = UTHINC_R(i,j,k,n);
+                        }
+                        else
+                        {
+                           TBVFlag(i,j,k,0) = 0;
+                        }
 
-                            UL(i,j,k,RHO_K,m)	= UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
-                            UR(i,j,k,RHO_K,m)	= UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
+                    }
+
+                    for(int m = 0; m < U.numberOfMaterials; m++)
+                    {
+                        UL(i,j,k,RHO_K,m) = UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
+                        UR(i,j,k,RHO_K,m) = UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
+                    }
+                }
+            }
+        }
+    }
+
+    /*for    		   (int k = lo.z; k <= hi.z; ++k)
+    {
+        for        (int j = lo.y; j <= hi.y; ++j)
+        {
+            for    (int i = lo.x; i <= hi.x; ++i)
+            {
+                if(mixedCellFlag(i,j,k))
+                {
+                    Vector<MaterialSpecifier> vars(4);
+
+                    vars[0] = MaterialSpecifier(ALPHA,0);
+                    vars[1] = MaterialSpecifier(ALPHA,1);
+
+                    vars[2] = MaterialSpecifier(ALPHARHO,0);
+                    vars[3] = MaterialSpecifier(ALPHARHO,1);
+
+                    for(auto n : vars)
+                    {
+                        if(TBVFlag(i,j,k,0))
+                        {
+                            UL(i,j,k,n) = UTHINC_L(i,j,k,n);
+                            UR(i,j,k,n) = UTHINC_R(i,j,k,n);
                         }
                     }
+
+                    for(int m = 0; m < U.numberOfMaterials; m++)
+                    {
+                        UL(i,j,k,RHO_K,m) = UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
+                        UR(i,j,k,RHO_K,m) = UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
+                    }
                 }
             }
         }
-    }
+    }*/
 
 
     return;

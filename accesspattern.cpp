@@ -84,7 +84,7 @@ void AccessPattern::define(ParameterStruct& parameters)
     addVariable(n,"u",              PRIMITIVE,      CELL, NEITHER ,-c ,     c,    VELOCITY,       1,3);
     addVariable(n,"E",              CONSERVATIVE,   CELL, NEITHER,  min,    max,  TOTAL_E);
     addVariable(n,"p",              PRIMITIVE,      CELL, REFINE,  -max,    max,  P);
-    addVariable(n,"a",              NEITHER,        CELL, NEITHER,  min,    c,    SOUNDSPEED);
+    addVariable(n,"a",              NEITHER,        CELL, NEITHER,   min,    c,    SOUNDSPEED);
     addVariable(n,"uStar",          NEITHER,        CELL, NEITHER, -c,      c,    USTAR);
     addVariable(n,"sigma",          NEITHER,        CELL, NEITHER, -max,    max,  SIGMA,          1,3,3);
 

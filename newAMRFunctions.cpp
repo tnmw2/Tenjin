@@ -649,11 +649,6 @@ void findBiggestGradientOnLevel(const Box& box, BoxAccessCellArray& U, BoxAccess
     
     Real ax,ay;
 
-    if(level > 2 && n.var != ALPHA)
-    {
-        return;
-    }
-
     for 		(int k = lo.z; k <= hi.z; ++k)
     {
         for 	(int j = lo.y; j <= hi.y; ++j)
@@ -743,18 +738,15 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
 
     for(auto n : accessPattern.refineVariables)
     {
-        if(!(n.var == VELOCITY && (n.row == 0 || n.row == 2)))
+        for 		(int k = lo.z; k <= hi.z; ++k)
         {
-            for 		(int k = lo.z; k <= hi.z; ++k)
+            for 	(int j = lo.y; j <= hi.y; ++j)
             {
-                for 	(int j = lo.y; j <= hi.y; ++j)
+                for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    for (int i = lo.x; i <= hi.x; ++i)
+                    if(grad(i,j,k,n) > levelGradientCoefficients[level])
                     {
-                        if(grad(i,j,k,n) > levelGradientCoefficients[level])
-                        {
-                            tagarr(i,j,k) = TagBox::SET;
-                        }
+                        tagarr(i,j,k) = TagBox::SET;
                     }
                 }
             }
