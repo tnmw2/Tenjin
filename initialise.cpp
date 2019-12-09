@@ -99,8 +99,9 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-                U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
+                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                //U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -755,7 +756,96 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Explosive Welding
      *****************************************/
-     {
+     /*{
+
+        Real tanalpha = tan(10.0*3.14159/180.0);
+        Real tandelta = 0.1;
+        Real tandelta2= 1.0;
+
+
+        Real interface = initial.interface;
+
+        Real flyerPlateThickness = 0.5E-3;
+        Real explosiveThickness  = 2.0E-3;
+        Real flyerPlateRampStart = 3E-3;
+        Real flyerPlateRampEnd   = 13.0E-3;
+        Real flyerPlateRampEnd2  = 12.0E-3;
+        Real lengthBeforeRamp    = 2.0E-3;
+        Real boosterThickness    = 0.5E-3;
+        Real chamfer             = 0.4E-3;
+        Real radius              = 0.1E-3;
+
+
+        if(y < interface)
+        {
+            if(x < lengthBeforeRamp + 1E-3)
+            {
+                s = 1;
+            }
+            else if(y < interface - (x-lengthBeforeRamp)*tanalpha)
+            {
+                s = 1;
+            }
+            else
+            {
+                s = 0;
+            }
+
+            if( (x-(lengthBeforeRamp + 1.075E-3))*(x-(lengthBeforeRamp + 1.075E-3))+(y-3.9E-3)*(y-3.9E-3) < radius*radius)
+            {
+                s = 0;
+            }
+        }
+        else
+        {
+            if(y < interface + flyerPlateThickness)
+            {
+                s = 1;
+            }
+            else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness- boosterThickness)
+            {
+                s = 2;
+            }
+            else if(x > flyerPlateRampStart && x < flyerPlateRampEnd && y < interface + flyerPlateThickness + explosiveThickness)
+            {
+                if(x < flyerPlateRampStart+chamfer)
+                {
+                    if((x-(flyerPlateRampStart+chamfer))*(x-(flyerPlateRampStart+chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 0;
+                    }
+                }
+                else if(x > (flyerPlateRampEnd-chamfer))
+                {
+                    if((x-(flyerPlateRampEnd-chamfer))*(x-(flyerPlateRampEnd-chamfer))+(y-(interface + flyerPlateThickness + explosiveThickness - chamfer))*(y-(interface + flyerPlateThickness + explosiveThickness - chamfer)) < chamfer*chamfer)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 0;
+                    }
+                }
+                else
+                {
+                    s = 3;
+                }
+            }
+            else
+            {
+                s = 0;
+            }
+        }
+    }*/
+
+    /******************************************
+     * Explosive Welding 2 Solids
+     *****************************************/
+     /*{
 
         Real tanalpha = tan(10.0*3.14159/180.0);
         Real tandelta = 0.1;
@@ -839,8 +929,44 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 s = 0;
             }
         }
-    }
+    }*/
 
+    /******************************************
+     * Rod Impact
+     *****************************************/
+
+    {
+        Real chamfer = 1E-3;
+        Real length  = 32.4E-3;
+        Real radius  = initial.interface;
+
+        if(x<radius)
+        {
+            if(y< length-chamfer)
+            {
+                s=2;
+            }
+            else if(y<length)
+            {
+                if( (x< radius-chamfer) || (x - (radius-chamfer))*(x - (radius-chamfer))+(y - (length-chamfer))*(y - (length-chamfer)) < chamfer*chamfer     )
+                {
+                    s=2;
+                }
+                else
+                {
+                    s=1;
+                }
+            }
+            else
+            {
+                s=1;
+            }
+        }
+        else
+        {
+            s=0;
+        }
+    }
 
 }
 
@@ -899,8 +1025,52 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
         Real chamfer             = 0.4E-3;
         Real radius              = 0.1E-3;
 
-
         if(y < interface)
+        {
+            if(x < lengthBeforeRamp + 1E-3)
+            {
+                return 0.999998;
+            }
+            else if( (x-(lengthBeforeRamp + 1.075E-3))*(x-(lengthBeforeRamp + 1.075E-3))+(y-3.9E-3)*(y-3.9E-3) < radius*radius)
+            {
+                return 0.000001;
+            }
+            else if(y < interface - (x-lengthBeforeRamp)*tanalpha + 0.5E-3)
+            {
+                for(int row = -(sub-1)/2; row< (sub+1)/2; row++)
+                {
+                    for(int col = -(sub-1)/2; col < (sub+1)/2; col++)
+                    {
+                        if( (y+((Real)col)/((Real)sub)*dx[1]) < interface - ( (x+((Real)row/((Real)sub))*dx[0])-lengthBeforeRamp)*tanalpha)
+                        {
+                            counter++;
+                        }
+                    }
+                }
+
+                return 0.999997*(((Real) counter)/((Real) sub*sub))+0.000001;
+            }
+            else
+            {
+                return 0.000001;
+            }
+
+
+        }
+        else
+        {
+            if(y < interface + flyerPlateThickness)
+            {
+                return 0.999998;
+            }
+            else
+            {
+                return 0.000001;
+            }
+        }
+
+
+        /*if(y < interface)
         {
             if(x < lengthBeforeRamp + 1E-3)
             {
@@ -942,6 +1112,6 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
             {
                 return 0.000001;
             }
-        }
+        }*/
 
 }

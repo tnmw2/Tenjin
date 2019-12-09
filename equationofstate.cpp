@@ -65,7 +65,6 @@ Real MieGruneisenEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, in
 
 Real MieGruneisenEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
 {
-    mixidx *= 1;
     return U(i,j,k,P)/(U(i,j,k,RHO_K,m)*GruneisenGamma*CV);
 }
 
@@ -379,11 +378,11 @@ Real MixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int 
 {
     if(mixidx == 0)
     {
-        return U(i,j,k,P)/(U(i,j,k,RHO_MIX,m,mixidx)*first.GruneisenGamma*first.CV);
+        return (U(i,j,k,P)-first.pref)/(U(i,j,k,RHO_MIX,m,mixidx)*first.GruneisenGamma*first.CV);
     }
     else
     {
-        return U(i,j,k,P)/(U(i,j,k,RHO_MIX,m,mixidx)*second.GruneisenGamma*second.CV);
+        return (U(i,j,k,P)-second.pref)/(U(i,j,k,RHO_MIX,m,mixidx)*second.GruneisenGamma*second.CV);
     }
 }
 
@@ -593,4 +592,11 @@ Real WilkinsSolidEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int 
 void WilkinsSolidEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
     return;
+}
+
+Real WilkinsSolidEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
+{
+    Real x = U(i,j,k,RHO_K,m)/rho0;
+
+    return (U(i,j,k,P)-(2.0*e2*x*x*x+e3*x*x-e4-e5*x))/(U(i,j,k,RHO_K,m)*GruneisenGamma*CV);
 }

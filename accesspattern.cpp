@@ -88,10 +88,12 @@ void AccessPattern::define(ParameterStruct& parameters)
     addVariable(n,"uStar",          NEITHER,        CELL, NEITHER, -c,      c,    USTAR);
     addVariable(n,"sigma",          NEITHER,        CELL, NEITHER, -max,    max,  SIGMA,          1,3,3);
 
-
-    addVariable(n,"rhomix",         NEITHER,        NOTCELL,NEITHER,   min, max,  RHO_MIX,        parameters.numberOfMaterials,2);
-    addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,    0.0, 1.0,  LAMBDA,         parameters.numberOfMaterials);
-    addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,   min, max,  ALPHARHOLAMBDA, parameters.numberOfMaterials);
+    if(parameters.numberOfMixtures > 0)
+    {
+        addVariable(n,"rhomix",         NEITHER,        NOTCELL,NEITHER,   min, max,  RHO_MIX,        parameters.numberOfMaterials,2);
+        addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,    0.0, 1.0,  LAMBDA,         parameters.numberOfMaterials);
+        addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,   min, max,  ALPHARHOLAMBDA, parameters.numberOfMaterials);
+    }
 
     if(parameters.SOLID)
     {
@@ -102,7 +104,7 @@ void AccessPattern::define(ParameterStruct& parameters)
 
         if(parameters.PLASTIC)
         {
-            addVariable(n,"epsilon",            PRIMITIVE,    CELL, NEITHER,  0.0, max,  EPSILON,         parameters.numberOfMaterials);
+            addVariable(n,"epsilon",            PRIMITIVE,    CELL, REFINE,  0.0, max,  EPSILON,         parameters.numberOfMaterials);
             addVariable(n,"alphaRhoEpsilon",    CONSERVATIVE, CELL, NEITHER,  0.0, max,  ALPHARHOEPSILON, parameters.numberOfMaterials);
         }
     }

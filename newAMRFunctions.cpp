@@ -501,6 +501,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
 
+
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
     /*MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
@@ -703,11 +704,6 @@ void C_state_error_grad(Array4<char> const& tagarr, const Box& box, BoxAccessCel
 
     for(auto n : accessPattern.refineVariables)
     {
-        if(level > 2 && n.var != ALPHA)
-        {
-            continue;
-        }
-
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
             for 	(int j = lo.y; j <= hi.y; ++j)
@@ -734,6 +730,8 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
+    Real tolerance = 1E-10;
+
     int m = 0;
 
     for(auto n : accessPattern.refineVariables)
@@ -744,7 +742,7 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    if(grad(i,j,k,n) > levelGradientCoefficients[level])
+                    if(grad(i,j,k,n) > levelGradientCoefficients[level] && grad(i,j,k,n) > tolerance)
                     {
                         tagarr(i,j,k) = TagBox::SET;
                     }
@@ -804,6 +802,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
                 BoxAccessCellArray 			gradbox(mfi,bx,grad);
 
                 findBiggestDifferenceOnLevel(bx,Ubox,gradbox,dx,time,level,gradMax,n);
+                //findBiggestGradientOnLevel(bx,Ubox,gradbox,dx,time,level,gradMax,n);
             }
         }
 
@@ -832,7 +831,8 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
             Array4<char> const& tagarr 	= tagfab.array();
             
             C_state_error_diff(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
-            
+            //C_state_error_grad(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
+
         }
 	}
 }

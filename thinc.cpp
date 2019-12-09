@@ -21,8 +21,8 @@ THINCArray::THINCArray(BoxArray& ba, DistributionMapping& dm, const int Nghost, 
 {
     addTHINCvariable(ALPHA,parameters.numberOfMaterials);
     addTHINCvariable(ALPHARHO,parameters.numberOfMaterials);
-    addTHINCvariable(P);
-    addTHINCvariable(VELOCITY,0,3);
+    //addTHINCvariable(P);
+    //addTHINCvariable(VELOCITY,0,3);
     //addTHINCvariable(V_TENSOR,0,3,3);
 
 }

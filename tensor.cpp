@@ -1,9 +1,9 @@
-#include "cblas.h"
+/*#include "cblas.h"
 #include "cblas_f77.h"
 #include <cmath>
 #include <complex>
 #include <iostream>
-#include <algorithm>
+#include <algorithm>*/
 
 #include "tensor.h"
 

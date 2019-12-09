@@ -164,7 +164,7 @@ public:
     virtual void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
     virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
-
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
 
 
     Real dpcdrho                                (BoxAccessCellArray& U, int i, int j, int k, int m);
