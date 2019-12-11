@@ -41,7 +41,7 @@ void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string
 void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial, PlasticEOS& plastic);
 //void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial, const Real* dx, const Real* prob_lo);
-void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern);
+void setBoundaryConditions(CellArray& U, Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern);
 void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *dx, Real dt, const Real *prob_lo, MultiFab &S_new);
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt, MultiFab &S_new);

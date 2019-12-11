@@ -49,6 +49,7 @@ public:
     void customChanger(int& i, int sense);
 
     bool cellIsValid(int i, int j, int k, int m);
+    int whatMaterialIsValid(int i, int j, int k);
     bool cellIsNearInterface(int i, int j, int k, const Real* dx);
 
 

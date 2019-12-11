@@ -25,31 +25,34 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    std::vector< std::vector<Real> > V(initial.numberOfStates);
+    std::vector< std::vector< std::vector<Real> > > V(initial.numberOfStates);
 
     for(int s = 0; s < initial.numberOfStates; s++)
     {
-        if(parameters.SOLID)
+        V[s].resize(parameters.numberOfMaterials);
+
+        for(int m = 0; m < parameters.numberOfMaterials; m++)
         {
-            V[s].resize(9);
+            V[s][m].resize(9);
 
-            getStretchTensor(&V[s][0],&initial.F[s][0]);
-
-            double norm1 = std::pow(det(&V[s][0]),-1.0/3.0);
-
-            for(int row=0;row<U.numberOfComponents;row++)
+            if(U.accessPattern.materialInfo[m].phase == solid)
             {
-                for(int col=0;col<U.numberOfComponents;col++)
+                getStretchTensor(&V[s][m][0],&initial.F[s][m][0]);
+
+                double norm1 = std::pow(det(&V[s][m][0]),-1.0/3.0);
+
+                for(int row=0;row<U.numberOfComponents;row++)
                 {
-                    V[s][row*U.numberOfComponents+col] *= norm1;
+                    for(int col=0;col<U.numberOfComponents;col++)
+                    {
+                        V[s][m][row*U.numberOfComponents+col] *= norm1;
+                    }
                 }
             }
         }
     }
 
     int s=0;
-
-    Real volfrac;
 
     Real x,y,z;
 
@@ -72,13 +75,39 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 {
                     U(i,j,k,RHO,m)    = initial.rho[s][m];
 
+                    if(parameters.materialInfo[m].phase == solid)
+                    {
+                        U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][m][0]);
+                    }
+
                     U(i,j,k,P,m)      = initial.p[s][m];
 
                     U(i,j,k,VELOCITY,m,0)  = initial.u[s][m];
                     U(i,j,k,VELOCITY,m,1)  = initial.v[s][m];
                     U(i,j,k,VELOCITY,m,2)  = initial.w[s][m];
 
+
+                    if(parameters.PLASTIC)
+                    {
+                        U(i,j,k,EPSILON,m) = 0.0;
+                    }
+
+                    if(U.accessPattern.materialInfo[m].phase == solid)
+                    {
+                        for(int row = 0; row<U.numberOfComponents; row++)
+                        {
+                            for(int col = 0; col<U.numberOfComponents; col++)
+                            {
+                                U(i,j,k,V_TENSOR,m,row,col) = V[s][m][row*U.numberOfComponents+col];
+                            }
+                        }
+
+                        U.getHenckyJ2(i,j,k,m);
+
+                    }
+
                     U(i,j,k,P,m) += U.getEffectiveNonThermalPressure(i,j,k,m)/U.getEffectiveInverseGruneisen(i,j,k,m);
+
                 }
 
                 //U(i,j,k,RHO_K,0) = densityWeight(s,x,y,z,initial,parameters,dx,1.0,0.125);
@@ -134,9 +163,9 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
     temp.push_back(materialname[m]["eref"]);
     temp.push_back(materialname[m]["CV"]);
 
-    /*if(EOSstring == "RomenskiiSolid")
+    if(EOSstring == "SINGLEMATERIAL_RomenskiiSolid")
     {
-        parameters.materialInfo[m].EOS = new RomenskiiSolidEOS();
+        parameters.materialInfo[m].EOS = new SINGLEMATERIAL_RomenskiiSolidEOS();
 
         temp.push_back(materialname[m]["rho0"]);
         temp.push_back(materialname[m]["K0"]);
@@ -149,7 +178,7 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             exit(1);
         }
     }
-    else if(EOSstring == "WilkinsSolid")
+    /*else if(EOSstring == "WilkinsSolid")
     {
         parameters.materialInfo[m].EOS = new WilkinsSolidEOS();
 
@@ -184,8 +213,8 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
         {
             parameters.materialInfo[m].EOS = new MieGruneisenEOS();
         }
-    }
-    else */if(EOSstring == "SINGLEMATERIAL_MieGruneisen")
+    }*/
+    else if(EOSstring == "SINGLEMATERIAL_MieGruneisen")
     {
         parameters.materialInfo[m].EOS = new SINGLEMATERIAL_MieGruneisenEOS();
     }
@@ -232,6 +261,14 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
 
     for(int m=0;m<parameters.numberOfMaterials;m++)
     {
+        if(parameters.materialInfo[m].phase == solid)
+        {
+            for(int i=0;i<9;i++)
+            {
+                initial.F[s][m][i] = state[s]["material"][m]["F"][i];
+            }
+        }
+
         initial.rho[s][m] = state[s]["material"][m]["rho"];
         initial.p  [s][m] = state[s]["material"][m]["p"];
         initial.u  [s][m] = state[s]["material"][m]["u"];
@@ -239,6 +276,7 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
         initial.w  [s][m] = state[s]["material"][m]["w"];
 
     }
+
     return;
 }
 
@@ -320,10 +358,10 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         }
 
 
-        int m = parameters.numberOfMaterials;
+        int m   = parameters.numberOfMaterials;
         int mix = parameters.numberOfMixtures;
 
-        parameters.Ncomp = ((2+2)*mix)+m+m+m+3+3+1+1+1+1+1+9+(9+9+9+1)*parameters.SOLID;
+        //parameters.Ncomp = ((2+2)*mix)+m+m+m+3+3+1+1+1+1+1+9+(9+9+9+1)*parameters.SOLID;
 
         /**********************************************************
          * Material Parameters
@@ -564,7 +602,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * 1D RP
      *****************************************/
     {
-        if(x + y < initial.interface)
+        if(x < initial.interface)
         {
             s=0;
         }

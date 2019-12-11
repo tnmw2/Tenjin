@@ -1,12 +1,14 @@
 #include "cell.h"
 
-Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : phase(_phase), accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
+Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
 {
     materials.resize(U.numberOfMaterials);
 
     for(int n = 0; n< U.numberOfMaterials; n++)
     {
         materials[n].allocateSpace();
+
+        materials[n].phase = _phase;
     }
 
     for(auto n : accessPattern.cellVariables)
@@ -40,6 +42,14 @@ Real& Cell::operator()(MaterialSpecifier m)
         break;
     case SIGMA:             return *(materials[m.mat].sigma[m.row*numberOfComponents+m.col]);
         break;
+    case V_TENSOR:          return *(materials[m.mat].V[m.row*numberOfComponents+m.col]);
+        break;
+    case VSTAR:             return *(materials[m.mat].VStar[m.row*numberOfComponents+m.col]);
+        break;
+    case EPSILON:           return *(materials[m.mat].epsilon);
+        break;
+    case RHOEPSILON:        return *(materials[m.mat].rhoEpsilon);
+        break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
     }
@@ -64,6 +74,14 @@ void Cell::assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpe
     case USTAR:           (materials[m.mat].uStar)                                   = &U(i,j,k,m);
         break;
     case SIGMA:           (materials[m.mat].sigma[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
+        break;
+    case V_TENSOR:        (materials[m.mat].V[m.row*numberOfComponents+m.col])       = &U(i,j,k,m);
+        break;
+    case VSTAR:           (materials[m.mat].VStar[m.row*numberOfComponents+m.col])   = &U(i,j,k,m);
+        break;
+    case EPSILON:         (materials[m.mat].epsilon)                                 = &U(i,j,k,m);
+        break;
+    case RHOEPSILON:      (materials[m.mat].rhoEpsilon)                              = &U(i,j,k,m);
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
@@ -104,4 +122,7 @@ void Material::allocateSpace()
     rhoU.resize(3);
     u.resize(3);
     sigma.resize(9);
+    V.resize(9);
+    VStar.resize(9);
+
 }

@@ -50,22 +50,22 @@ Real geometricFlux(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier
     switch(n.var)
     {
     case ALPHA:          return 0.0;
-    case ALPHARHO:  	 return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
-    case ALPHARHOLAMBDA: return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
-    case ALPHARHOEPSILON:return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);
+    case ALPHARHO:  	 return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
+    case ALPHARHOLAMBDA: return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
+    case ALPHARHOEPSILON:return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
 
     case RHOU:
-        if(n.row==0){       return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - U(i,j,k,SIGMA,0,0,0) + U(i,j,k,SIGMA,0,2,2);}
-        else if(n.row==1){  return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - U(i,j,k,SIGMA,0,0,1);}
-        else if(n.row==2){  return -2.0*U(i,j,k,SIGMA,0,0,2);}
+        if(n.row==0){       return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x) - U(i,j,k,SIGMA,n.mat,0,0) + U(i,j,k,SIGMA,n.mat,2,2);}
+        else if(n.row==1){  return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x) - U(i,j,k,SIGMA,n.mat,0,1);}
+        else if(n.row==2){  return -2.0*U(i,j,k,SIGMA,n.mat,0,2);}
         else {Print() << "Bad radial flux variable" << std::endl;}
 
     //case TOTAL_E:	    return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - vdotsigma(U,i,j,k,x);
 
     case V_TENSOR:
-        if(n.row==0){       return  (1.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);}
-        else if(n.row==1){  return  (1.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);}
-        else if(n.row==2){  return -(2.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,0,x);}
+        if(n.row==0){       return  (1.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);}
+        else if(n.row==1){  return  (1.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);}
+        else if(n.row==2){  return -(2.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);}
         else {Print() << "Bad radial flux variable" << std::endl;}
 
     default:   amrex::Print() << "Bad radial flux variable" << std::endl; exit(1);

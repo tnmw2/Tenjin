@@ -28,7 +28,8 @@ enum Variable
     DEVH,
     HJ2,
     EPSILON,
-    ALPHARHOEPSILON
+    ALPHARHOEPSILON,
+    RHOEPSILON
 };
 
 /** Not yet used...
@@ -156,7 +157,7 @@ struct InitialStruct
     Real startT;
     Real finalT;
 
-    Vector<Vector<Real> > F;
+    Vector<Vector< Vector<Real> > > F;
     Vector<Vector<Real> > rho;
     Vector<Vector<Real> > u;
     Vector<Vector<Real> > v;
@@ -190,7 +191,7 @@ struct InitialStruct
 
         for(int i=0;i<numberOfStates;i++)
         {
-            F[i].resize(9);
+            F[i].resize(parameters.numberOfMaterials);
             rho[i].resize(parameters.numberOfMaterials);
             u[i].resize(parameters.numberOfMaterials);
             v[i].resize(parameters.numberOfMaterials);
@@ -199,6 +200,11 @@ struct InitialStruct
 
             alpha[i].resize(parameters.numberOfMaterials);
             lambda[i].resize(parameters.numberOfMaterials);
+
+            for(int m = 0; m < parameters.numberOfMaterials; m++)
+            {
+                F[i][m].resize(9);
+            }
         }
 
 

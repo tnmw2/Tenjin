@@ -24,6 +24,11 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
     UStar(RHO,m)       = multiplier*U(RHO,m);
 
+    if(parameters.materialInfo[m].plastic)
+    {
+        UStar(RHOEPSILON,m) = multiplier*U(RHOEPSILON,m);
+    }
+
     for(int row = 0; row < U.numberOfComponents; row++)
     {
         if(row == d)
@@ -36,6 +41,21 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
         }
 
         UStar(VELOCITY,m,row)     = UStar(RHOU,m,row)/UStar(RHO,m);
+
+        if(U.accessPattern.materialInfo[m].phase == solid)
+        {
+            for(int col=0;col<U.numberOfComponents; col++)
+            {
+                if(row == d)
+                {
+                    UStar(V_TENSOR,m,row,col) = U(V_TENSOR,m,row,col);
+                }
+                else
+                {
+                    UStar(V_TENSOR,m,row,col) = multiplier*U(V_TENSOR,m,row,col);
+                }
+            }
+        }
     }
 
     UStar(TOTAL_E,m)      = multiplier*U(RHO,m)*(U(TOTAL_E,m)/U(RHO,m) + (Sstar-U(VELOCITY,m,d))*(Sstar - (U(SIGMA,m,d,d))/(U(RHO,m)*(SK-U(VELOCITY,m,d))) ));
@@ -43,25 +63,25 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
     return;
 }
 
-/*void getSigmaStar(Cell& UKStar, Real Sstar, Real SLT, Real SRT, Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Direction_enum d, ParameterStruct& parameters)
+void getSigmaStar(Cell& UKStar, Real Sstar, Real SLT, Real SRT, Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Direction_enum d, ParameterStruct& parameters, int m)
 {
     for(int i=0;i<UL.numberOfComponents;i++)
     {
-        UKStar(SIGMA,0,i,d) = (ULStar(RHO)*(Sstar-SLT)*URStar(RHO)*(Sstar-SRT)*(UL(VELOCITY,0,i) -UR(VELOCITY,0,i)) + ULStar(RHO)*(Sstar-SLT)*UR(SIGMA,0,i,d) - URStar(RHO)*(Sstar-SRT)*UL(SIGMA,0,i,d))/(ULStar(RHO)*(Sstar-SLT)-URStar(RHO)*(Sstar-SRT));
+        UKStar(SIGMA,m,i,d) = (ULStar(RHO,m)*(Sstar-SLT)*URStar(RHO,m)*(Sstar-SRT)*(UL(VELOCITY,m,i) -UR(VELOCITY,m,i)) + ULStar(RHO,m)*(Sstar-SLT)*UR(SIGMA,m,i,d) - URStar(RHO,m)*(Sstar-SRT)*UL(SIGMA,m,i,d))/(ULStar(RHO,m)*(Sstar-SLT)-URStar(RHO,m)*(Sstar-SRT));
     }
 
     return;
-}*/
+}
 
 /** Finds the (inner) intermediate states for the HLLD solver.
  */
-/*void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& UStarStar, Real SL, Real SR, Real SLT, Real SRT, Real Sstar, ParameterStruct& parameters, Direction_enum d, Cell& UK, Cell& UKStar, Real SKT)
+void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& UStarStar, Real SL, Real SR, Real SLT, Real SRT, Real Sstar, ParameterStruct& parameters, Direction_enum d, Cell& UK, Cell& UKStar, Real SKT, int m)
 {
     int N = UL.numberOfComponents;
 
     UStarStar = UKStar;
 
-    getSigmaStar(UKStar,Sstar,SLT,SRT,UL,UR,ULStar,URStar,d,parameters);
+    getSigmaStar(UKStar,Sstar,SLT,SRT,UL,UR,ULStar,URStar,d,parameters,m);
 
     for(int row =0;row<N;row++)
     {
@@ -71,11 +91,11 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
         }
         else
         {
-            UStarStar(RHOU,0,row) += (UKStar(SIGMA,0,row,d)-UK(SIGMA,0,row,d))/(Sstar-SKT);
+            UStarStar(RHOU,m,row) += (UKStar(SIGMA,m,row,d)-UK(SIGMA,m,row,d))/(Sstar-SKT);
 
         }
 
-        UStarStar(VELOCITY,0,row) = UStarStar(RHOU,0,row)/UStarStar(RHO);
+        UStarStar(VELOCITY,m,row) = UStarStar(RHOU,m,row)/UStarStar(RHO);
 
     }
 
@@ -87,21 +107,21 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
         }
         else
         {
-            UStarStar(TOTAL_E) += (UStarStar(VELOCITY,0,row)*UKStar(SIGMA,0,row,d)-UK(VELOCITY,0,row)*UK(SIGMA,0,row,d))/(Sstar-SKT);
+            UStarStar(TOTAL_E,m) += (UStarStar(VELOCITY,m,row)*UKStar(SIGMA,m,row,d)-UK(VELOCITY,m,row)*UK(SIGMA,m,row,d))/(Sstar-SKT);
 
             for(int col =0;col<N;col++)
             {
-                UStarStar(V_TENSOR,0,row,col) += (UStarStar(V_TENSOR,0,d,col)*(UStarStar(VELOCITY,0,row)-UK(VELOCITY,0,row)))/(Sstar-SKT);
+                UStarStar(V_TENSOR,m,row,col) += (UStarStar(V_TENSOR,m,d,col)*(UStarStar(VELOCITY,m,row)-UK(VELOCITY,m,row)))/(Sstar-SKT);
             }
         }
     }
 
     return;
 }
-*/
+
 /** Calculates the HLLC fluxes.
  */
-/*void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo)
+void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx, const Real *prob_lo)
 {
     const auto lo = lbound(ULbox.box);
     const auto hi = ubound(ULbox.box);
@@ -131,268 +151,153 @@ void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& pa
 
                 Cell UStarStar(UStarStarbox,i,j,k,solid);
 
-
-                SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
-                SL = -SR;
-
-                Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
-
-                if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
+                for(int m = 0; m < parameters.numberOfMaterials; m++)
                 {
-                    UL.parent->checking = 1;
-                    UR.parent->checking = 1;
-
-                    UL.parent->checkLimits(UL.accessPattern.allVariables);
-                    UR.parent->checkLimits(UL.accessPattern.allVariables);
-
-                    UL.parent->conservativeToPrimitive();
-                    UR.parent->conservativeToPrimitive();
-
-                    UL.parent->checking = 0;
-                    UR.parent->checking = 0;
-
-                    SR = std::max(std::abs(UL(VELOCITY,0,d))+UL(SOUNDSPEED),std::abs(UR(VELOCITY,0,d))+UR(SOUNDSPEED));
+                    SR = std::max(std::abs(UL(VELOCITY,m,d))+UL(SOUNDSPEED,m),std::abs(UR(VELOCITY,m,d))+UR(SOUNDSPEED,m));
                     SL = -SR;
 
-                    Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
+                    Sstar = getSstar(UL,UR,SL,SR,i,j,k,d,m);
 
-                    if(std::isnan(SL) || std::isnan(SR))
+                    if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                     {
-                        amrex::Abort("Nan in SL SR wavespeeds before flux");
+                       amrex::Abort("Nan in SL SR wavespeeds before flux");
                     }
 
-                    if(std::isnan(Sstar))
+                    fluxbox(i,j,k,USTAR,m) = Sstar;
+
+                    if(SL>=0.0)
                     {
-                        if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)+UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
-                        {
-                            if(std::isnan(-UR(SIGMA,0,d,d)+UL(SIGMA,0,d,d)))
-                            {
-                                if(std::isnan(UR(P)) || std::isnan(UL(P)))
-                                {
-                                    amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, p");
-                                }
-                                else
-                                {
-                                    if( (UR(ALPHA,0) < UR(ALPHA,1)) && (UL(ALPHA,0) < UL(ALPHA,1)))
-                                    {
-                                        for(int row = 0; row<3;row++)
-                                        {
-                                            for(int col = 0; col<3;col++)
-                                            {
-                                                UR(SIGMA,0,row,col) = -UR(P)*delta<Real>(row,col);
-                                                UL(SIGMA,0,row,col) = -UL(P)*delta<Real>(row,col);
-                                            }
-                                        }
-
-                                        Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
-
-                                     }
-                                    else
-                                    {
-                                        amrex::Abort("Nan in Sstar wavespeed before flux: num, sigma, not p, in solid");
-                                    }
-                                }
-
-                            }
-                            else if(std::isnan(UL(RHOU,0,d)*(SL-UL(VELOCITY,0,d))-UR(RHOU,0,d)*(SR-UR(VELOCITY,0,d))))
-                            {
-                                amrex::Abort("Nan in Sstar wavespeed before flux: num, RHOU or vel");
-                            }
-                            else
-                            {
-                                Sstar = 0.0;
-                            }
-                        }
-                        else if(std::isnan((UL(RHO)*(SL-UL(VELOCITY,0,d)) -  UR(RHO)*(SR-UR(VELOCITY,0,d)))))
-                        {
-                            amrex::Abort("Nan in Sstar wavespeed before flux: den");
-                        }
-                        else
-                        {
-                            Sstar = 0.0;
-                        }
-                    }
-                }
-
-                fluxbox(i,j,k,USTAR) = Sstar;
-
-                if(SL>=0.0)
-                {
-                    getStarState(UL,ULStar,SL,Sstar,parameters,d);
-
-                    for(auto n : ULbox.accessPattern.conservativeVariables)
-                    {
-                        if(n.var == ALPHA)
-                        {
-                             fluxbox(i,j,k,n)	= flux(n,ULStar,d);
-                        }
-                        else
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d);
                         }
-                    }
 
-                    for(int row=0;row<ULbox.numberOfComponents;row++)
-                    {
-                        for(int col=0;col<ULbox.numberOfComponents;col++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
-                            fluxbox(i,j,k,VSTAR,0,row,col) = UL(V_TENSOR,0,row,col);
+                            for(int col=0;col<ULbox.numberOfComponents;col++)
+                            {
+                                fluxbox(i,j,k,VSTAR,m,row,col) = UL(V_TENSOR,m,row,col);
+                            }
                         }
                     }
-                }
-                else if(Sstar>=0.0)
-                {
-                    getStarState(UL,ULStar,SL,Sstar,parameters,d);
-
-                    SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k);
-
-                    if(SLT>=0.0)
+                    else if(Sstar>=0.0)
                     {
-                        for(auto n : ULbox.accessPattern.conservativeVariables)
+                        getStarState(UL,ULStar,SL,Sstar,parameters,d,m);
+
+                        SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k,m);
+
+                        if(SLT>=0.0)
                         {
-                            if(n.var == ALPHA)
-                            {
-                                 fluxbox(i,j,k,n)	= flux(n,ULStar,d);
-                            }
-                            else
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
                             }
-                        }
 
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
-                        {
-                            for(int col=0;col<ULbox.numberOfComponents;col++)
+                            for(int row=0;row<ULbox.numberOfComponents;row++)
                             {
-                                fluxbox(i,j,k,VSTAR,0,row,col) = ULStar(V_TENSOR,0,row,col);
+                                for(int col=0;col<ULbox.numberOfComponents;col++)
+                                {
+                                    fluxbox(i,j,k,VSTAR,m,row,col) = ULStar(V_TENSOR,m,row,col);
+                                }
                             }
-                        }
-                    }
-                    else
-                    {
-                        getStarState(UR,URStar,SR,Sstar,parameters,d);
-
-                        SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k);
-
-                        getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UL,ULStar,SLT);
-
-                        for(auto n : ULbox.accessPattern.conservativeVariables)
-                        {
-                            if(n.var == ALPHA)
-                            {
-                                 fluxbox(i,j,k,n)	= flux(n,ULStar,d);
-                            }
-                            else
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
-                            }
-                        }
-
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
-                        {
-                            for(int col=0;col<ULbox.numberOfComponents;col++)
-                            {
-                                fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
-                            }
-                        }
-                    }
-                }
-                else if(SR>=0.0)
-                {
-                    getStarState(UR,URStar,SR,Sstar,parameters,d);
-
-                    SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k); 
-
-                    if(SRT>=0.0)
-                    {
-                        getStarState(UL,ULStar,SL,Sstar,parameters,d);
-
-                        SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k);
-
-                        getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UR,URStar,SRT);
-
-                        for(auto n : ULbox.accessPattern.conservativeVariables)
-                        {
-                            if(n.var == ALPHA)
-                            {
-                                 fluxbox(i,j,k,n)	= flux(n,URStar,d);
-                            }
-                            else
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
-                            }
-                        }
-
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
-                        {
-                            for(int col=0;col<ULbox.numberOfComponents;col++)
-                            {
-                                fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for(auto n : ULbox.accessPattern.conservativeVariables)
-                        {
-                            if(n.var == ALPHA)
-                            {
-                                 fluxbox(i,j,k,n)	= flux(n,URStar,d);
-                            }
-                            else
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
-                            }
-                        }
-
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
-                        {
-                            for(int col=0;col<ULbox.numberOfComponents;col++)
-                            {
-                                fluxbox(i,j,k,VSTAR,0,row,col) = URStar(V_TENSOR,0,row,col);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    getStarState(UR,URStar,SR,Sstar,parameters,d);
-
-                    for(auto n : ULbox.accessPattern.conservativeVariables)
-                    {
-                        if(n.var == ALPHA)
-                        {
-                             fluxbox(i,j,k,n)	= flux(n,URStar,d);
                         }
                         else
                         {
+                            getStarState(UR,URStar,SR,Sstar,parameters,d,m);
+
+                            SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k,m);
+
+                            getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UL,ULStar,SLT,m);
+
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
+                            }
+
+                            for(int row=0;row<ULbox.numberOfComponents;row++)
+                            {
+                                for(int col=0;col<ULbox.numberOfComponents;col++)
+                                {
+                                    fluxbox(i,j,k,VSTAR,m,row,col) = UStarStar(V_TENSOR,m,row,col);
+                                }
+                            }
+                        }
+                    }
+                    else if(SR>=0.0)
+                    {
+                        getStarState(UR,URStar,SR,Sstar,parameters,d,m);
+
+                        SRT = Sstar + URStar.parent->transverseWaveSpeed(URStar.parent_i,URStar.parent_j,URStar.parent_k,m);
+
+                        if(SRT>=0.0)
+                        {
+                            getStarState(UL,ULStar,SL,Sstar,parameters,d,m);
+
+                            SLT = Sstar - ULStar.parent->transverseWaveSpeed(ULStar.parent_i,ULStar.parent_j,ULStar.parent_k,m);
+
+                            getStarStarState(UL,UR,ULStar,URStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,d,UR,URStar,SRT,m);
+
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
+                            }
+
+                            for(int row=0;row<ULbox.numberOfComponents;row++)
+                            {
+                                for(int col=0;col<ULbox.numberOfComponents;col++)
+                                {
+                                    fluxbox(i,j,k,VSTAR,m,row,col) = UStarStar(V_TENSOR,m,row,col);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                            {
+                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
+                            }
+
+                            for(int row=0;row<ULbox.numberOfComponents;row++)
+                            {
+                                for(int col=0;col<ULbox.numberOfComponents;col++)
+                                {
+                                    fluxbox(i,j,k,VSTAR,m,row,col) = URStar(V_TENSOR,m,row,col);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        getStarState(UR,URStar,SR,Sstar,parameters,d,m);
+
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        {
                             fluxbox(i,j,k,n)	= flux(n,UR,d);
                         }
-                    }
 
-                    for(int row=0;row<ULbox.numberOfComponents;row++)
-                    {
-                        for(int col=0;col<ULbox.numberOfComponents;col++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
-                            fluxbox(i,j,k,VSTAR,0,row,col) = UR(V_TENSOR,0,row,col);
+                            for(int col=0;col<ULbox.numberOfComponents;col++)
+                            {
+                                fluxbox(i,j,k,VSTAR,m,row,col) = UR(V_TENSOR,m,row,col);
+                            }
                         }
                     }
-                }
 
-                if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar) || std::isnan(SLT) || std::isnan(SRT))
-                {
-                    Print() << "Nan in Wavespeeds " << std::endl;
-                    Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
-                    Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
-                    amrex::Abort("Nan in waveSpeeds");
+                    if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar) || std::isnan(SLT) || std::isnan(SRT))
+                    {
+                        Print() << "Nan in Wavespeeds " << std::endl;
+                        Print() << SL << " " <<  SR << " " << Sstar << " " << SLT  << " "  << SRT << std::endl;
+                        Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
+                        amrex::Abort("Nan in waveSpeeds");
+                    }
                 }
-
             }
         }
     }
 
     return;
-}*/
+}
 
 /** Calculates the HLLC fluxes.
  */
@@ -421,49 +326,48 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                 for(int m = 0; m < parameters.numberOfMaterials; m++)
                 {
-                    if(LS.cellIsValid(i,j,k,m) || LS.cellIsNearInterface(i,j,k,dx))
+
+                    SR[m] = std::max(std::abs(UL(VELOCITY,m,d))+UL(SOUNDSPEED,m),std::abs(UR(VELOCITY,m,d))+UR(SOUNDSPEED,m));
+                    SL[m] = -SR[m];
+
+                    Sstar[m] = getSstar(UL,UR,SL[m],SR[m],i,j,k,d,m);
+
+                    fluxbox(i,j,k,USTAR,m) = Sstar[m];
+
+                    if(SL[m]>=0.0)
                     {
-                        SR[m] = std::max(std::abs(UL(VELOCITY,m,d))+UL(SOUNDSPEED,m),std::abs(UR(VELOCITY,m,d))+UR(SOUNDSPEED,m));
-                        SL[m] = -SR[m];
-
-                        Sstar[m] = getSstar(UL,UR,SL[m],SR[m],i,j,k,d,m);
-
-                        fluxbox(i,j,k,USTAR,m) = Sstar[m];
-
-                        if(SL[m]>=0.0)
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
                         {
-                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UL,d);
-                            }
-                        }
-                        else if(Sstar[m]>=0.0)
-                        {
-                            getStarState(UL,UStar,SL[m],Sstar[m],parameters,d,m);
-
-                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UL,d)+SL[m]*(UStar(n)-UL(n));
-                            }
-
-                        }
-                        else if(SR[m]>=0.0)
-                        {
-                            getStarState(UR,UStar,SR[m],Sstar[m],parameters,d,m);
-
-                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UR,d)+SR[m]*(UStar(n)-UR(n));
-                            }
-                        }
-                        else
-                        {
-                            for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
-                            {
-                                fluxbox(i,j,k,n)	= flux(n,UR,d);
-                            }
+                            fluxbox(i,j,k,n)	= flux(n,UL,d);
                         }
                     }
+                    else if(Sstar[m]>=0.0)
+                    {
+                        getStarState(UL,UStar,SL[m],Sstar[m],parameters,d,m);
+
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        {
+                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL[m]*(UStar(n)-UL(n));
+                        }
+
+                    }
+                    else if(SR[m]>=0.0)
+                    {
+                        getStarState(UR,UStar,SR[m],Sstar[m],parameters,d,m);
+
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        {
+                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR[m]*(UStar(n)-UR(n));
+                        }
+                    }
+                    else
+                    {
+                        for(auto n : ULbox.accessPattern.material_conservativeVariables[m])
+                        {
+                            fluxbox(i,j,k,n)	= flux(n,UR,d);
+                        }
+                    }
+
                 }
             }
         }
@@ -490,10 +394,14 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    //if(LS.cellIsValid(i,j,k,n.mat) || LS.cellIsNearInterface(i,j,k,dx))
-                    //{
+                    if(n.var == V_TENSOR)
+                    {
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -(2.0/3.0)*Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR,n.mat) - fluxbox.right(d,i,j,k,USTAR,n.mat)) + Ubox(i,j,k,VELOCITY,n.mat,n.row)*(fluxbox(i,j,k,VSTAR,n.mat,d,n.col) - fluxbox.right(d,i,j,k,VSTAR,n.mat,d,n.col)));
+                    }
+                    else
+                    {
                         U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n));
-                    //}
+                    }
                 }
             }
         }

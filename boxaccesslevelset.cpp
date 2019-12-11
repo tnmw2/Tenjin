@@ -25,9 +25,14 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
                 {
                     x = prob_lo[0] + (Real(i)+0.5)*dx[0];
 
-                    (*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
+                    //(*this)(i,j,k,n) = (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5))));// ( (0.2 -sqrt(std::abs((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))) < 0.0 ? -1E20 : 1E20);
 
                     //(*this)(i,j,k,n) = (1.0-(x+y))/sqrt(2.0);
+
+                    (*this)(i,j,k,n) = 0.5-x;
+
+                    //(*this)(i,j,k,n) = 0.005-x;
+
                 }
             }
         }
@@ -336,7 +341,7 @@ void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n
 
 void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
 {
-    static const Real probe_length = 1.0;
+    static const Real probe_length = 1.5;
 
     px[0] = ix - probe_length*dx[0]*nx;
     px[1] = ix + probe_length*dx[0]*nx;
@@ -367,7 +372,20 @@ bool BoxAccessLevelSet::cellIsValid(int i, int j, int k, int m)
     }
 }
 
+int BoxAccessLevelSet::whatMaterialIsValid(int i, int j, int k)
+{
+    if((*this)(i,j,k,0) > 0.0)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
 bool BoxAccessLevelSet::cellIsNearInterface(int i, int j, int k, const Real* dx)
 {
     return (std::abs((*this)(i,j,k,0)) < 5.0*dx[0]);
 }
+

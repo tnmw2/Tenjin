@@ -36,7 +36,19 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col));
         break;
-    default: Print() << "Incorrect Access variable " << m.var << "in boxaccesscellarray" << std::endl;
+    case V_TENSOR:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col));
+        break;
+    case DEVH:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col));
+        break;
+    case VSTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col));
+        break;
+    case HJ2:               return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    case EPSILON:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
+        break;
+    default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
         exit(1);
     }
 }
@@ -61,7 +73,19 @@ int BoxAccessCellArray::getArrayPosition(MaterialSpecifier& m)
             break;
         case SIGMA:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
             break;
-        default: Print() << "Incorrect Access variable " << m.var << "in boxaccesscellarray" << std::endl;
+        case V_TENSOR:          return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case DEVH:              return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case VSTAR:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case HJ2:               return (accessPattern[m.var]+m.mat);
+            break;
+        case EPSILON:           return (accessPattern[m.var]+m.mat);
+            break;
+        case ALPHARHOEPSILON:   return (accessPattern[m.var]+m.mat);
+            break;
+    default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
         exit(1);
     }
 }
@@ -120,6 +144,11 @@ void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
 
     for(int m = 0; m < numberOfMaterials ; m++)
     {
+        if(accessPattern.materialInfo[m].plastic)
+        {
+            (*this)(i,j,k,EPSILON,m) = (*this)(i,j,k,RHOEPSILON,m)/(*this)(i,j,k,RHO,m);
+        }
+
         kineticEnergy = 0.0;
 
         for(int row = 0; row < numberOfComponents ; row++)
@@ -128,6 +157,8 @@ void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
 
             kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
         }
+
+        getHenckyJ2(i,j,k,m);
 
         (*this)(i,j,k,P,m) = ((*this)(i,j,k,TOTAL_E,m)-kineticEnergy - getEffectiveNonThermalInternalEnergy(i,j,k,m)+ getEffectiveNonThermalPressure(i,j,k,m))/(getEffectiveInverseGruneisen(i,j,k,m));
 
@@ -143,6 +174,11 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
 
     for(int m = 0; m < numberOfMaterials ; m++)
     {
+        if(accessPattern.materialInfo[m].plastic)
+        {
+            (*this)(i,j,k,RHOEPSILON,m) = (*this)(i,j,k,EPSILON,m)*(*this)(i,j,k,RHO,m);
+        }
+
         kineticEnergy = 0.0;
 
         for(int row = 0; row < numberOfComponents ; row++)
@@ -152,6 +188,8 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
             kineticEnergy += 0.5*(*this)(i,j,k,RHO,m)*(*this)(i,j,k,VELOCITY,m,row)*(*this)(i,j,k,VELOCITY,m,row);
         }
 
+        getHenckyJ2(i,j,k,m);
+
         (*this)(i,j,k,TOTAL_E,m) = (*this)(i,j,k,P,m)*getEffectiveInverseGruneisen(i,j,k,m) + getEffectiveNonThermalInternalEnergy(i,j,k,m) - getEffectiveNonThermalPressure(i,j,k,m) + kineticEnergy;
 
         stressTensor(i,j,k,m);
@@ -160,11 +198,26 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
 
 void BoxAccessCellArray::stressTensor(int i, int j, int k, int m)
 {
-    for(int row=0;row<numberOfComponents;row++)
+    if(accessPattern.materialInfo[m].phase == solid)
     {
-        for(int col=0;col<numberOfComponents;col++)
+        Real shearModulus = accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m);
+
+        for(int row=0;row<numberOfComponents;row++)
         {
-            (*this)(i,j,k,SIGMA,m,row,col)=-(*this)(i,j,k,P,m)*delta<Real>(row,col);
+            for(int col=0;col<numberOfComponents;col++)
+            {
+                (*this)(i,j,k,SIGMA,m,row,col)=-(*this)(i,j,k,P,m)*delta<Real>(row,col) + 2.0*shearModulus*(*this)(i,j,k,DEVH,m,row,col);
+            }
+        }
+    }
+    else
+    {
+        for(int row=0;row<numberOfComponents;row++)
+        {
+            for(int col=0;col<numberOfComponents;col++)
+            {
+                (*this)(i,j,k,SIGMA,m,row,col)=-(*this)(i,j,k,P,m)*delta<Real>(row,col);
+            }
         }
     }
 
@@ -214,79 +267,64 @@ void BoxAccessCellArray::getSoundSpeed(int i, int j, int k)
     }
 }
 
-/*Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
+Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k, int m)
 {
-    Real b      = 0.0;
-
-    getHenckyJ2(i,j,k);
-
-    for(int m=0;m<numberOfMaterials;m++)
+    if(accessPattern.materialInfo[m].phase == solid)
     {
-        if(accessPattern.materialInfo[m].phase == solid)
+        getHenckyJ2(i,j,k,m);
+
+        Real b  = accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)/((*this)(i,j,k,RHO,m));
+
+        if(std::isnan(b) || b < 0.0)
         {
-            b       += accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)/((*this)(i,j,k,RHO_K,m));
+            b = 0.0;
         }
-    }
 
-    if(std::isnan(b) || b < 0.0)
-    {
-        b = 0.0;*/
+        Real temp = sqrt(b);
 
-        /*Print() << "Nan in transverse wave speeds" << std::endl;
-        for(int m=0;m<numberOfMaterials;m++)
+        if(std::isnan(temp))
         {
-            Print() <<  accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m) << " " << accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m) << " "<< ((*this)(i,j,k,RHO_K,m)) << std::endl;
-        }*/
-/*
-        //exit(1);
+            temp = 0.0;
+        }
+
+        return temp;
     }
-
-    Real temp = sqrt(b/getEffectiveInverseGruneisen(i,j,k));
-
-    if(std::isnan(temp))
+    else
     {
-        temp = 0.0;
+        return 0.0;
     }
+}
 
-    return temp;
-
-    //return sqrt(b/getEffectiveInverseGruneisen(i,j,k));
-}*/
-
-void BoxAccessCellArray::getHenckyJ2(int i, int j, int k)
+void BoxAccessCellArray::getHenckyJ2(int i, int j, int k, int m)
 {
-    for(int m=0; m<numberOfMaterials;m++)
+    if(accessPattern.materialInfo[m].phase == solid)
     {
-        if(accessPattern.materialInfo[m].phase == solid)
-        {
-            double tempdevH[numberOfComponents*numberOfComponents];
-            double tempdevHT[numberOfComponents*numberOfComponents];
-            double product[numberOfComponents*numberOfComponents];
+        double tempdevH[numberOfComponents*numberOfComponents];
+        double tempdevHT[numberOfComponents*numberOfComponents];
+        double product[numberOfComponents*numberOfComponents];
 
+        getDeviatoricHenckyStrain(i,j,k,m);
 
-            getDeviatoricHenckyStrain(i,j,k);
+        amrexToArray(i,j,k,DEVH,m,tempdevH);
 
-            amrexToArray(i,j,k,DEVH,0,tempdevH);
+        matrixCopy(tempdevH,tempdevHT);
 
-            matrixCopy(tempdevH,tempdevHT);
+        (*this)(i,j,k,HJ2,m) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevHT,product,numberOfComponents));
 
-            (*this)(i,j,k,HJ2) = trace(squareMatrixMultiplyTranspose(tempdevH,tempdevHT,product,numberOfComponents)); //totalAlpha
-
-            return;
-        }
+        return;
     }
 
     return;
 }
 
-void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k)
+void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k, int m)
 {
 
     double temp[numberOfComponents*numberOfComponents];
     double tempV[numberOfComponents*numberOfComponents];
     double tempV1[numberOfComponents*numberOfComponents];
 
-    amrexToArray(i,j,k,V_TENSOR,0,tempV);
+    amrexToArray(i,j,k,V_TENSOR,m,tempV);
 
     matrixCopy(tempV,tempV1);
 
@@ -298,7 +336,7 @@ void BoxAccessCellArray::getDeviatoricHenckyStrain(int i, int j, int k)
     {
         for(int col=0;col<numberOfComponents;col++)
         {
-            (*this)(i,j,k,DEVH,0,row,col) = 0.5*0.5*(temp[row*numberOfComponents+col]-tempV[row*numberOfComponents+col]);
+            (*this)(i,j,k,DEVH,m,row,col) = 0.5*0.5*(temp[row*numberOfComponents+col]-tempV[row*numberOfComponents+col]);
         }
     }
 
@@ -376,21 +414,27 @@ void BoxAccessCellArray::normaliseV()
 
     double temp[numberOfComponents*numberOfComponents];
 
-    for    		(int k = lo.z; k <= hi.z; ++k)
+    for             (int m = 0;    m <  numberOfMaterials; m++)
     {
-        for     (int j = lo.y; j <= hi.y; ++j)
+        if(accessPattern.materialInfo[m].phase == solid)
         {
-            for (int i = lo.x; i <= hi.x; ++i)
+            for    		(int k = lo.z; k <= hi.z; ++k)
             {
-                amrexToArray(i,j,k,V_TENSOR,0,temp);
-
-                Real norm = std::pow(det(temp,numberOfComponents),-1.0/3.0);
-
-                for(int row=0;row<numberOfComponents;row++)
+                for     (int j = lo.y; j <= hi.y; ++j)
                 {
-                    for(int col=0;col<numberOfComponents;col++)
+                    for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        (*this)(i,j,k,V_TENSOR,0,row,col) *= norm;
+                        amrexToArray(i,j,k,V_TENSOR,m,temp);
+
+                        Real norm = std::pow(det(temp,numberOfComponents),-1.0/3.0);
+
+                        for(int row=0;row<numberOfComponents;row++)
+                        {
+                            for(int col=0;col<numberOfComponents;col++)
+                            {
+                                (*this)(i,j,k,V_TENSOR,m,row,col) *= norm;
+                            }
+                        }
                     }
                 }
             }
@@ -402,128 +446,13 @@ void BoxAccessCellArray::normaliseV()
 
 void BoxAccessCellArray::cleanUpV()
 {
-    const auto lo = lbound(box);
-    const auto hi = ubound(box);
-
-    double tempV[numberOfComponents*numberOfComponents];
-    double temp [numberOfComponents*numberOfComponents];
-    Real norm;
-    Real totalSolid;
-    Real totalAlpha;
-
-    for    		   (int k = lo.z; k <= hi.z; ++k)
-    {
-        for        (int j = lo.y; j <= hi.y; ++j)
-        {
-            for    (int i = lo.x; i <= hi.x; ++i)
-            {
-                totalAlpha = 0.0;
-                totalSolid = 0.0;
-
-                for(int m = 0; m < numberOfMaterials; m++)
-                {
-                    totalAlpha += (*this)(i,j,k,ALPHA,m);
-
-                    if(accessPattern.materialInfo[m].phase == solid)
-                    {
-                        totalSolid += (*this)(i,j,k,ALPHA,m);
-                    }
-                }
-
-                //Print() << totalAlpha << std::endl;
-
-                amrexToArray(i,j,k,V_TENSOR,0,tempV);
-
-                squareMatrixMultiplyTranspose(tempV,tempV,temp);
-
-                matrixSquareRoot(tempV,temp);
-
-                norm = std::pow(det(tempV),-1.0/3.0);
-
-                for(int row=0;row<numberOfComponents;row++)
-                {
-                    for(int col=0;col<numberOfComponents;col++)
-                    {
-                        (*this)(i,j,k,V_TENSOR,0,row,col) = ((tempV[row*numberOfComponents+col]*norm*totalSolid)+delta<Real>(row,col)*(totalAlpha-totalSolid))/totalAlpha;
-                    }
-                }
-
-                getHenckyJ2(i,j,k);
-            }
-        }
-    }
+    normaliseV();
 
     return;
 }
 
 void BoxAccessCellArray::cleanUpAlpha()
 {
-    const auto lo = lbound(box);
-    const auto hi = ubound(box);
-
-    Real totalAlpha;
-    int Nan;
-
-    for    		   (int k = lo.z; k <= hi.z; ++k)
-    {
-        for        (int j = lo.y; j <= hi.y; ++j)
-        {
-            for    (int i = lo.x; i <= hi.x; ++i)
-            {
-                totalAlpha = 0.0;
-                Nan = 0;
-
-                for(int m=0;m<numberOfMaterials;m++)
-                {
-                    if(std::isnan((*this)(i,j,k,ALPHA,m)))
-                    {
-                        (*this)(i,j,k,ALPHA,m) = 0.0;
-
-                        if(Nan == 0)
-                        {
-                            Nan = m;
-                        }
-                        else
-                        {
-                            Print() << "Error in scaling volume fractions, too many Nans" << std::endl;
-
-                            exit(1);
-                        }
-                    }
-                    else if((*this)(i,j,k,ALPHA,m)<0.0)
-                    {
-                        (*this)(i,j,k,ALPHA,m)= 1E-6;
-                    }
-                    else if((*this)(i,j,k,ALPHA,m)>1.0)
-                    {
-                        (*this)(i,j,k,ALPHA,m) = 1.0;
-                    }
-
-                    totalAlpha += (*this)(i,j,k,ALPHA,m);
-                }
-
-                if(Nan>0)
-                {
-                    (*this)(i,j,k,ALPHA,Nan) = 1.0 - totalAlpha;
-
-                    totalAlpha += (*this)(i,j,k,ALPHA,Nan);
-                }
-
-                if(totalAlpha <= 0.0)
-                {
-                    Print() << "Error in scaling volume fractions" << std::endl;
-
-                    exit(1);
-                }
-
-                for(int m=0;m<numberOfMaterials;m++)
-                {
-                    (*this)(i,j,k,ALPHA,m) *= 1.0/totalAlpha;
-                }
-            }
-        }
-    }
-
     return;
 }
 
@@ -873,3 +802,37 @@ void BoxAccessCellArray::rotateFrameBack(int i, int j, int k, Real nx, Real ny)
     return;
 }
 
+void BoxAccessCellArray::realPositionToCell(int& i, int& j, int& k, Real x, Real y, Real z, const Real* dx, const Real* prob_lo)
+{
+
+    if((x-prob_lo[0]) > 0.0)
+    {
+       i = (int)((x-prob_lo[0])/dx[0]);
+    }
+    else
+    {
+       j = (int)((x-prob_lo[0])/dx[0])-1;
+    }
+
+    if((y-prob_lo[1]) > 0.0)
+    {
+       j = (int)((y-prob_lo[1])/dx[1]);
+    }
+    else
+    {
+       j = (int)((y-prob_lo[1])/dx[1])-1;
+    }
+
+    if(AMREX_SPACEDIM == 3)
+    {
+        if((z-prob_lo[2]) > 0.0)
+        {
+           k = (int)((z-prob_lo[2])/dx[2]);
+        }
+        else
+        {
+           k = (int)((z-prob_lo[2])/dx[2])-1;
+        }
+    }
+
+}

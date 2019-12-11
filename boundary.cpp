@@ -1,142 +1,67 @@
 #include "simulationheader.h"
 
-void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern)
+void setBoundaryConditions(CellArray& U, Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern)
 {
-    int row, col;
-
     for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
     {
-        for(int n = 0; n < parameters.Ncomp; ++n)
+        for(int n = 0; n < parameters.Ncomp; n++)
         {
-            /*if(initial.lowBoundary[dir] == REFLECTIVE)
+            if(initial.lowBoundary[dir] == REFLECTIVE)
             {
-                if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
-                {
-                    bc[n].setLo(dir, BCType::reflect_odd);
-                }
-                else if(parameters.SOLID)
-                {
-                    if( n >= accessPattern[V_TENSOR] && n < accessPattern[V_TENSOR] + 9)
-                    {
-                        row = (n - accessPattern[V_TENSOR])/3;
-                        col = (n - accessPattern[V_TENSOR])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setLo(dir, BCType::reflect_odd); //reflect_odd
-                        }
-                        else
-                        {
-                            bc[n].setLo(dir, BCType::reflect_even);
-                        }
-                    }
-                    else if( n >= accessPattern[DEVH] && n < accessPattern[DEVH] + 9)
-                    {
-                        row = (n - accessPattern[DEVH])/3;
-                        col = (n - accessPattern[DEVH])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setLo(dir, BCType::reflect_odd);
-                        }
-                        else
-                        {
-                            bc[n].setLo(dir, BCType::reflect_even);
-                        }
-                    }
-                    else if( n >= accessPattern[SIGMA] && n < accessPattern[SIGMA] + 9)
-                    {
-                        row = (n - accessPattern[SIGMA])/3;
-                        col = (n - accessPattern[SIGMA])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setLo(dir, BCType::reflect_odd);
-                        }
-                        else
-                        {
-                            bc[n].setLo(dir, BCType::reflect_even);
-                        }
-                    }
-                    else
-                    {
-                        bc[n].setLo(dir, BCType::reflect_even);
-                    }
-                }
-                else
-                {
-                    bc[n].setLo(dir, BCType::reflect_even);
-                }
+                Print() << "Need to implement reflective bcs" << std::endl;
             }
             else
-            {*/
+            {
                 bc[n].setLo(dir, BCType::foextrap);
-            //}
+            }
+
+            if(initial.highBoundary[dir] == REFLECTIVE)
+            {
+                Print() << "Need to implement reflective bcs" << std::endl;
+            }
+            else
+            {
+                bc[n].setHi(dir, BCType::foextrap);
+            }
+        }
+    }
+            /*if((n.var == VELOCITY || n.var == RHOU) && n.row == dir)
+            {
+                bc[U.getArrayPosition(n)].setLo(dir, BCType::reflect_odd);
+            }
+            else if((n.var == V_TENSOR || n.var == DEVH || n.var == SIGMA) && (((n.row == dir) && (n.col != dir)) || ((n.row != dir) && (n.col == dir))))
+            {
+                bc[U.getArrayPosition(n)].setLo(dir, BCType::reflect_odd);
+            }
+            else
+            {
+                bc[U.getArrayPosition(n)].setLo(dir, BCType::reflect_even);
+            }
+            }*/
+
 
             /*if(initial.highBoundary[dir] == REFLECTIVE)
             {
-                if(n == accessPattern[VELOCITY]+dir || n == accessPattern[RHOU]+dir)
+                Print() << "Need to implement reflective bcs" << std::endl;*/
+
+                /*if((n.var == VELOCITY || n.var == RHOU) && n.row == dir)
                 {
-                    bc[n].setHi(dir, BCType::reflect_odd);
+                    bc[U.getArrayPosition(n)].setHi(dir, BCType::reflect_odd);
                 }
-                else if(parameters.SOLID)
+                else if((n.var == V_TENSOR || n.var == DEVH || n.var == SIGMA) && (((n.row == dir) && (n.col != dir)) || ((n.row != dir) && (n.col == dir))))
                 {
-                    if( n >= accessPattern[V_TENSOR] && n < accessPattern[V_TENSOR] + 9)
-                    {
-                        row = (n - accessPattern[V_TENSOR])/3;
-                        col = (n - accessPattern[V_TENSOR])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setHi(dir, BCType::reflect_odd);
-                        }
-                        else
-                        {
-                            bc[n].setHi(dir, BCType::reflect_even);
-                        }
-                    }
-                    else if( n >= accessPattern[DEVH] && n < accessPattern[DEVH] + 9)
-                    {
-                        row = (n - accessPattern[DEVH])/3;
-                        col = (n - accessPattern[DEVH])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setHi(dir, BCType::reflect_odd);
-                        }
-                        else
-                        {
-                            bc[n].setHi(dir, BCType::reflect_even);
-                        }
-                    }
-                    else if( n >= accessPattern[SIGMA] && n < accessPattern[SIGMA] + 9)
-                    {
-                        row = (n - accessPattern[SIGMA])/3;
-                        col = (n - accessPattern[SIGMA])%3;
-
-                        if( ((row == dir) && (col != dir)) || ((row != dir) && (col == dir)))
-                        {
-                            bc[n].setHi(dir, BCType::reflect_odd);
-                        }
-                        else
-                        {
-                            bc[n].setHi(dir, BCType::reflect_even);
-                        }
-                    }
-                    else
-                    {
-                        bc[n].setHi(dir, BCType::reflect_even);
-                    }
+                    bc[U.getArrayPosition(n)].setHi(dir, BCType::reflect_odd);
                 }
                 else
                 {
-                    bc[n].setHi(dir, BCType::reflect_even);
-                }
-            }
+                    bc[U.getArrayPosition(n)].setHi(dir, BCType::reflect_even);
+                }*/
+           /* }
             else
-            {*/
-                bc[n].setHi(dir, BCType::foextrap);
-            //}
-        }
-    }
+            {
+                //bc[U.getArrayPosition(n)].setHi(dir, BCType::foextrap);
+            }
+        }*/
+    //}
+
 }

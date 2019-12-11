@@ -36,6 +36,11 @@ class Material
     Real*           E;
     Real*           p;
     Vector<Real*>   sigma;
+    Vector<Real*>   V;
+    Vector<Real*>   VStar;
+
+    Real*           epsilon;
+    Real*           rhoEpsilon;
 
     Real*           a;
     Real*           uStar;
@@ -45,7 +50,7 @@ class Cell
 {
 public:
 
-    Material_type phase;
+    //Material_type phase;
 
     static const int numberOfComponents = 3;
 

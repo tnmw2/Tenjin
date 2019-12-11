@@ -155,10 +155,26 @@ void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
     U(VELOCITY,m[1],x) = UL(VELOCITY,m[0],x);
     U(VELOCITY,m[0],y) = UR(VELOCITY,m[1],y);
     U(VELOCITY,m[1],y) = UL(VELOCITY,m[0],y);
+    U(VELOCITY,m[0],z) = UR(VELOCITY,m[1],z);
+    U(VELOCITY,m[1],z) = UL(VELOCITY,m[0],z);
 
     U(RHO,m[0]) = UL(RHO,m[0])*std::pow(U(P,m[0])/UL(P,m[0]), 1.0/1.4);
     U(RHO,m[1]) = UR(RHO,m[1])*std::pow(U(P,m[1])/UR(P,m[1]), 1.0/1.4);
 
+    for(int row = 0; row < U.numberOfComponents; row++)
+    {
+        for(int col = 0; col < U.numberOfComponents; col++)
+        {
+            if(U.accessPattern.materialInfo[m[0]].phase == solid)
+            {
+                U(V_TENSOR,m[0],row,col) = UL(V_TENSOR,m[0],row,col);
+            }
+            if(U.accessPattern.materialInfo[m[1]].phase == solid)
+            {
+                U(V_TENSOR,m[1],row,col) = UR(V_TENSOR,m[1],row,col);
+            }
+        }
+    }
 }
 
 void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, Vector<int>& probe_m, ParameterStruct& parameters)
@@ -169,7 +185,7 @@ void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ub
     Cell UStar  (UStarbox,i,j,k,fluid);
 
 
-    /*Real SR    = std::max(std::abs(UL(VELOCITY,probe_m[0],x))+UL(SOUNDSPEED,probe_m[0]),std::abs(UR(VELOCITY,probe_m[1],x))+UR(SOUNDSPEED,probe_m[1]));
+    Real SR    = std::max(std::abs(UL(VELOCITY,probe_m[0],x))+UL(SOUNDSPEED,probe_m[0]),std::abs(UR(VELOCITY,probe_m[1],x))+UR(SOUNDSPEED,probe_m[1]));
     Real SL    = -SR;
 
     Real Sstar = getSstarFromDifferentMaterials(UL,UR,SL,SR,i,j,k,x,probe_m);
@@ -177,17 +193,12 @@ void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ub
     getStarState(UL,UStar,SL,Sstar,parameters,x,probe_m[0]);
     getStarState(UR,UStar,SR,Sstar,parameters,x,probe_m[1]);
 
-    UStar(P,probe_m[0]) = UL(P,probe_m[0])+UL(RHO,probe_m[0])*(SL-UL(VELOCITY,probe_m[0],0))*(Sstar - UL(VELOCITY,probe_m[0],0));
-    UStar(P,probe_m[1]) = UR(P,probe_m[1])+UR(RHO,probe_m[1])*(SR-UR(VELOCITY,probe_m[1],0))*(Sstar - UR(VELOCITY,probe_m[1],0));
-
     U = UStar;
 
-    Ubox.conservativeToPrimitive(i,j,k);*/
+    Ubox.conservativeToPrimitive(i,j,k);
 
+    //originalGFM(U,UL,UR,probe_m);
 
-    originalGFM(U,UL,UR,probe_m);
-
-    Ubox.primitiveToConservative(i,j,k);
 
 }
 
@@ -210,6 +221,8 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
     Vector<Real> ydiff(2);
     Vector<Real> B(4);
 
+    Vector<int> probe_int(3);
+
     int m;
 
     for 		(int k = lo.z; k <= hi.z; ++k)
@@ -227,46 +240,42 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
 
                 if(LS0.cellIsNextToAnInterface(i,j,k,0))
                 {
-
-                    //Print()<<"Point  : \t " << i << " " << j << " " << k << std::endl;
-                    //Print()<<"Physic : \t " << current_x << " " <<current_y << std::endl;
-
                     LS0.calculateNormal(i,j,k,0,dx,nx,ny);
                     LS0.calculateInterpolationPoint(i,j,k,0,dx,nx,ny,current_x,current_y,interface_x,interface_y);
                     LS0.calculateProbes(i,j,k,0,dx,nx,ny,interface_x,interface_y,probe_x,probe_y);
 
+                    m = LS0.whatMaterialIsValid(i,j,k);
 
-                    if(LS0(i,j,k,0) > 0.0)
-                    {
-                        m = 0;
-                    }
-                    else
-                    {
-                        m = 1;
-                    }
+                    U.realPositionToCell(probe_int[0],probe_int[1],probe_int[0],probe_x[0],probe_y[0],probe_x[0],dx,prob_lo);
+                    probe_m[0] = LS0.whatMaterialIsValid(probe_int[0],probe_int[1],k);
 
-                    if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
+                    U.realPositionToCell(probe_int[0],probe_int[1],probe_int[0],probe_x[1],probe_y[1],probe_x[1],dx,prob_lo);
+                    probe_m[1] = LS0.whatMaterialIsValid(probe_int[0],probe_int[1],k);
+
+                    if(probe_m[0] == probe_m[1])
                     {
-                        probe_m[0] = m;
-                        probe_m[1] = ( m==0 ? 1 : 0);
-                    }
-                    else
-                    {
-                        probe_m[1] = m;
-                        probe_m[0] = ( m==0 ? 1 : 0);
+                        if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
+                        {
+                            probe_m[0] = m;
+                            probe_m[1] = ( m==0 ? 1 : 0);
+                        }
+                        else
+                        {
+                            probe_m[1] = m;
+                            probe_m[0] = ( m==0 ? 1 : 0);
+                        }
+
+                        if(probe_m[0] == probe_m[1])
+                        {
+                            Abort("Error in probe extrapolation: materials are the same");
+                        }
                     }
 
                     UL.bilinearInterpolation(U,i,j,k,dx,prob_lo,probe_x[0],probe_y[0],probe_m[0], corner_x, corner_y, xdiff, ydiff, B);
                     UR.bilinearInterpolation(U,i,j,k,dx,prob_lo,probe_x[1],probe_y[1],probe_m[1], corner_x, corner_y, xdiff, ydiff, B);
 
-                    //Print()<<"rho:\t " << UL(i,j,k,RHO,probe_m[0]) << " " << UR(i,j,k,RHO,probe_m[1]) << std::endl;
-                    //Print()<<"MombefR:\t " << UR(i,j,k,RHOU,m,0) << " " << UR(i,j,k,RHOU,m,1) << std::endl;
-
                     UL.rotateFrameSoXPointsAlongNormal(i,j,k,nx,ny,probe_m[0]);
                     UR.rotateFrameSoXPointsAlongNormal(i,j,k,nx,ny,probe_m[1]);
-
-                    //Print()<<"MomrotL:\t " << UL(i,j,k,RHOU,m,0) << " " << UL(i,j,k,RHOU,m,1) << std::endl;
-                    //Print()<<"MomrotR:\t " << UR(i,j,k,RHOU,m,0) << " " << UR(i,j,k,RHOU,m,1) << std::endl;
 
                     UL.primitiveToConservative(i,j,k);
                     UR.primitiveToConservative(i,j,k);

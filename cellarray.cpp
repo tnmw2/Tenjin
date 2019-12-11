@@ -137,7 +137,19 @@ int CellArray::getArrayPosition(MaterialSpecifier& m)
             break;
         case SIGMA:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
             break;
-        default: Print() << "Incorrect Access variable " << m.var << "in boxaccesscellarray" << std::endl;
+        case V_TENSOR:          return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case DEVH:              return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case VSTAR:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
+            break;
+        case HJ2:               return (accessPattern[m.var]+m.mat);
+            break;
+        case EPSILON:           return (accessPattern[m.var]+m.mat);
+            break;
+        case ALPHARHOEPSILON:   return (accessPattern[m.var]+m.mat);
+            break;
+    default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
         exit(1);
     }
 }

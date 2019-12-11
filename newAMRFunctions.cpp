@@ -41,7 +41,6 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
 
 void AmrLevelAdv::initData ()
 {
-
     const Real* dx      = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
     const Real time     = state[Phi_Type].curTime();
@@ -68,7 +67,7 @@ void AmrLevelAdv::initData ()
     LevelSet LS(S_LS,parameters);
     LevelSet LS_temp(S_LS_0,parameters);
 
-     
+
     setInitialConditions(U,parameters,initial,dx,prob_lo);
     LS.initialise(dx,prob_lo);
 
@@ -275,14 +274,14 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
             BoxAccessLevelSet LSbox(mfi,bx,LS);
 
-            /*if(parameters.SOLID)
+            if(parameters.SOLID)
             {
                 calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d,dx,prob_lo);
             }
             else
-            {*/
+            {
                 calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,dx,prob_lo,LSbox);
-            //}
+            }
 
             update(fluxbox, Ubox, U1box, parameters,d,dt,dx);
 
@@ -326,6 +325,8 @@ void AmrLevelAdv::boxAdvanceLevelSet(BoxAccessCellArray& U, BoxAccessLevelSet& L
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
+    int mat;
+
     for             (int n = 0; n < LS0.NLevelSets; n++)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
@@ -338,9 +339,11 @@ void AmrLevelAdv::boxAdvanceLevelSet(BoxAccessCellArray& U, BoxAccessLevelSet& L
 
                     if(LS0.cellIsNearInterface(i,j,k,dx))
                     {
+                        mat = LS0.whatMaterialIsValid(i,j,k);
+
                         for(int row = 0; row < AMREX_SPACEDIM; row++)
                         {
-                            LS1(i,j,k,n) -= dt*(U(i,j,k,VELOCITY,0,row)*LS0.levelSetDerivative(U(i,j,k,VELOCITY,0,row),dx,row,i,j,k,n));
+                            LS1(i,j,k,n) -= dt*(U(i,j,k,VELOCITY,mat,row)*LS0.levelSetDerivative(U(i,j,k,VELOCITY,mat,row),dx,row,i,j,k,n));
                         }
                     }
                 }
@@ -481,15 +484,14 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS1(S_LS_1,parameters);
     LevelSet LS2(S_LS_2,parameters);
 
-    //if(nStep() < 1)
-        setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
+    setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
 
     U = U1;
 
-    /*if(parameters.RADIAL)
+    if(parameters.RADIAL)
     {
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
-    }*/
+    }
 
     advanceLevelSet(SL,U,LS0,LS1,dt,dx);
 
@@ -519,30 +521,20 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
     }*/
 
-    /*if(parameters.REACTIVE)
-    {
-        reactiveUpdate(U,U1,U2,parameters,dt,S_new);
-    }*/
-
-    /*if(parameters.PLASTIC)
+    if(parameters.PLASTIC)
     {
         plastic.plasticUpdate(U1,parameters,dt,S_new);
-    }*/
-
-    /*if(parameters.RADIAL)
-    {
-        geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
-    }*/
-
-    /*if(parameters.SOLID)
-    {
-        U1.cleanUpV();
-    }*/
-
-    {
-        //U1.cleanUpAlpha();
     }
 
+    if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
+    }
+
+    if(parameters.SOLID)
+    {
+        U1.cleanUpV();
+    }
 
     U1.data.FillBoundary(geom.periodicity());
     FillDomainBoundary(U1.data, geom, bc);
@@ -911,17 +903,35 @@ void AmrLevelAdv::variableSetUp ()
     desc_lst.addDescriptor(LevelSet_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.NLevelSets,   &cell_cons_interp);
 
     /*------------------------------------------------------------
-     * Thermodynamic variables
+     * Make a bogus CellArray to help with boundary condition setting
+     *------------------------------------------------------------*/
+
+    IntVect lo(AMREX_D_DECL(0,0,0));
+    IntVect hi(AMREX_D_DECL(1,1,1));
+    Box domain(lo,hi);
+    BoxArray ba(domain);
+    ba.maxSize(1);
+
+    DistributionMapping dm(ba);
+
+    MultiFab S0(ba, dm, parameters.Ncomp, 0);
+
+    CellArray bogus(S0,accessPattern,parameters);
+
+    /*------------------------------------------------------------
      *------------------------------------------------------------*/
 
     bc.resize(parameters.Ncomp);
 
-    setBoundaryConditions(bc,parameters,initial,accessPattern);
-    
+    setBoundaryConditions(bogus,bc,parameters,initial,accessPattern);
+
     for(int n = 0; n<parameters.Ncomp; n++)
     {
         desc_lst.setComponent(Phi_Type,      n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
 	}
+
+
+
 
     /*------------------------------------------------------------
      * Level set
@@ -930,7 +940,6 @@ void AmrLevelAdv::variableSetUp ()
     Vector<std::string> LevelSetNames(parameters.NLevelSets);
 
     levelSet_bc.resize(parameters.NLevelSets);
-
 
     for(int dir = 0; dir < AMREX_SPACEDIM; ++dir)
     {
@@ -947,6 +956,7 @@ void AmrLevelAdv::variableSetUp ()
 
         desc_lst.setComponent(LevelSet_Type, n, LevelSetNames[n] , levelSet_bc[n] , StateDescriptor::BndryFunc(phifill));
     }
+
 }
 
 void AmrLevelAdv::read_params ()
@@ -969,11 +979,6 @@ void AmrLevelAdv::read_params ()
     
     accessPattern.define(parameters);
 
-    /*for(auto n : accessPattern.refineVariables)
-    {
-        Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat] << std::endl;
-    }*/
-    
     parameters.Ncomp = accessPattern.variableNames.size();
 
     parameters.NLevelSets = 1;

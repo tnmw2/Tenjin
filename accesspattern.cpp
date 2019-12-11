@@ -47,8 +47,6 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
                     }
 
                     allVariables.push_back(MaterialSpecifier(var,m,row,col));
-
-
                 }
             }
         }
@@ -101,20 +99,20 @@ void AccessPattern::define(ParameterStruct& parameters)
     //addVariable(n,"lambda",         PRIMITIVE,      CELL,   REFINE,    0.0, 1.0,  LAMBDA,         parameters.numberOfMixtures);
     //addVariable(n,"alpharholambda", CONSERVATIVE,   CELL,   NEITHER,   min, max,  ALPHARHOLAMBDA, parameters.numberOfMixtures);
 
-    /*if(parameters.SOLID)
+    if(parameters.SOLID)
     {
-        addVariable(n,"V",          BOTH,           CELL,    NEITHER, -max, max,  V_TENSOR,       1,3,3);
-        addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, -max, max,  VSTAR,          1,3,3);
-        addVariable(n,"devH",       NEITHER,        NOTCELL, NEITHER, -max, max,  DEVH,           1,3,3);
-        addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, NEITHER ,-max, max,  HJ2);
+        addVariable(n,"devH",       NEITHER,        NOTCELL, NEITHER, -max, max,  DEVH,           parameters.numberOfMaterials,3,3);
+        addVariable(n,"V",          BOTH,           CELL,    NEITHER, -max, max,  V_TENSOR,       parameters.numberOfMaterials,3,3);
+        addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, -max, max,  VSTAR,          parameters.numberOfMaterials,3,3);
+        addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, NEITHER ,-max, max,  HJ2,            parameters.numberOfMaterials);
+
 
         if(parameters.PLASTIC)
         {
             addVariable(n,"epsilon",            PRIMITIVE,    CELL, NEITHER,  0.0, max,  EPSILON,         parameters.numberOfMaterials);
-            addVariable(n,"alphaRhoEpsilon",    CONSERVATIVE, CELL, NEITHER,  0.0, max,  ALPHARHOEPSILON, parameters.numberOfMaterials);
+            addVariable(n,"rhoEpsilon",      CONSERVATIVE,    CELL, NEITHER,  0.0, max,  RHOEPSILON,      parameters.numberOfMaterials);
         }
-    }*/
-
+    }
 }
 
 int& AccessPattern::operator[](Variable var)

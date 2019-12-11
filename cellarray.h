@@ -98,12 +98,12 @@ public:
     void getSoundSpeed();
     void getSoundSpeed(int i, int j, int k);
 
-    Real transverseWaveSpeed(int i, int j, int k);
+    Real transverseWaveSpeed(int i, int j, int k, int m);
 
     void amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx=3, int ny=3);
 
-    void getHenckyJ2(int i, int j, int k);
-    void getDeviatoricHenckyStrain(int i, int j, int k);
+    void getHenckyJ2(int i, int j, int k, int m);
+    void getDeviatoricHenckyStrain(int i, int j, int k, int m);
     void normaliseV();
     void cleanUpV();
     void cleanUpAlpha();
@@ -122,6 +122,8 @@ public:
     void bilinearInterpolation(BoxAccessCellArray& U, int i, int j, int k, const Real* dx, const Real* prob_lo, Real probe_x, Real probe_y, int m, Vector<int> &corner_x, Vector<int> &corner_y, Vector<Real> &xdiff, Vector<Real> &ydiff, Vector<Real> &B);
     void rotateFrameSoXPointsAlongNormal(int i, int j, int k, Real nx, Real ny, int m);
     void rotateFrameBack(int i, int j, int k, Real nx, Real ny);
+
+    void realPositionToCell(int &i, int &j, int &k, Real x, Real y, Real z, const Real* dx, const Real* prob_lo);
 };
 
 
