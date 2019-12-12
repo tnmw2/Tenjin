@@ -29,9 +29,9 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
 
                     //(*this)(i,j,k,n) = (1.0-(x+y))/sqrt(2.0);
 
-                    (*this)(i,j,k,n) = 0.5-x;
+                    //(*this)(i,j,k,n) = 0.5-x;
 
-                    //(*this)(i,j,k,n) = 0.005-x;
+                    (*this)(i,j,k,n) = 0.005-x;
 
                 }
             }
@@ -333,15 +333,15 @@ void BoxAccessLevelSet::calculateNormal(int i , int j , int k, int n, const Real
 
 void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& cx, Real& cy, Real& ix, Real& iy)
 {
-    ix = cx + std::abs((*this)(i,j,k,n))*nx;
-    iy = cy + std::abs((*this)(i,j,k,n))*ny;
+    ix = cx - (*this)(i,j,k,n)*nx;
+    iy = cy - (*this)(i,j,k,n)*ny;
 
     return;
 }
 
 void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
 {
-    static const Real probe_length = 1.5;
+    static const Real probe_length = 1.0;
 
     px[0] = ix - probe_length*dx[0]*nx;
     px[1] = ix + probe_length*dx[0]*nx;

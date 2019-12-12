@@ -15,6 +15,8 @@
  * to one material
  */
 
+class Cell;
+
 class Material
 {
     public:
@@ -22,8 +24,8 @@ class Material
 
     Material(){}
 
-    void allocateSpace();
-
+    void allocateSpace(Cell *ptr, int n);
+    void operator= (Material& M);
 
     Material_type		phase;
 
@@ -44,6 +46,10 @@ class Material
 
     Real*           a;
     Real*           uStar;
+
+    Cell*           parent;
+
+    int             materialNumber;
 };
 
 class Cell

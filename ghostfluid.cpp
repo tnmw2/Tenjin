@@ -146,6 +146,60 @@ Real getSstarFromDifferentMaterials(Cell& UL, Cell& UR, Real SL, Real SR, int i,
     }
 }
 
+void getSigmaStarFromDifferentMaterials(Cell& UKStar, Real Sstar, Real SLT, Real SRT, Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Direction_enum d, ParameterStruct& parameters, int matL, int matR, int matK)
+{
+    for(int i=0;i<UL.numberOfComponents;i++)
+    {
+        UKStar(SIGMA,matK,i,d) = (ULStar(RHO,matL)*(Sstar-SLT)*URStar(RHO,matR)*(Sstar-SRT)*(UL(VELOCITY,matL,i) -UR(VELOCITY,matR,i)) + ULStar(RHO,matL)*(Sstar-SLT)*UR(SIGMA,matR,i,d) - URStar(RHO,matR)*(Sstar-SRT)*UL(SIGMA,matL,i,d))/(ULStar(RHO,matL)*(Sstar-SLT)-URStar(RHO,matR)*(Sstar-SRT));
+    }
+
+    return;
+}
+
+void getStarStarStateFromDifferentMaterials(Cell& UL, Cell& UR, Cell& UStar, Cell& UStarStar, Real SL, Real SR, Real SLT, Real SRT, Real Sstar, ParameterStruct& parameters, Direction_enum d, Cell& UK, Cell& UKStar, Real SKT, int matL, int matR, int matK)
+{
+    int N = UL.numberOfComponents;
+
+    //UStarStar = UKStar;
+
+    UStarStar.materials[matK] = UStar.materials[matK];
+
+    getSigmaStarFromDifferentMaterials(UKStar,Sstar,SLT,SRT,UL,UR,UStar,UStar,d,parameters,matL,matR,matK);
+
+    for(int row =0;row<N;row++)
+    {
+        if(row == d)
+        {
+            continue;
+        }
+        else
+        {
+            UStarStar(RHOU,matK,row) += (UKStar(SIGMA,matK,row,d)-UK(SIGMA,matK,row,d))/(Sstar-SKT);
+        }
+
+        UStarStar(VELOCITY,matK,row) = UStarStar(RHOU,matK,row)/UStarStar(RHO,matK);
+    }
+
+    for(int row =0;row<N;row++)
+    {
+        if(row == d)
+        {
+            continue;
+        }
+        else
+        {
+            UStarStar(TOTAL_E,matK) += (UStarStar(VELOCITY,matK,row)*UKStar(SIGMA,matK,row,d)-UK(VELOCITY,matK,row)*UK(SIGMA,matK,row,d))/(Sstar-SKT);
+
+            for(int col =0;col<N;col++)
+            {
+                UStarStar(V_TENSOR,matK,row,col) += (UStarStar(V_TENSOR,matK,d,col)*(UStarStar(VELOCITY,matK,row)-UK(VELOCITY,matK,row)))/(Sstar-SKT);
+            }
+        }
+    }
+
+    return;
+}
+
 void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
 {
     U(P,m[0]) = UR(P,m[1]);
@@ -161,7 +215,7 @@ void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
     U(RHO,m[0]) = UL(RHO,m[0])*std::pow(U(P,m[0])/UL(P,m[0]), 1.0/1.4);
     U(RHO,m[1]) = UR(RHO,m[1])*std::pow(U(P,m[1])/UR(P,m[1]), 1.0/1.4);
 
-    for(int row = 0; row < U.numberOfComponents; row++)
+    /*for(int row = 0; row < U.numberOfComponents; row++)
     {
         for(int col = 0; col < U.numberOfComponents; col++)
         {
@@ -174,15 +228,29 @@ void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
                 U(V_TENSOR,m[1],row,col) = UR(V_TENSOR,m[1],row,col);
             }
         }
-    }
+    }*/
 }
 
-void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, Vector<int>& probe_m, ParameterStruct& parameters)
+void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, BoxAccessCellArray& UStarStarbox, Vector<int>& probe_m, ParameterStruct& parameters)
 {
-    Cell U      (Ubox,i,j,k,fluid);
-    Cell UL     (ULbox,i,j,k,fluid);
-    Cell UR     (URbox,i,j,k,fluid);
-    Cell UStar  (UStarbox,i,j,k,fluid);
+    Material_type phase;
+
+    if(parameters.SOLID)
+    {
+        phase = solid;
+    }
+    else
+    {
+        phase = fluid;
+    }
+
+    Cell U          (Ubox,        i,j,k,phase);
+    Cell UL         (ULbox,       i,j,k,phase);
+    Cell UR         (URbox,       i,j,k,phase);
+    Cell UStar      (UStarbox,    i,j,k,phase);
+    Cell UStarStar  (UStarStarbox,i,j,k,phase);
+
+
 
 
     Real SR    = std::max(std::abs(UL(VELOCITY,probe_m[0],x))+UL(SOUNDSPEED,probe_m[0]),std::abs(UR(VELOCITY,probe_m[1],x))+UR(SOUNDSPEED,probe_m[1]));
@@ -193,7 +261,13 @@ void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ub
     getStarState(UL,UStar,SL,Sstar,parameters,x,probe_m[0]);
     getStarState(UR,UStar,SR,Sstar,parameters,x,probe_m[1]);
 
-    U = UStar;
+    Real SLT = Sstar - UStar.parent->transverseWaveSpeed(UStar.parent_i,UStar.parent_j,UStar.parent_k,probe_m[0]);
+    Real SRT = Sstar + UStar.parent->transverseWaveSpeed(UStar.parent_i,UStar.parent_j,UStar.parent_k,probe_m[1]);
+
+    getStarStarStateFromDifferentMaterials(UL,UR,UStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,x,UL,UStar,SLT,probe_m[0],probe_m[1],probe_m[0]);
+    getStarStarStateFromDifferentMaterials(UL,UR,UStar,UStarStar,SL,SR,SLT,SRT,Sstar,parameters,x,UR,UStar,SRT,probe_m[0],probe_m[1],probe_m[1]);
+
+    U = UStarStar;
 
     Ubox.conservativeToPrimitive(i,j,k);
 
@@ -202,7 +276,7 @@ void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ub
 
 }
 
-void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& Ustar, BoxAccessLevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters)
+void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& Ustar, BoxAccessCellArray& Ustarstar, BoxAccessLevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters)
 {
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
@@ -283,7 +357,7 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
                     UL.getSoundSpeed(i,j,k);
                     UR.getSoundSpeed(i,j,k);
 
-                    getBothStarStatesAndSetNewValue(i,j,k,U1,UL,UR,Ustar,probe_m,parameters);
+                    getBothStarStatesAndSetNewValue(i,j,k,U1,UL,UR,Ustar,Ustarstar,probe_m,parameters);
 
                     U1.rotateFrameBack(i,j,k,nx,ny);
 
@@ -316,7 +390,7 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
     return;
 }
 
-void setGhostFluidValues(MultiFab& S_new,CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& Ustar, LevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters, Geometry& geom, Vector<BCRec>& bc)
+void setGhostFluidValues(MultiFab& S_new,CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& Ustar, CellArray& Ustarstar, LevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters, Geometry& geom, Vector<BCRec>& bc)
 {
 
 
@@ -335,9 +409,10 @@ void setGhostFluidValues(MultiFab& S_new,CellArray& U, CellArray& U1, CellArray&
         BoxAccessCellArray ULbox(mfi,bx,UL);
         BoxAccessCellArray URbox(mfi,bx,UR);
         BoxAccessCellArray Ustarbox(mfi,bx,Ustar);
+        BoxAccessCellArray Ustarstarbox(mfi,bx,Ustarstar);
         BoxAccessLevelSet  bals (mfi,bx,LS0);
 
-        boxGhostFluidValues(Ubox,U1box,ULbox,URbox,Ustarbox,bals,dx,prob_lo,parameters);
+        boxGhostFluidValues(Ubox,U1box,ULbox,URbox,Ustarbox,Ustarstarbox,bals,dx,prob_lo,parameters);
     }
 
     U1.data.FillBoundary(geom.periodicity());

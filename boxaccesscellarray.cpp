@@ -777,11 +777,30 @@ void BoxAccessCellArray::rotateFrameSoXPointsAlongNormal(int i, int j, int k, Re
 {
     //Just a rotation matrix (nx,ny //-ny,nx)
 
-    Real normalVel  = (*this)(i,j,k,VELOCITY,m,0)* nx +(*this)(i,j,k,VELOCITY,m,1)*ny;
-    Real tangentVel = (*this)(i,j,k,VELOCITY,m,0)*-ny +(*this)(i,j,k,VELOCITY,m,1)*nx;
+    Real normalVel  = (*this)(i,j,k,VELOCITY,m,x)* nx +(*this)(i,j,k,VELOCITY,m,y)*ny;
+    Real tangentVel = (*this)(i,j,k,VELOCITY,m,x)*-ny +(*this)(i,j,k,VELOCITY,m,y)*nx;
 
-    (*this)(i,j,k,VELOCITY,m,0) = normalVel;
-    (*this)(i,j,k,VELOCITY,m,1) = tangentVel;
+    (*this)(i,j,k,VELOCITY,m,x) = normalVel;
+    (*this)(i,j,k,VELOCITY,m,y) = tangentVel;
+
+    if(accessPattern.materialInfo[m].phase == solid)
+    {
+        Real rotationMatrix[numberOfComponents*numberOfComponents] = {nx, ny, 0.0, -ny, nx, 0.0, 0.0, 0.0, 1.0};
+        Real Vmat          [numberOfComponents*numberOfComponents];
+        Real prod          [numberOfComponents*numberOfComponents];
+
+        amrexToArray(i,j,k,V_TENSOR,m,Vmat);
+
+        squareMatrixMultiply(rotationMatrix,Vmat,prod);
+
+        for(int row = 0; row< numberOfComponents; row++)
+        {
+            for(int col = 0; col < numberOfComponents; col++)
+            {
+                (*this)(i,j,k,V_TENSOR,m,row,col) = prod[row*numberOfComponents+col];
+            }
+        }
+    }
 
     return;
 }
@@ -797,6 +816,25 @@ void BoxAccessCellArray::rotateFrameBack(int i, int j, int k, Real nx, Real ny)
 
         (*this)(i,j,k,VELOCITY,m,0) = normalVel;
         (*this)(i,j,k,VELOCITY,m,1) = tangentVel;
+
+        if(accessPattern.materialInfo[m].phase == solid)
+        {
+            Real rotationMatrix[numberOfComponents*numberOfComponents] = {nx, -ny, 0.0, ny, nx, 0.0, 0.0, 0.0, 1.0};
+            Real Vmat          [numberOfComponents*numberOfComponents];
+            Real prod          [numberOfComponents*numberOfComponents];
+
+            amrexToArray(i,j,k,V_TENSOR,m,Vmat);
+
+            squareMatrixMultiply(rotationMatrix,Vmat,prod);
+
+            for(int row = 0; row< numberOfComponents; row++)
+            {
+                for(int col = 0; col < numberOfComponents; col++)
+                {
+                    (*this)(i,j,k,V_TENSOR,m,row,col) = prod[row*numberOfComponents+col];
+                }
+            }
+        }
     }
 
     return;

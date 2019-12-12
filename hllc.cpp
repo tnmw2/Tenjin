@@ -95,7 +95,7 @@ void getStarStarState(Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Cell& USta
 
         }
 
-        UStarStar(VELOCITY,m,row) = UStarStar(RHOU,m,row)/UStarStar(RHO);
+        UStarStar(VELOCITY,m,row) = UStarStar(RHOU,m,row)/UStarStar(RHO,m);
 
     }
 

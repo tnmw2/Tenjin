@@ -484,7 +484,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     LevelSet LS1(S_LS_1,parameters);
     LevelSet LS2(S_LS_2,parameters);
 
-    setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,LS0,dx,prob_lo,parameters,geom,bc);
+    setGhostFluidValues(S_new,U,U1,UL,UR,ULStar,UStarStar,LS0,dx,prob_lo,parameters,geom,bc);
 
     U = U1;
 

@@ -6,7 +6,7 @@ Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : a
 
     for(int n = 0; n< U.numberOfMaterials; n++)
     {
-        materials[n].allocateSpace();
+        materials[n].allocateSpace(this,n);
 
         materials[n].phase = _phase;
     }
@@ -117,12 +117,26 @@ bool Cell::contains_nan()
 
 }
 
-void Material::allocateSpace()
+void Material::allocateSpace(Cell* ptr, int n)
 {
+    parent          = ptr;
+    materialNumber  = n;
+
     rhoU.resize(3);
     u.resize(3);
     sigma.resize(9);
     V.resize(9);
     VStar.resize(9);
 
+}
+
+void Material::operator= (Material& M)
+{
+    for(auto n : parent->accessPattern.cellVariables)
+    {
+        if(n.mat == M.materialNumber)
+        {
+            parent->operator()(n) = M.parent->operator()(n);
+        }
+    }
 }
