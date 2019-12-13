@@ -37,7 +37,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo, BoxAccessLevelSet& LS);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
-
+void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULboxnew, BoxAccessCellArray& URboxnew, Direction_enum d, ParameterStruct& parameters, const Real* dx, Real dt);
 
 void AmrLevelAdv::initData ()
 {
@@ -175,8 +175,8 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
     {
         d = (Direction_enum)dir;
 
-        UL = U;
-        UR = U;
+        UL     = U;
+        UR     = U;
 
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
@@ -184,6 +184,9 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
         if(parameters.MUSCL)
         {
+            ULStar = U;
+            URStar = U;
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -198,42 +201,24 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
                  * -----------------------------------------------------------*/
 
                 BoxAccessCellArray  Ubox(mfi,bx,U);
-                BoxAccessCellArray  ULbox(mfi,bx,UL);
-                BoxAccessCellArray  URbox(mfi,bx,UR);
+                BoxAccessCellArray  ULbox(mfi,bx,ULStar);
+                BoxAccessCellArray  URbox(mfi,bx,URStar);
+                BoxAccessCellArray  ULboxnew(mfi,bx,UL);
+                BoxAccessCellArray  URboxnew(mfi,bx,UR);
                 BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
 
                 MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
 
+                halfTimeStepEvolution(ULbox,URbox,ULboxnew,URboxnew,d,parameters,dx,dt);
+
             }
 
 
-            if(parameters.THINC)
-            {
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-                for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
-                {
-                    const Box& bx = mfi.validbox();
+            //UL.primitiveToConservative();
+            //UR.primitiveToConservative();
 
-                    BoxAccessCellArray  Ubox(mfi,bx,U);
-                    BoxAccessCellArray  ULbox(mfi,bx,UL);
-                    BoxAccessCellArray  URbox(mfi,bx,UR);
-                    BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
-                    BoxAccessCellArray URTHINC(mfi,bx,URStar);
-                    BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
-
-                    THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
-
-                    ULbox.cleanUpAlpha();
-                    URbox.cleanUpAlpha();
-
-                }
-            }
-
-
-            UL.primitiveToConservative();
-            UR.primitiveToConservative();
+            UL.conservativeToPrimitive();
+            UR.conservativeToPrimitive();
 
             UL.getSoundSpeed();
             UR.getSoundSpeed();
@@ -421,7 +406,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * -----------------------------------------------------------*/
 
 
-    int TWOGHOST = 2;
+    int TWOGHOST = 3;
 
     MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
     FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
@@ -465,7 +450,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * Levelset
      * -----------------------------------------------------------*/
 
-    int LSGHOST = 1;
+    int LSGHOST = 2;
 
     MultiFab& S_LS  = get_new_data(LevelSet_Type);
     FillPatch(*this, S_LS  , 0, time, LevelSet_Type, 0, parameters.NLevelSets);
@@ -497,13 +482,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
 
-    advanceLevelSet(SL,U1,LS1,LS2,dt,dx);
-
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time,LS2);
-
-    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
-
-    MultiFab::LinComb(S_LS_1,0.5,S_LS_0,0,0.5,S_LS_2,0,0,LS0.data.nComp(),0);
     MultiFab::Copy(S_LS, S_LS_1, 0, 0, S_LS.nComp(), S_LS.nGrow());
 
     S_LS.FillBoundary(geom.periodicity());
@@ -1114,7 +1092,9 @@ void AmrLevelAdv::sweepLevelSet()
     int positive  =  1;
     int negative  = -1;
 
-    for(int it = 0; it < 10 ; it++)
+    int MAXSWEEPS = 100;
+
+    for(int it = 0; it < MAXSWEEPS; it++)
     {
         int sweepingDone = 1;
 
@@ -1136,12 +1116,17 @@ void AmrLevelAdv::sweepLevelSet()
             }
         }
 
-        //if(it == 10)
-         //   break;
-
-        if(sweepingDone && it > 10)
+        if(sweepingDone)
         {
             break;
+        }
+    }
+
+    for(int n = 0; n < parameters.NLevelSets; n++)
+    {
+        if( LS.data.max(n) > 1E19 || LS.data.min(n) < -1E19 )
+        {
+            Abort("Sweeping finished, but LS not reinitialised");
         }
     }
 

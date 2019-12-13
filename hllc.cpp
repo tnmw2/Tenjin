@@ -433,7 +433,7 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    for    			(auto n : U.accessPattern.primitiveVariables)
+    for    			(auto n : U.accessPattern.conservativeVariables)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -465,5 +465,36 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     return;
 }
 
+void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULboxnew, BoxAccessCellArray& URboxnew, Direction_enum d, ParameterStruct& parameters, const Real* dx, Real dt)
+{
+    const auto lo = lbound(ULbox.box);
+    const auto hi = ubound(ULbox.box);
 
+    Material_type phase = (parameters.SOLID == 1 ? solid : fluid);
 
+    Real fluxL, fluxR;
+
+    for    			(auto n : ULbox.accessPattern.conservativeVariables)
+    {
+        for 		   (int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	   (int j = lo.y; j <= hi.y; ++j)
+            {
+                for    (int i = lo.x; i <= hi.x; ++i)
+                {
+                    ULbox.conservativeToPrimitive(i,j,k);
+                    URbox.conservativeToPrimitive(i,j,k);
+
+                    Cell UL(ULbox,i,j,k,phase);
+                    Cell UR(URbox,i,j,k,phase);
+
+                    fluxL = flux(n,UL,d);
+                    fluxR = flux(n,UR,d);
+
+                    ULboxnew(i,j,k,n) = ULbox(i,j,k,n) + 0.5*(dt/dx[d])*(fluxL - fluxR);
+                    URboxnew(i,j,k,n) = URbox(i,j,k,n) + 0.5*(dt/dx[d])*(fluxL - fluxR);
+                }
+            }
+        }
+    }
+}

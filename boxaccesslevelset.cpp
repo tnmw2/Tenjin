@@ -341,7 +341,7 @@ void BoxAccessLevelSet::calculateInterpolationPoint(int i , int j , int k, int n
 
 void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real* dx, Real& nx, Real& ny, Real& ix, Real& iy, Vector<Real>& px, Vector<Real>& py)
 {
-    static const Real probe_length = 1.0;
+    static const Real probe_length = 1.5;
 
     px[0] = ix - probe_length*dx[0]*nx;
     px[1] = ix + probe_length*dx[0]*nx;
@@ -349,11 +349,11 @@ void BoxAccessLevelSet::calculateProbes(int i , int j , int k, int n, const Real
     py[0] = iy - probe_length*dx[1]*ny;
     py[1] = iy + probe_length*dx[1]*ny;
 
-    if( (std::abs(px[0]-ix) > 2.0*dx[0]) || (std::abs(px[1]-ix) > 2.0*dx[0]))
+    if( (std::abs(px[0]-ix) > 2.0*probe_length*dx[0]) || (std::abs(px[1]-ix) > 2.0*probe_length*dx[0]))
     {
         Abort("Error in probe calculation");
     }
-    if( (std::abs(py[0]-iy) > 2.0*dx[1]) || (std::abs(py[1]-iy) > 2.0*dx[1]))
+    if( (std::abs(py[0]-iy) > 2.0*probe_length*dx[1]) || (std::abs(py[1]-iy) > 2.0*probe_length*dx[1]))
     {
         Abort("Error in probe calculation");
     }
@@ -386,6 +386,6 @@ int BoxAccessLevelSet::whatMaterialIsValid(int i, int j, int k)
 
 bool BoxAccessLevelSet::cellIsNearInterface(int i, int j, int k, const Real* dx)
 {
-    return (std::abs((*this)(i,j,k,0)) < 5.0*dx[0]);
+    return (std::abs((*this)(i,j,k,0)) < 10.0*dx[0]);
 }
 

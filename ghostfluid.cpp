@@ -1,5 +1,117 @@
 #include "simulationheader.h"
 
+Real fK(const Real p, Cell& W, int m)
+{
+    Real adiabaticIndex = W.accessPattern.materialInfo[m].EOS->adiabaticIndex;
+
+    Real ans;
+
+    Real A = 2.0/((adiabaticIndex+1.0)*W(RHO,m));
+
+    Real B = (adiabaticIndex-1.0)/(adiabaticIndex+1.0)*W(P,m);
+
+    if(p > W(P,m))
+    { //shock
+        ans=(p-W(P,m))*std::sqrt(A/(p+B));
+    }
+    else
+    { //rarefaction
+        ans=2.0*W(SOUNDSPEED,m)/(adiabaticIndex-1.0)*(std::pow(p/(W(P,m)),(adiabaticIndex-1.0)/(2.0*adiabaticIndex))-1.0);
+    }
+
+    return ans;
+}
+
+Real f (const Real p, Cell& WL, Cell& WR, Real du, Vector<int>& m)
+{
+    Real ans;
+
+    ans = fK(p,WL,m[0])+fK(p,WR,m[1])+du;
+
+    return ans;
+
+}
+
+void exactSolver_bisection(Cell& UL, Cell& UR, ParameterStruct& parameters, Cell& UStar, Vector<int>& m)
+{
+    Real du = UR(VELOCITY,m[1],x)-UL(VELOCITY,m[0],x);
+    Real p;
+    Real pA = 0.0; // std::min(UL(P,m[0]),UR(P,m[1]));
+    Real pB = 100.0*std::max(UL(P,m[0]),UR(P,m[1]));
+
+    Real tolerance = 1E-10;
+
+    do
+    {
+        p=0.5*(pA+pB);
+
+
+        if(sgn<Real,int>(f(pB,UL,UR,du,m)) == sgn<Real,int>(f(pA,UL,UR,du,m)))
+        {
+            Abort("Sign error in rGFM exact solver");
+        }
+
+        if(sgn<Real,int>(f(p,UL,UR,du,m)) == sgn<Real,int>(f(pA,UL,UR,du,m)))
+        {
+            pA=p;
+        }
+        else
+        {
+            pB=p;
+        }
+
+    }
+    while(std::abs(pA-pB)/p > tolerance);
+
+    UStar(P,m[0]) = p;
+    UStar(P,m[1]) = p;
+
+    UStar(VELOCITY,m[0],x) = 0.5*(UL(VELOCITY,m[0],x)+UR(VELOCITY,m[1],x)+fK(p,UR,m[1])-fK(p,UL,m[0]));
+    UStar(VELOCITY,m[1],x) = UStar(VELOCITY,m[0],x);
+
+    UStar(VELOCITY,m[0],y) = UL(VELOCITY,m[0],y);
+    UStar(VELOCITY,m[1],y) = UR(VELOCITY,m[1],y);
+
+    UStar(VELOCITY,m[0],z) = UL(VELOCITY,m[0],z);
+    UStar(VELOCITY,m[1],z) = UR(VELOCITY,m[1],z);
+
+    return;
+}
+
+void exactSolver_FindIntermediateState(Cell& UL, Cell&  UR, ParameterStruct& parameters, Cell& UStar, Vector<int>& m )
+{
+    Real adiabaticIndexL = UL.accessPattern.materialInfo[m[0]].EOS->adiabaticIndex;
+    Real adiabaticIndexR = UR.accessPattern.materialInfo[m[1]].EOS->adiabaticIndex;
+
+
+    exactSolver_bisection(UL,UR,parameters,UStar,m);
+
+
+    if(UL(P,m[0]) < UStar(P,m[0]))
+    {
+        //shock -> uses Rankine Hugoniot
+        UStar(RHO,m[0]) = UL(RHO,m[0])*(((adiabaticIndexL-1.0)/(adiabaticIndexL+1.0)+UStar(P,m[0])/UL(P,m[0])) / ((adiabaticIndexL-1.0)/(adiabaticIndexL+1.0)*UStar(P,m[0])/UL(P,m[0])+1.0));
+    }
+    else
+    {
+        //rarefaction -> uses constant entropy extrapolation
+        UStar(RHO,m[0]) = UL(RHO,m[0])*std::pow((UStar(P,m[0]))/(UL(P,m[0])),1.0/adiabaticIndexL);
+    }
+    if(UR(P,m[1]) < UStar(P,m[1]))
+    {
+        //shock -> uses Rankine Hugoniot
+        UStar(RHO,m[1]) = UR(RHO,m[1])*(((adiabaticIndexR-1.0)/(adiabaticIndexR+1.0)+UStar(P,m[1])/UR(P,m[1])) / ((adiabaticIndexR-1.0)/(adiabaticIndexR+1.0)*UStar(P,m[1])/UR(P,m[1])+1.0));
+    }
+    else
+    {
+        //rarefaction -> uses constant entropy extrapolation
+        UStar(RHO,m[1]) = UR(RHO,m[1])*std::pow((UStar(P,m[1]))/(UR(P,m[1])),1.0/adiabaticIndexR);
+    }
+
+    return;
+
+}
+
 void getStarState(Cell& U, Cell& UStar, Real SK, Real Sstar, ParameterStruct& parameters, Direction_enum d, int m);
 
 void fastSweep(BoxAccessCellArray& U, BoxAccessLevelSet& LS, const Real* dx, int xsense, int ysense, int sign)
@@ -148,10 +260,30 @@ Real getSstarFromDifferentMaterials(Cell& UL, Cell& UR, Real SL, Real SR, int i,
 
 void getSigmaStarFromDifferentMaterials(Cell& UKStar, Real Sstar, Real SLT, Real SRT, Cell& UL, Cell& UR, Cell& ULStar, Cell& URStar, Direction_enum d, ParameterStruct& parameters, int matL, int matR, int matK)
 {
-    for(int i=0;i<UL.numberOfComponents;i++)
+    /*for(int i=0;i<UL.numberOfComponents;i++)
     {
         UKStar(SIGMA,matK,i,d) = (ULStar(RHO,matL)*(Sstar-SLT)*URStar(RHO,matR)*(Sstar-SRT)*(UL(VELOCITY,matL,i) -UR(VELOCITY,matR,i)) + ULStar(RHO,matL)*(Sstar-SLT)*UR(SIGMA,matR,i,d) - URStar(RHO,matR)*(Sstar-SRT)*UL(SIGMA,matL,i,d))/(ULStar(RHO,matL)*(Sstar-SLT)-URStar(RHO,matR)*(Sstar-SRT));
+    }*/
+
+    for(int i=0;i<UL.numberOfComponents;i++)
+    {
+        if(i == d)
+        {
+            if(matK == matL)
+            {
+                UKStar(SIGMA,matK,i,d) = UL(SIGMA,matK,i,d);
+            }
+            else
+            {
+                UKStar(SIGMA,matK,i,d) = UR(SIGMA,matK,i,d);
+            }
+        }
+        else
+        {
+            UKStar(SIGMA,matK,i,d) = 0.0;
+        }
     }
+
 
     return;
 }
@@ -180,6 +312,7 @@ void getStarStarStateFromDifferentMaterials(Cell& UL, Cell& UR, Cell& UStar, Cel
         UStarStar(VELOCITY,matK,row) = UStarStar(RHOU,matK,row)/UStarStar(RHO,matK);
     }
 
+
     for(int row =0;row<N;row++)
     {
         if(row == d)
@@ -200,8 +333,31 @@ void getStarStarStateFromDifferentMaterials(Cell& UL, Cell& UR, Cell& UStar, Cel
     return;
 }
 
-void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
+void originalGFM(Cell& Uold, Cell& U, Cell& UL, Cell& UR, Vector<int>& m, int validMat)
 {
+    /*U = Uold;
+
+    if(validMat == m[0])
+    {
+        U(P,m[1]) = UL(P,m[0]);
+
+        U(VELOCITY,m[1],x) = UL(VELOCITY,m[0],x);
+        U(VELOCITY,m[1],y) = UL(VELOCITY,m[0],y);
+        U(VELOCITY,m[1],z) = UL(VELOCITY,m[0],z);
+
+        U(RHO,m[1]) = UR(RHO,m[1])*std::pow(U(P,m[1])/UR(P,m[1]), 1.0/1.4);
+    }
+    else
+    {
+        U(P,m[0]) = UR(P,m[1]);
+
+        U(VELOCITY,m[0],x) = UR(VELOCITY,m[1],x);
+        U(VELOCITY,m[0],y) = UR(VELOCITY,m[1],y);
+        U(VELOCITY,m[0],z) = UR(VELOCITY,m[1],z);
+
+        U(RHO,m[0]) = UL(RHO,m[0])*std::pow(U(P,m[0])/UL(P,m[0]), 1.0/1.4);
+    }*/
+
     U(P,m[0]) = UR(P,m[1]);
     U(P,m[1]) = UL(P,m[0]);
 
@@ -214,43 +370,16 @@ void originalGFM(Cell& U, Cell& UL, Cell& UR, Vector<int>& m)
 
     U(RHO,m[0]) = UL(RHO,m[0])*std::pow(U(P,m[0])/UL(P,m[0]), 1.0/1.4);
     U(RHO,m[1]) = UR(RHO,m[1])*std::pow(U(P,m[1])/UR(P,m[1]), 1.0/1.4);
-
-    /*for(int row = 0; row < U.numberOfComponents; row++)
-    {
-        for(int col = 0; col < U.numberOfComponents; col++)
-        {
-            if(U.accessPattern.materialInfo[m[0]].phase == solid)
-            {
-                U(V_TENSOR,m[0],row,col) = UL(V_TENSOR,m[0],row,col);
-            }
-            if(U.accessPattern.materialInfo[m[1]].phase == solid)
-            {
-                U(V_TENSOR,m[1],row,col) = UR(V_TENSOR,m[1],row,col);
-            }
-        }
-    }*/
 }
 
-void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, BoxAccessCellArray& UStarStarbox, Vector<int>& probe_m, ParameterStruct& parameters)
+void getBothStarStatesAndSetNewValue_5Wave(int i, int j, int k, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, BoxAccessCellArray& UStarStarbox, Vector<int>& probe_m, ParameterStruct& parameters)
 {
-    Material_type phase;
 
-    if(parameters.SOLID)
-    {
-        phase = solid;
-    }
-    else
-    {
-        phase = fluid;
-    }
-
-    Cell U          (Ubox,        i,j,k,phase);
-    Cell UL         (ULbox,       i,j,k,phase);
-    Cell UR         (URbox,       i,j,k,phase);
-    Cell UStar      (UStarbox,    i,j,k,phase);
-    Cell UStarStar  (UStarStarbox,i,j,k,phase);
-
-
+    Cell U          (Ubox,        i,j,k,solid);
+    Cell UL         (ULbox,       i,j,k,solid);
+    Cell UR         (URbox,       i,j,k,solid);
+    Cell UStar      (UStarbox,    i,j,k,solid);
+    Cell UStarStar  (UStarStarbox,i,j,k,solid);
 
 
     Real SR    = std::max(std::abs(UL(VELOCITY,probe_m[0],x))+UL(SOUNDSPEED,probe_m[0]),std::abs(UR(VELOCITY,probe_m[1],x))+UR(SOUNDSPEED,probe_m[1]));
@@ -271,8 +400,35 @@ void getBothStarStatesAndSetNewValue(int i, int j, int k, BoxAccessCellArray& Ub
 
     Ubox.conservativeToPrimitive(i,j,k);
 
-    //originalGFM(U,UL,UR,probe_m);
+    //Print() << UStar(VELOCITY,probe_m[0],y) << " " << UStar(VELOCITY,probe_m[1],y) << std::endl;
+    //Print() << U(VELOCITY,probe_m[0],y) << " " << U(VELOCITY,probe_m[1],y) << std::endl;
 
+}
+
+void getBothStarStatesAndSetNewValue_3Wave(int i, int j, int k, BoxAccessCellArray& Uoldbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, BoxAccessCellArray& UStarStarbox, Vector<int>& probe_m, ParameterStruct& parameters, int validMat)
+{
+
+    Cell Uold       (Uoldbox,     i,j,k,fluid);
+    Cell U          (Ubox,        i,j,k,fluid);
+    Cell UL         (ULbox,       i,j,k,fluid);
+    Cell UR         (URbox,       i,j,k,fluid);
+    Cell UStar      (UStarbox,    i,j,k,fluid);
+
+    Real SR    = std::max(std::abs(UL(VELOCITY,probe_m[0],x))+UL(SOUNDSPEED,probe_m[0]),std::abs(UR(VELOCITY,probe_m[1],x))+UR(SOUNDSPEED,probe_m[1]));
+    Real SL    = -SR;
+
+    Real Sstar = getSstarFromDifferentMaterials(UL,UR,SL,SR,i,j,k,x,probe_m);
+
+    getStarState(UL,UStar,SL,Sstar,parameters,x,probe_m[0]);
+    getStarState(UR,UStar,SR,Sstar,parameters,x,probe_m[1]);
+
+    U = UStar;
+
+    Ubox.conservativeToPrimitive(i,j,k);
+
+    //originalGFM(Uold,U,UL,UR,probe_m,validMat);
+
+    //exactSolver_FindIntermediateState(UL,UR,parameters,U,probe_m);
 
 }
 
@@ -328,7 +484,7 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
 
                     if(probe_m[0] == probe_m[1])
                     {
-                        if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
+                        /*if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
                         {
                             probe_m[0] = m;
                             probe_m[1] = ( m==0 ? 1 : 0);
@@ -337,11 +493,18 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
                         {
                             probe_m[1] = m;
                             probe_m[0] = ( m==0 ? 1 : 0);
-                        }
+                        }*/
 
                         if(probe_m[0] == probe_m[1])
                         {
+                            Print() << nx << " " << ny << std::endl;
+                            Print() << probe_x[0] << " " << probe_y[0] << std::endl;
+                            Print() << probe_x[1] << " " << probe_y[1] << std::endl;
+                            Print() << LS0.whatMaterialIsValid(i-3,j,k) << " " << LS0.whatMaterialIsValid(i-2,j,k)<< " " << LS0.whatMaterialIsValid(i-1,j,k) << " " << LS0.whatMaterialIsValid(i,j,k) << " " << LS0.whatMaterialIsValid(i+1,j,k) << " " << LS0.whatMaterialIsValid(i+2,j,k) << " " << LS0.whatMaterialIsValid(i+3,j,k) << std::endl;
+
                             Abort("Error in probe extrapolation: materials are the same");
+
+
                         }
                     }
 
@@ -354,10 +517,18 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
                     UL.primitiveToConservative(i,j,k);
                     UR.primitiveToConservative(i,j,k);
 
+
                     UL.getSoundSpeed(i,j,k);
                     UR.getSoundSpeed(i,j,k);
 
-                    getBothStarStatesAndSetNewValue(i,j,k,U1,UL,UR,Ustar,Ustarstar,probe_m,parameters);
+                    if(parameters.SOLID)
+                    {
+                        getBothStarStatesAndSetNewValue_5Wave(i,j,k,U1,UL,UR,Ustar,Ustarstar,probe_m,parameters);
+                    }
+                    else
+                    {
+                        getBothStarStatesAndSetNewValue_3Wave(i,j,k,U,U1,UL,UR,Ustar,Ustarstar,probe_m,parameters,m);
+                    }
 
                     U1.rotateFrameBack(i,j,k,nx,ny);
 
@@ -390,10 +561,83 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
     return;
 }
 
+void boxGhostFluidValues_1D(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& Ustar, BoxAccessCellArray& Ustarstar, BoxAccessLevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters)
+{
+    const auto lo = lbound(U.box);
+    const auto hi = ubound(U.box);
+
+    Real current_x,   current_y,  current_z;
+
+
+
+    Vector<int>  probe_m(2);
+
+    for 		(int k = lo.z; k <= hi.z; ++k)
+    {
+                current_z = prob_lo[2] + (Real(k)+0.5)*dx[2];
+
+        for 	(int j = lo.y; j <= hi.y; ++j)
+        {
+                current_y = prob_lo[1] + (Real(j)+0.5)*dx[1];
+
+            for (int i = lo.x; i <= hi.x; ++i)
+            {
+
+                current_x = prob_lo[0] + (Real(i)+0.5)*dx[0];
+
+                if(sgn<Real,int>(LS0(i,j,k,0)) != sgn<Real,int>(LS0(i+1,j,k,0)))
+                {
+                    probe_m[0] = LS0.whatMaterialIsValid(i,j,k);
+                    probe_m[1] = LS0.whatMaterialIsValid(i+1,j,k);
+
+                    U1(i  ,j,k,P,probe_m[1]) = U(i  ,j,k,P,probe_m[0]);
+                    U1(i+1,j,k,P,probe_m[0]) = U(i+1,j,k,P,probe_m[1]);
+
+                    U1(i  ,j,k,VELOCITY,probe_m[1],x) = U(i  ,j,k,VELOCITY,probe_m[0],x);
+                    U1(i+1,j,k,VELOCITY,probe_m[0],x) = U(i+1,j,k,VELOCITY,probe_m[1],x);
+                    U1(i  ,j,k,VELOCITY,probe_m[1],y) = U(i  ,j,k,VELOCITY,probe_m[0],y);
+                    U1(i+1,j,k,VELOCITY,probe_m[0],y) = U(i+1,j,k,VELOCITY,probe_m[1],y);
+                    U1(i  ,j,k,VELOCITY,probe_m[1],z) = U(i  ,j,k,VELOCITY,probe_m[0],z);
+                    U1(i+1,j,k,VELOCITY,probe_m[0],z) = U(i+1,j,k,VELOCITY,probe_m[1],z);
+
+                    U1(i  ,j,k,RHO,probe_m[1]) = U1(i+1,j,k,RHO,probe_m[1])*std::pow(U1(i  ,j,k,P,probe_m[1])/U1(i+1,j,k,P,probe_m[1]), 1.0/1.4);
+                    U1(i+1,j,k,RHO,probe_m[0]) = U1(i  ,j,k,RHO,probe_m[0])*std::pow(U1(i+1,j,k,P,probe_m[0])/U1(i  ,j,k,P,probe_m[0]), 1.0/1.4);
+
+                    U1.primitiveToConservative(i,j,k);
+                }
+                else if(sgn<Real,int>(LS0(i,j,k,0)) != sgn<Real,int>(LS0(i-1,j,k,0)))
+                {
+                    continue;
+                }
+                else
+                {
+                    if(LS0.cellIsNearInterface(i,j,k,dx))
+                    {
+                        if(LS0(i,j,k,0) > 0.0)
+                        {
+                            for(auto n : U.accessPattern.material_primitiveVariables[1])
+                            {
+                                U1(i,j,k,n) = 1E20;
+                            }
+                        }
+                        else
+                        {
+                            for(auto n : U.accessPattern.material_primitiveVariables[0])
+                            {
+                                U1(i,j,k,n) = 1E20;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
 void setGhostFluidValues(MultiFab& S_new,CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& Ustar, CellArray& Ustarstar, LevelSet& LS0, const Real* dx, const Real* prob_lo, ParameterStruct& parameters, Geometry& geom, Vector<BCRec>& bc)
 {
-
-
     U1 = U;
 
 
