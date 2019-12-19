@@ -601,7 +601,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -610,12 +610,12 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
      *****************************************/
-    {
+    /*{
         if((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) < 0.2*0.2)
         {
             s=0;
@@ -624,7 +624,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * Wilkins

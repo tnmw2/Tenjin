@@ -53,8 +53,6 @@ Real& variableMatrix::operator ()(MaterialSpecifier& a, MaterialSpecifier& b)
     return data[map[a]*numberOfVariables+map[b]];
 }
 
-
-
 Real componentOfPrimitiveMatrix(Cell& Ustart, Cell& Uend, Real s, MaterialSpecifier& a, MaterialSpecifier& b, Direction_enum d)
 {
     switch(a.var)
@@ -105,55 +103,6 @@ Real componentOfPrimitiveMatrix(Cell& Ustart, Cell& Uend, Real s, MaterialSpecif
             }
         }
         break;
-    case RHO_K:
-        if((b.var == a.var) && (a.mat == b.mat))
-        {
-            return Ustart(VELOCITY,0,d)+s*(Uend(VELOCITY,0,d)-Ustart(VELOCITY,0,d));
-        }
-        else if((b.var == VELOCITY) && (b.row == d))
-        {
-            return Ustart(a)+s*(Uend(a)-Ustart(a));
-        }
-        else
-        {
-            return 0.0;
-        }
-        break;
-    case VELOCITY:
-        if(a.row == d)
-        {
-            if((b.var == VELOCITY) && (b.row == d))
-            {
-                return Ustart(VELOCITY,0,d)+s*(Uend(VELOCITY,0,d)-Ustart(VELOCITY,0,d));
-            }
-            else if((b.var == P))
-            {
-                return (1.0/Ustart(RHO))+s*((1.0/Uend(RHO))-(1.0/Ustart(RHO)));
-            }
-            else
-            {
-                return 0.0;
-            }
-        }
-        else
-        {
-            return 0.0; // ! needs changing!
-        }
-        break;
-    case P:
-        if((b.var == a.var))
-        {
-            return Ustart(VELOCITY,0,d)+s*(Uend(VELOCITY,0,d)-Ustart(VELOCITY,0,d));
-        }
-        else if((b.var == VELOCITY) && (b.row == d))
-        {
-            //return (1.4*Ustart(P))+s*((1.4*Uend(P))-(1.4*Ustart(P)));
-            return (Ustart(RHO)*Ustart(SOUNDSPEED)*Ustart(SOUNDSPEED))+s*((Uend(RHO)*Uend(SOUNDSPEED)*Uend(SOUNDSPEED))-(Ustart(RHO)*Ustart(SOUNDSPEED)*Ustart(SOUNDSPEED)));
-        }
-        else
-        {
-            return 0.0;
-        }
     default: Abort("Incorrect variable in path con flux"); return 0.0;
     }
 }
@@ -162,10 +111,13 @@ Real calculateAMatrixIntegration(Cell& Ustart, Cell& Uend, Direction_enum d, Mat
 {
     Real s;
 
-    const int orderOfQuadratureRule = 3;
+    const int orderOfQuadratureRule = 1;
 
-    static const Real weight  [orderOfQuadratureRule] = {5.0/9.0, 8.0/9.0, 5.0/9.0};
-    static const Real abscissa[orderOfQuadratureRule] = {-sqrt(3.0/5.0), 0.0, sqrt(3.0/5.0)};
+    static const Real weight  [orderOfQuadratureRule] = {2.0};
+    static const Real abscissa[orderOfQuadratureRule] = {0.0};
+
+    //static const Real weight  [orderOfQuadratureRule] = {5.0/9.0, 8.0/9.0, 5.0/9.0};
+    //static const Real abscissa[orderOfQuadratureRule] = {-sqrt(3.0/5.0), 0.0, sqrt(3.0/5.0)};
 
     //static const Real weight  [orderOfQuadratureRule] = {(322.0-13.0*sqrt(70.0))/900.0,(322.0+13.0*sqrt(70.0))/900.0, 128.0/225.0, (322.0+13.0*sqrt(70.0))/900.0,(322.0-13.0*sqrt(70.0))/900.0};
     //static const Real abscissa[orderOfQuadratureRule] = {-(1.0/3.0)*sqrt(5.0+2.0*sqrt(10.0/7.0)), -(1.0/3.0)*sqrt(5.0-2.0*sqrt(10.0/7.0)), 0.0, (1.0/3.0)*sqrt(5.0-2.0*sqrt(10.0/7.0)), (1.0/3.0)*sqrt(5.0+2.0*sqrt(10.0/7.0))};

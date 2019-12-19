@@ -456,7 +456,6 @@ Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, Variable 
     return right(d,i,j,k,temp);
 }
 
-
 Real& BoxAccessCellArray::neighbour(int di, int dj, int dk, int i, int j, int k, Variable var, int mat, int row, int col)
 {
     MaterialSpecifier temp(var,mat,row,col);
