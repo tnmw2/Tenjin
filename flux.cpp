@@ -34,13 +34,13 @@ Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
 {
     switch(n.var)
     {
-        case ALPHA:           return U(ALPHA,n.mat)*           U(VELOCITY,0,d);
+        case ALPHA:           return 0.0; //U(ALPHA,n.mat)*           U(VELOCITY,0,d);
         case ALPHARHO:  	  return U(ALPHARHO,n.mat)*        U(VELOCITY,0,d);
         case ALPHARHOLAMBDA:  return U(ALPHARHOLAMBDA,n.mat)*  U(VELOCITY,0,d);
         case ALPHARHOEPSILON: return U(ALPHARHOEPSILON,n.mat)* U(VELOCITY,0,d);
         case RHOU: 			  return U(RHOU,0,n.row)*          U(VELOCITY,0,d)-U(SIGMA,0,n.row,d);
         case TOTAL_E:	   	  return U(TOTAL_E)*               U(VELOCITY,0,d)-vdotsigma(U,d);
-        case V_TENSOR:        return U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
+        case V_TENSOR:        return 0.0; //U(V_TENSOR,0,n.row,n.col)*U(VELOCITY,0,d)-U(V_TENSOR,0,d,n.col)*U(VELOCITY,0,n.row);
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
     }
 
