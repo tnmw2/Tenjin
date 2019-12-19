@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     plastic.cpp \
     AmrLevelAdv.cpp \
     newAMRFunctions.cpp \
-    LevelBldAdv.cpp
+    LevelBldAdv.cpp \
+    pathconservativehllc.cpp
 
 HEADERS += \
     simulationheader.h \

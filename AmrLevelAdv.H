@@ -95,7 +95,7 @@ public:
     //
 	// My own HLLC
 	//
-    void AMR_HLLCadvance(MultiFab& S, CellArray& U, CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, THINCArray& THINCArr, ParameterStruct& parameters, const Real* dx, const Real *prob_lo, Real dt, Real time);
+    void AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
     //
     //Estimate time step.
     //

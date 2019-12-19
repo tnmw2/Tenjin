@@ -99,6 +99,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
+
+
                 //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
                 //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
                 //U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
@@ -122,9 +124,16 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                 U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
 
+
+
             }
+
+            //Print() << "Here" << std::endl;
         }
     }
+
+    Print() << "Here" << std::endl;
+
 }
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
@@ -323,21 +332,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
          * General Simulation Parameters
          ****************************************************/
 
-        //pp.get("max_grid_size", parameters.max_grid_size);
-        //pp.get("Nghost",        parameters.Nghost);
-
-        //pp.get("plotDirectory", initial.filename);
-
-
-        cfg.lookupValue("finalTime",initial.finalT);
-
-        cfg.lookupValue("numberOfxCells",parameters.n_cells[0]);
-        cfg.lookupValue("numberOfyCells",parameters.n_cells[1]);
-        cfg.lookupValue("numberOfzCells",parameters.n_cells[2]);
-
-        cfg.lookupValue("xdomainLength",parameters.dimL[0]);
-        cfg.lookupValue("ydomainLength",parameters.dimL[1]);
-        cfg.lookupValue("zdomainLength",parameters.dimL[2]);
 
         cfg.lookupValue("CFL",parameters.CFL);
 
@@ -346,8 +340,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         cfg.lookupValue("states",       initial.numberOfStates);
 
         cfg.lookupValue("interface",initial.interface);
-
-        cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
 
         cfg.lookupValue("SOLID",    parameters.SOLID);
         cfg.lookupValue("THINC",    parameters.THINC);
@@ -384,9 +376,9 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         Setting* materials = &root["listOfMaterials"];
 
-        for(int m=0;m<parameters.numberOfMaterials;m++)
+        for(int material=0;material<parameters.numberOfMaterials;material++)
         {
-            getMaterialParameters(*materials,parameters,m,plastic);
+            getMaterialParameters(*materials,parameters,material,plastic);
         }
 
         Setting* states = &root["listOfStates"];
@@ -395,7 +387,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         {
             getState(*states,parameters,initial,s);
         }
-
 
     }
     catch( SettingException except)
@@ -610,7 +601,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         if(x < initial.interface)
         {
             s=0;
@@ -619,12 +610,12 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * 2D Sod
      *****************************************/
-    /*{
+    {
         if((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) < 0.2*0.2)
         {
             s=0;
@@ -633,7 +624,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * Wilkins
@@ -935,7 +926,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * Rod Impact
      *****************************************/
 
-    {
+    /*{
         Real chamfer = 1E-3;
         Real length  = 32.4E-3;
         Real radius  = initial.interface;
@@ -966,7 +957,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=0;
         }
-    }
+    }*/
 
 }
 

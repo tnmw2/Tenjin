@@ -28,8 +28,7 @@ enum Variable
     DEVH,
     HJ2,
     EPSILON,
-    ALPHARHOEPSILON //,
-    //NORM
+    ALPHARHOEPSILON
 };
 
 /** Not yet used...
@@ -75,6 +74,9 @@ struct MaterialSpecifier
         row=r;
         col=c;
     }
+
+    bool operator <  (const MaterialSpecifier& b) const;
+    bool operator == (const MaterialSpecifier& b) const;
 };
 
 enum Var_type

@@ -4,7 +4,12 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
 {
     if(materialNumber*rowNumber*colNumber > 0)
     {
-        data.insert(std::pair<Variable,int>(var,position));
+        //data.insert(std::pair<Variable,int>(var,position));
+
+        data[var] = position;
+
+        numberOfMaterialsForVariable[var] = 1;
+        numberOfRowsForVariable[var]      = (colNumber > 1 ? rowNumber : 1);
 
         limits.insert(std::pair<Variable,std::pair<Real,Real> >(var,std::make_pair(lo,hi)));
 
@@ -68,11 +73,22 @@ void AccessPattern::define(ParameterStruct& parameters)
     refineVariables.clear();
     variableNames.clear();
     cellVariables.clear();
+    numberOfMaterialsForVariable.clear();
+    numberOfRowsForVariable.clear();
 
     Real c   = 3E8;
     Real min = 1E-20;
     Real max = 1E20;
 
+    data.resize(50);
+
+    numberOfMaterialsForVariable.resize(50);
+    numberOfRowsForVariable.resize(50);
+
+
+    std::fill(data.begin(),data.end(),0);
+    std::fill(numberOfMaterialsForVariable.begin(),numberOfMaterialsForVariable.end(),0);
+    std::fill(numberOfRowsForVariable.begin(),numberOfRowsForVariable.end(),0);
 
 
 
@@ -85,7 +101,7 @@ void AccessPattern::define(ParameterStruct& parameters)
     addVariable(n,"E",              CONSERVATIVE,   CELL, NEITHER, -max,    max,  TOTAL_E);
     addVariable(n,"p",              PRIMITIVE,      CELL, REFINE,  -max,    max,  P);
     addVariable(n,"a",              NEITHER,        CELL, NEITHER,   min,    c,    SOUNDSPEED);
-    addVariable(n,"uStar",          NEITHER,        CELL, NEITHER, -c,      c,    USTAR);
+    //addVariable(n,"uStar",          NEITHER,        CELL, NEITHER, -c,      c,    USTAR);
     addVariable(n,"sigma",          NEITHER,        CELL, NEITHER, -max,    max,  SIGMA,          1,3,3);
 
     if(parameters.numberOfMixtures > 0)
@@ -98,7 +114,7 @@ void AccessPattern::define(ParameterStruct& parameters)
     if(parameters.SOLID)
     {
         addVariable(n,"V",          BOTH,           CELL,    NEITHER, -max, max,  V_TENSOR,       1,3,3);
-        addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, -max, max,  VSTAR,          1,3,3);
+        //addVariable(n,"VStar",      NEITHER,        CELL,    NEITHER, -max, max,  VSTAR,          1,3,3);
         addVariable(n,"devH",       NEITHER,        NOTCELL, NEITHER, -max, max,  DEVH,           1,3,3);
         addVariable(n,"HenckyJ2",   NEITHER,        NOTCELL, NEITHER ,-max, max,  HJ2);
 
@@ -108,8 +124,6 @@ void AccessPattern::define(ParameterStruct& parameters)
             addVariable(n,"alphaRhoEpsilon",    CONSERVATIVE, CELL, NEITHER,  0.0, max,  ALPHARHOEPSILON, parameters.numberOfMaterials);
         }
     }
-
-    //addVariable(n,"n", NEITHER, NOTCELL, NEITHER, -max, max,  NORM, parameters.numberOfMaterials,2);
 }
 
 int& AccessPattern::operator[](Variable var)

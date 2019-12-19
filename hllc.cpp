@@ -148,9 +148,11 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
     Real SRT    = 0.0;
     Real Sstar  = 0.0;
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
+
+
 
     for 		(int k = lo.z; k <= hi.z+extra[z]; ++k)
     {
@@ -175,8 +177,8 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                 {
-                    UL.parent->checking = 1;
-                    UR.parent->checking = 1;
+                    //UL.parent->checking = 1;
+                    //UR.parent->checking = 1;
 
                     UL.parent->checkLimits(UL.accessPattern.allVariables);
                     UR.parent->checkLimits(UL.accessPattern.allVariables);
@@ -236,31 +238,37 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     }
                 }
 
-                fluxbox(i,j,k,USTAR) = Sstar;
+                //fluxbox(i,j,k,USTAR) = Sstar;
 
                 if(SL>=0.0)
                 {
-                    getStarState(UL,ULStar,SL,Sstar,parameters,d);
+                    //getStarState(UL,ULStar,SL,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UL,d);
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d);
-                        }
+                        }*/
                     }
 
-                    for(int row=0;row<ULbox.numberOfComponents;row++)
+
+                    /*for(int row=0;row<ULbox.numberOfComponents;row++)
                     {
                         for(int col=0;col<ULbox.numberOfComponents;col++)
                         {
                             fluxbox(i,j,k,VSTAR,0,row,col) = UL(V_TENSOR,0,row,col);
                         }
-                    }
+                    }*/
+
+                    UStarStar = UL;
+
                 }
                 else if(Sstar>=0.0)
                 {
@@ -272,23 +280,29 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     {
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            if(n.var == ALPHA)
+                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
+
+                            /*if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
-                            }
+                            }*/
                         }
 
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
+
+                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = ULStar(V_TENSOR,0,row,col);
                             }
-                        }
+                        }*/
+
+                        UStarStar = ULStar;
+
                     }
                     else
                     {
@@ -300,23 +314,26 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            if(n.var == ALPHA)
+                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
+
+                            /*if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
-                            }
+                            }*/
                         }
 
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
+
+                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
                             }
-                        }
+                        }*/
                     }
                 }
                 else if(SR>=0.0)
@@ -335,45 +352,51 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            if(n.var == ALPHA)
+                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
+
+                            /*if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,URStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
-                            }
+                            }*/
                         }
 
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
+                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
                             }
-                        }
+                        }*/
                     }
                     else
                     {
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            if(n.var == ALPHA)
+                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
+
+                            /*if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,URStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
-                            }
+                            }*/
                         }
 
-                        for(int row=0;row<ULbox.numberOfComponents;row++)
+                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = URStar(V_TENSOR,0,row,col);
                             }
-                        }
+                        }*/
+
+                        UStarStar = URStar;
                     }
                 }
                 else
@@ -382,24 +405,31 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UR,d);
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,URStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d);
-                        }
+                        }*/
                     }
 
-                    for(int row=0;row<ULbox.numberOfComponents;row++)
+                    /*for(int row=0;row<ULbox.numberOfComponents;row++)
                     {
                         for(int col=0;col<ULbox.numberOfComponents;col++)
                         {
                             fluxbox(i,j,k,VSTAR,0,row,col) = UR(V_TENSOR,0,row,col);
                         }
-                    }
+                    }*/
+
+                    UStarStar = UR;
+
                 }
+
+                UStarStarbox.conservativeToPrimitive(i,j,k);
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar) || std::isnan(SLT) || std::isnan(SRT))
                 {
@@ -408,7 +438,6 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     Print() << "At " <<  i << " " << j << " " <<k  << std::endl;
                     amrex::Abort("Nan in waveSpeeds");
                 }
-
             }
         }
     }
@@ -427,7 +456,7 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
     Real SL;
     Real Sstar;
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
 
@@ -449,23 +478,27 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
-                fluxbox(i,j,k,USTAR) = Sstar;
+                //fluxbox(i,j,k,USTAR) = Sstar;
 
                 if(SL>=0.0)
                 {
-                    getStarState(UL,UStar,SL,Sstar,parameters,d);
+                    //getStarState(UL,UStar,SL,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UL,d);
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d);
-                        }
+                        }*/
                     }
+
+                    UStar = UL;
                 }
                 else if(Sstar>=0.0)
                 {
@@ -473,14 +506,16 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(UStar(n)-UL(n));
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(UStar(n)-UL(n));
-                        }
+                        }*/
                     }
 
                 }
@@ -490,32 +525,41 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(UStar(n)-UR(n));
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(UStar(n)-UR(n));
-                        }
+                        }*/
                     }
                 }
                 else
                 {
-                    getStarState(UR,UStar,SR,Sstar,parameters,d);
+                    //getStarState(UR,UStar,SR,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        if(n.var == ALPHA)
+                        fluxbox(i,j,k,n)	= flux(n,UR,d);
+
+                        /*if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d);
-                        }
+                        }*/
                     }
+
+                    UStar = UR;
                 }
+
+                //UStarbox.conservativeToPrimitive(i,j,k);
+                //UStarbox.getSoundSpeed(i,j,k);
             }
         }
     }
@@ -541,13 +585,10 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    if(n.var == ALPHA)
+                    if(n.var == ALPHA || n.var == V_TENSOR)
                     {
-                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
-                    }
-                    else if(n.var == V_TENSOR)
-                    {
-                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -(2.0/3.0)*Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)) + Ubox(i,j,k,VELOCITY,0,n.row)*(fluxbox(i,j,k,VSTAR,0,d,n.col) - fluxbox.right(d,i,j,k,VSTAR,0,d,n.col)));
+                        continue;
+                        //U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
                     }
                     else
                     {
@@ -558,22 +599,7 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
         }
     }
 
-    /*for 		    (int k = lo.z; k <= hi.z; ++k)
-    {
-        for 	    (int j = lo.y; j <= hi.y; ++j)
-        {
-            for     (int i = lo.x; i <= hi.x; ++i)
-            {
-                for (int m = 0   ; m < parameters.numberOfMaterials; ++m)
-                {
 
-                    U1box(i,j,k,NORM,m,0) = Ubox(i,j,k,NORM,m,0);
-                    U1box(i,j,k,NORM,m,1) = Ubox(i,j,k,NORM,m,1);
-
-                }
-            }
-        }
-    }*/
 
     U1box.checkLimits(Ubox.accessPattern.conservativeVariables);
 }
@@ -594,12 +620,16 @@ Real vanLeerlimiter(Real r)
 
 /** Performs MUSCL extrapolation on the primitive variables.
  */
-void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d)
+void MUSCLextrapolate(const BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, Direction_enum d)
 {
-    Real r;
+    Real r,grad;
 
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
+
+    int extra[3] = {0,0,0};
+
+    extra[d]=1;
 
     for    			(auto n : U.accessPattern.primitiveVariables)
     {
@@ -609,30 +639,18 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    r = (U(i,j,k,n)-U.left(d,i,j,k,n))/(U.right(d,i,j,k,n)-U(i,j,k,n));
+                    r = (U(i,j,k,n)-U(i-extra[0],j-extra[1],k-extra[2],n))/(U(i+extra[0],j+extra[1],k+extra[2],n)-U(i,j,k,n));
 
                     if(std::isinf(r) || std::isnan(r))
                     {
                         r = 0.0;
                     }
 
-                    grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
-
-                    /*if(grad(i,j,k,n) > 0.0)
-                    {
-                        UL(i,j,k,n) = std::max(U(i,j,k,n) - 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].first);
-                        UR(i,j,k,n) = std::min(U(i,j,k,n) + 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].second);
-                    }
-                    else
-                    {
-                        UL(i,j,k,n) = std::min(U(i,j,k,n) - 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].second);
-                        UR(i,j,k,n) = std::max(U(i,j,k,n) + 0.5*grad(i,j,k,n),U.accessPattern.limits[n.var].first);
-                    }*/
+                    grad = vanLeerlimiter(r)*0.5*(U(i+extra[0],j+extra[1],k+extra[2],n)-U(i-extra[0],j-extra[1],k-extra[2],n));
 
 
-                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
-                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
-
+                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad;
+                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad;
                 }
             }
         }
@@ -644,136 +662,6 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     return;
 }
 
-/** Calculate the HLLC flux and update new array
- */
-/*void HLLCadvance(CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr,Geometry const& geom, ParameterStruct& parameters,Vector<BCRec>& bc, THINCArray& THINC)
-{
-    Direction_enum d;
 
-    U1 = U;
-
-    for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
-    {
-        d = (Direction_enum)dir;
-
-        UL = U;
-        UR = U;*/
-
-        /*-------------------------------------------------------------
-         * Perform MUSCL extrapolation.
-         * -----------------------------------------------------------*/
-/*#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-*/
-            /*-------------------------------------------------------------
-             * Data can't be accessed straight from a Multifab so we make
-             * some wrappers to hold the FArrayBoxes that can access the
-             * data called BoxAccessCellArray.
-             * -----------------------------------------------------------*/
-
-/*            BoxAccessCellArray  Ubox(mfi,bx,U);
-            BoxAccessCellArray  ULbox(mfi,bx,UL);
-            BoxAccessCellArray  URbox(mfi,bx,UR);
-
-
-            if(parameters.MUSCL)
-            {
-                BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
-
-                MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
-            }
-
-            if(parameters.THINC) // && d == x
-            {
-                BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
-                BoxAccessCellArray URTHINC(mfi,bx,URStar);
-                BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
-
-                THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters, parameters.dx.dataPtr(),d);
-
-                UL.cleanUpAlpha();
-                UR.cleanUpAlpha();
-
-            }
-
-
-            ULbox.primitiveToConservative();
-            URbox.primitiveToConservative();
-
-            ULbox.getSoundSpeed();
-            URbox.getSoundSpeed();
-
-        }
-
-        FillDomainBoundary(UL.data, geom, bc);
-        FillDomainBoundary(UR.data, geom, bc);
-
-        UL.data.FillBoundary(geom.periodicity());
-        UR.data.FillBoundary(geom.periodicity());
-
-*/
-        /*-------------------------------------------------------------
-         * Calulate HLLC flux and update the new array.
-         * -----------------------------------------------------------*/
-
-/*#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-
-            FArrayBox& flux_fab   = flux_arr[d][mfi];
-
-            BoxAccessCellArray Ubox(mfi,bx,U);
-            BoxAccessCellArray U1box(mfi,bx,U1);
-            BoxAccessCellArray ULbox(mfi,bx,UL);
-            BoxAccessCellArray URbox(mfi,bx,UR);
-            BoxAccessCellArray ULStarbox(mfi,bx,ULStar);
-            BoxAccessCellArray URStarbox(mfi,bx,URStar);
-            BoxAccessCellArray UStarStarbox(mfi,bx,UStarStar);
-            BoxAccessCellArray fluxbox(bx,flux_fab,U); 
-
-            if(parameters.SOLID)
-            {
-                calc_5Wave_fluxes(fluxbox, ULbox, URbox, ULStarbox, URStarbox, UStarStarbox, parameters,d,parameters.dx.dataPtr());
-            }
-            else
-            {
-                calc_fluxes(fluxbox, ULbox, URbox, ULStarbox, parameters,d,parameters.dx.dataPtr());
-            }
-
-            update(fluxbox, Ubox, U1box, parameters,d,parameters.dt,parameters.dx.dataPtr());
-
-        }
-
-
-
-    }
-
-
-    U1.conservativeToPrimitive();
-    FillDomainBoundary(U1.data, geom, bc);
-    U1.data.FillBoundary(geom.periodicity());
-
-
-
-}*/
-
-/** 2nd Order Runge-Kutta time integration
- */
-/*void advance(CellArray& U, CellArray& U1, CellArray& U2, CellArray& MUSCLgrad, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec>& bc, THINCArray &THINC)
-{
-    HLLCadvance(U,  U1, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
-
-    HLLCadvance(U1, U2, UL, UR, MUSCLgrad, ULStar, URStar, UStarStar, flux_arr, geom, parameters, bc, THINC);
-
-    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
-
-}*/
 
 

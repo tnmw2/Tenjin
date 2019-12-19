@@ -237,40 +237,6 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
         }
     }
 
-    /*for    		   (int k = lo.z; k <= hi.z; ++k)
-    {
-        for        (int j = lo.y; j <= hi.y; ++j)
-        {
-            for    (int i = lo.x; i <= hi.x; ++i)
-            {
-                if(mixedCellFlag(i,j,k))
-                {
-                    Vector<MaterialSpecifier> vars(4);
-
-                    vars[0] = MaterialSpecifier(ALPHA,0);
-                    vars[1] = MaterialSpecifier(ALPHA,1);
-
-                    vars[2] = MaterialSpecifier(ALPHARHO,0);
-                    vars[3] = MaterialSpecifier(ALPHARHO,1);
-
-                    for(auto n : vars)
-                    {
-                        if(TBVFlag(i,j,k,0))
-                        {
-                            UL(i,j,k,n) = UTHINC_L(i,j,k,n);
-                            UR(i,j,k,n) = UTHINC_R(i,j,k,n);
-                        }
-                    }
-
-                    for(int m = 0; m < U.numberOfMaterials; m++)
-                    {
-                        UL(i,j,k,RHO_K,m) = UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
-                        UR(i,j,k,RHO_K,m) = UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
-                    }
-                }
-            }
-        }
-    }*/
 
 
     return;
@@ -333,7 +299,7 @@ void BoxAccessTHINCArray::cautiousTHINCreconstruction(BoxAccessCellArray& U, Box
         }
     }
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
 

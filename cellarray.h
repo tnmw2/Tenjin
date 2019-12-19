@@ -74,6 +74,8 @@ public:
     Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
     Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
 
+    const Real operator()(int i, int j, int k, MaterialSpecifier& m) const;
+    const Real operator()(int i, int j, int k, Variable var, int mat, int row, int col) const;
 
     void  conservativeToPrimitive();
     void  primitiveToConservative();
@@ -88,9 +90,10 @@ public:
     Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k);
 
     void getSoundSpeed();
+    void getSoundSpeed(int i, int j, int k);
     Real transverseWaveSpeed(int i, int j, int k);
 
-    void amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx=3, int ny=3);
+    void amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx=3, int ny=3) const;
 
     void getHenckyJ2(int i, int j, int k);
     void getDeviatoricHenckyStrain(int i, int j, int k);

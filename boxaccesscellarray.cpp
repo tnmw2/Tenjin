@@ -10,15 +10,28 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, Variable var, int mat,
     return (*this)(i,j,k,temp);
 }
 
+const Real BoxAccessCellArray::operator()(int i, int j, int k, Variable var, int mat, int row, int col) const
+{
+    MaterialSpecifier temp(var,mat,row,col);
+    return (*this)(i,j,k,temp);
+}
+
 Real& BoxAccessCellArray::operator()(int i, int j, int k, int var, int mat, int row, int col)
 {
     MaterialSpecifier temp((Variable)var,mat,row,col);
     return (*this)(i,j,k,temp);
 }
 
+const Real BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m) const
+{
+    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
+}
+
 Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 {
-    switch(m.var)
+    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
+
+    /*switch(m.var)
     {
     case ALPHA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
@@ -60,11 +73,9 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
-    /*case NORM:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat*2+m.row));
-        break;*/
     default: Print() << "Incorrect Access variable " << m.var << std::endl;
         exit(1);
-    }
+    }*/
 }
 
 void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
@@ -286,26 +297,31 @@ void BoxAccessCellArray::getSoundSpeed()
         {
             for (int i = lo.x; i <= hi.x; ++i)
             {
-                Real a      = 0.0;
-                Real xiTot  = 0.0;
-
-                for(int m=0; m<numberOfMaterials;m++)
-                {
-                    a     += std::max(0.0,accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)*(*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,RHO));
-                    xiTot += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*(*this)(i,j,k,ALPHA,m);
-                }
-
-                if(a<=0.0)
-                {
-                    a = 1E-6;// soundSpeedTolerance
-                }
-
-                (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
-
-
+                getSoundSpeed(i,j,k);
             }
         }
     }
+}
+
+void BoxAccessCellArray::getSoundSpeed(int i, int j, int k)
+{
+
+    Real a      = 0.0;
+    Real xiTot  = 0.0;
+
+    for(int m=0; m<numberOfMaterials;m++)
+    {
+        a     += std::max(0.0,accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*accessPattern.materialInfo[m].EOS->getSoundSpeedContribution((*this),i,j,k,m)*(*this)(i,j,k,ALPHARHO,m)/(*this)(i,j,k,RHO));
+        xiTot += accessPattern.materialInfo[m].EOS->xi((*this),i,j,k,m)*(*this)(i,j,k,ALPHA,m);
+    }
+
+    if(a<=0.0)
+    {
+        a = 1E-6;// soundSpeedTolerance
+    }
+
+    (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
+
 }
 
 Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
@@ -440,6 +456,7 @@ Real& BoxAccessCellArray::right(Direction_enum d, int i, int j, int k, Variable 
     return right(d,i,j,k,temp);
 }
 
+
 Real& BoxAccessCellArray::neighbour(int di, int dj, int dk, int i, int j, int k, Variable var, int mat, int row, int col)
 {
     MaterialSpecifier temp(var,mat,row,col);
@@ -452,7 +469,7 @@ Real& BoxAccessCellArray::neighbour(int di, int dj, int dk, int i, int j, int k,
     return (*this)(i+di,j+dj,k+dk,m);
 }
 
-void BoxAccessCellArray::amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx, int ny)
+void BoxAccessCellArray::amrexToArray(int i, int j, int k, Variable var, int m, double* copy, int nx, int ny) const
 {
     for(int row = 0; row<nx ;row++)
     {
@@ -590,9 +607,7 @@ void BoxAccessCellArray::cleanUpAlpha()
                         }
                         else
                         {
-                            Print() << "Error in scaling volume fractions, too many Nans" << std::endl;
-
-                            exit(1);
+                            Abort("Error in scaling volume fractions, too many Nans");
                         }
                     }
                     else if((*this)(i,j,k,ALPHA,m)<0.0)
@@ -601,7 +616,7 @@ void BoxAccessCellArray::cleanUpAlpha()
                     }
                     else if((*this)(i,j,k,ALPHA,m)>1.0)
                     {
-                        (*this)(i,j,k,ALPHA,m) = 1.0;
+                        (*this)(i,j,k,ALPHA,m) = 0.999999;
                     }
 
                     totalAlpha += (*this)(i,j,k,ALPHA,m);

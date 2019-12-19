@@ -37,7 +37,6 @@ void advance(CellArray& U, CellArray& U1, CellArray &U2, CellArray &MUSCLgrad, C
 void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename);
 
 void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial, PlasticEOS& plastic);
-//void initialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial, const Real* dx, const Real* prob_lo);
 void setBoundaryConditions(Vector<BCRec>& bc, ParameterStruct& parameters, InitialStruct& initial, AccessPattern& accessPattern);
 void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *dx, Real dt, const Real *prob_lo, MultiFab &S_new);
@@ -46,7 +45,9 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
 void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt);
 
 void customAbort(Vector<Real>& values, std::string& Message);
-
+void getStarStateAlone(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx);
+void calculatePathConservativeFluxes(BoxAccessCellArray& fluxboxL, BoxAccessCellArray& fluxboxR, BoxAccessCellArray& Ubox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx);
+void PCupdate(BoxAccessCellArray& fluxboxL, BoxAccessCellArray& fluxboxR, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 
 #endif // SIMULATIONHEADER
 

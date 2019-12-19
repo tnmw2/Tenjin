@@ -43,27 +43,14 @@ class Cell
 {
 public:
 
-    Real* rho;
-    Vector<Real*> rhoU;
-    Real* E;
-    Vector<Real*> u;
-    Real* p;
-    Vector<Real*> sigma;
-    Vector<Real*> V;
-    Vector<Real*> VStar;
-
-    Real* a;
-    Real* uStar;
-
     Material_type phase;
 
     static const int numberOfComponents = 3;
 
-    std::vector<Material> materials;
-
     AccessPattern& accessPattern;
 
     Cell(BoxAccessCellArray& U, int i, int j, int k,Material_type _phase);
+    Cell(const BoxAccessCellArray& U, int i, int j, int k,Material_type _phase);
 
 
     Real&  operator()(Variable var, int mat=0, int row=0, int col=0);

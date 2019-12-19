@@ -2,22 +2,7 @@
 
 Cell::Cell(BoxAccessCellArray& U, int i, int j, int k, Material_type _phase) : phase(_phase), accessPattern(U.accessPattern), parent_i(i), parent_j(j), parent_k(k), parent(&U)
 {
-    rhoU.resize(numberOfComponents);
-    u.resize(numberOfComponents);
-    sigma.resize(numberOfComponents*numberOfComponents);
 
-    if(phase == solid)
-    {
-        V.resize(numberOfComponents*numberOfComponents);
-        VStar.resize(numberOfComponents*numberOfComponents);
-    }
-
-    materials.resize(U.numberOfMaterials);
-
-    for(auto n : accessPattern.cellVariables)
-    {
-        assignPointer(U,i,j,k,n);
-    }
 }
 
 Real& Cell::operator()(Variable var, int mat, int row, int col)
@@ -27,7 +12,9 @@ Real& Cell::operator()(Variable var, int mat, int row, int col)
 
 Real& Cell::operator()(MaterialSpecifier m)
 {
-    switch(m.var)
+    return parent->operator ()(parent_i,parent_j,parent_k,m);
+
+    /*switch(m.var)
     {
     case ALPHA:             return *(materials[m.mat].alpha);
         break;
@@ -65,12 +52,12 @@ Real& Cell::operator()(MaterialSpecifier m)
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
-    }
+    }*/
 }
 
 void Cell::assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m)
 {
-    switch(m.var)
+    /*switch(m.var)
     {
     case ALPHA:           materials[m.mat].alpha                    = &U(i,j,k,m);
         break;
@@ -108,7 +95,7 @@ void Cell::assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpe
         break;
     default: Print() << "Incorrect cell variable" << std::endl;
         exit(1);
-    }
+    }*/
 }
 
 void Cell::operator= (Cell& U)
