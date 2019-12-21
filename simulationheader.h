@@ -34,7 +34,7 @@ using namespace amrex;
 
 void advance(CellArray& U, CellArray& U1, CellArray &U2, CellArray &MUSCLgrad, CellArray &UL, CellArray &UR, CellArray& ULStar, CellArray &URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Geometry const& geom, ParameterStruct& parameters, Vector<BCRec> &bc, THINCArray& THINC);
 
-void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename);
+void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename, const Real *dx, const Real *prob_lo);
 
 void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& initial, PlasticEOS& plastic);
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct &initial, const Real* dx, const Real* prob_lo);

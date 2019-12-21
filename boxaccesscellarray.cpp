@@ -24,12 +24,12 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, int var, int mat, int 
 
 const Real BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m) const
 {
-    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
+    return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
 }
 
 Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 {
-    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
+    return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
 
     /*switch(m.var)
     {
@@ -113,7 +113,6 @@ void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)
         {
             (*this)(i,j,k,LAMBDA,m)	  = (*this)(i,j,k,ALPHARHOLAMBDA,m)/(*this)(i,j,k,ALPHARHO,m);
 
-
             accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
         }
     }
@@ -140,7 +139,7 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
         {
             (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
 
-            accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
+            //accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
         }
 
         if(accessPattern.materialInfo[m].plastic)
@@ -158,6 +157,14 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
         (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
 
         kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
+    }
+
+    for(int m = 0; m < numberOfMaterials ; m++)
+    {
+        if(accessPattern.materialInfo[m].mixture)
+        {
+            accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
+        }
     }
 
     (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;

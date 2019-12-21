@@ -82,9 +82,11 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                     if(U.accessPattern.materialInfo[m].mixture)
                     {
-                        U(i,j,k,RHO_MIX,m,0)    = initial.rho[s][m];
-                        U(i,j,k,RHO_MIX,m,1)    = initial.rho[s][m];
+                        U(i,j,k,RHO_MIX,m,0)    = initial.rhoa[s][m];
+                        U(i,j,k,RHO_MIX,m,1)    = initial.rhob[s][m];
                         U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
+
+                        U(i,j,k,RHO_K,m)        = 1.0/(U(i,j,k,LAMBDA,m)/U(i,j,k,RHO_MIX,m,0) +(1.0-U(i,j,k,LAMBDA,m))/U(i,j,k,RHO_MIX,m,1));
                     }
 
 
@@ -132,7 +134,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
         }
     }
 
-    Print() << "Here" << std::endl;
+    //Print() << "Here" << std::endl;
 
 }
 
@@ -275,7 +277,8 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
         if(parameters.materialInfo[m].mixture)
         {
             initial.lambda[s][m] = state[s]["material"][m]["lambda"];
-            initial.rho[s][m] = state[s]["material"][m]["rhoa"];
+            initial.rhoa[s][m] = state[s]["material"][m]["rhoa"];
+            initial.rhob[s][m] = state[s]["material"][m]["rhob"];
         }
         else if(parameters.materialInfo[m].phase == fluid)
         {
@@ -370,6 +373,7 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
 
         parameters.materialInfo.resize(parameters.numberOfMaterials);
+        Print() << " HERE" << std::endl;
         initial.resize(parameters);
         plastic.yieldStress.resize(parameters.numberOfMaterials);
 
@@ -601,7 +605,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         if(x < initial.interface)
         {
             s=0;
@@ -610,7 +614,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * 2D Sod

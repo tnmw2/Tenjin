@@ -293,17 +293,17 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
         Print() << "Nan in Lambda in root finding" << std::endl;
     }
 
-    if(U(i,j,k,LAMBDA,m)> 1.0-toleranceForSinglePhaseTreatment)
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
     {
         U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
-        U(i,j,k,RHO_MIX,m,1) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0)); //U(i,j,k,RHO_K,m);
 
         return;
     }
     else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
     {
         U(i,j,k,RHO_MIX,m,1) = U(i,j,k,RHO_K,m);
-        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,0) = rhoaFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,1));//U(i,j,k,RHO_K,m);
 
         return;
     }
@@ -390,6 +390,8 @@ void MixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int
 {
     U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m)*(U(i,j,k,LAMBDA,m)+(1.0-U(i,j,k,LAMBDA,m))*((U(i,j,k,P)-first.pref)/(U(i,j,k,P)-second.pref))*((second.CV*second.GruneisenGamma)/(first.CV*first.GruneisenGamma)));
     U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
+
+    Print() << U(i,j,k,LAMBDA,m) << " " << U(i,j,k,RHO_K,m) << " " << U(i,j,k,RHO_MIX,m,0) << " " << U(i,j,k,RHO_MIX,m,1) << std::endl;
 
     return;
 }

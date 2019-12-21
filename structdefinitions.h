@@ -164,6 +164,8 @@ struct InitialStruct
     Vector<Real> p;
     Vector<Vector<Real> > F;
     Vector<Vector<Real> > rho;
+    Vector<Vector<Real> > rhoa;
+    Vector<Vector<Real> > rhob;
     Vector<Vector<Real> > alpha;
     Vector<Vector<Real> > lambda;
     Real interface;
@@ -187,13 +189,18 @@ struct InitialStruct
         p.resize(numberOfStates);
         F.resize(numberOfStates);
         rho.resize(numberOfStates);
+        rhoa.resize(numberOfStates);
+        rhob.resize(numberOfStates);
         alpha.resize(numberOfStates);
         lambda.resize(numberOfStates);
+
 
         for(int i=0;i<numberOfStates;i++)
         {
             F[i].resize(9);
             rho[i].resize(parameters.numberOfMaterials);
+            rhoa[i].resize(parameters.numberOfMaterials);
+            rhob[i].resize(parameters.numberOfMaterials);
             alpha[i].resize(parameters.numberOfMaterials);
             lambda[i].resize(parameters.numberOfMaterials);
         }

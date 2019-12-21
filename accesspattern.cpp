@@ -8,8 +8,8 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
 
         data[var] = position;
 
-        numberOfMaterialsForVariable[var] = 1;
-        numberOfRowsForVariable[var]      = (colNumber > 1 ? rowNumber : 1);
+        numberOfMaterialsForVariable[var] = ( (materialNumber > 1 && rowNumber*colNumber > 1) ? rowNumber*colNumber : 1  );
+        numberOfRowsForVariable[var]      = ( (rowNumber > 1 && colNumber > 1) ? colNumber : 1);
 
         limits.insert(std::pair<Variable,std::pair<Real,Real> >(var,std::make_pair(lo,hi)));
 

@@ -6,6 +6,8 @@
 
 using namespace amrex;
 
+void PrintAllVarsTo1DGnuplotFile(CellArray &U, int picture, std::__cxx11::string filename, const Real *dx, const Real *prob_lo);
+
 
 #ifdef AMREX_PARTICLES
 std::unique_ptr<AmrTracerParticleContainer> AmrLevelAdv::TracerPC =  nullptr;
@@ -78,13 +80,24 @@ AmrLevelAdv::checkPoint (const std::string& dir,
 //
 //Write a plotfile to specified directory.
 //
-void
-AmrLevelAdv::writePlotFile (const std::string& dir,
-	 	            std::ostream&      os,
-                            VisMF::How         how)
+void AmrLevelAdv::writePlotFile (const std::string& dir, std::ostream& os, VisMF::How how)
 {
+    static int picture = 0;
 
     AmrLevel::writePlotFile (dir,os,how);
+
+    /*MultiFab& S_new = get_new_data(Phi_Type);
+
+    CellArray U(S_new,accessPattern,parameters);
+
+    std::string filename = "Gnuplot/Barton1_REF";
+
+    const Real* dx = geom.CellSize();
+    const Real* prob_lo = geom.ProbLo();
+
+    PrintAllVarsTo1DGnuplotFile(U,picture,filename,dx,prob_lo);
+
+    picture++;*/
 
 #ifdef AMREX_PARTICLES
     if (do_tracers and level == 0) {
