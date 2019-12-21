@@ -214,11 +214,11 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             }
 
 
-            //UL.primitiveToConservative();
-            //UR.primitiveToConservative();
+            UL.primitiveToConservative();
+            UR.primitiveToConservative();
 
-            UL.conservativeToPrimitive();
-            UR.conservativeToPrimitive();
+            //UL.conservativeToPrimitive();
+            //UR.conservativeToPrimitive();
 
             UL.getSoundSpeed();
             UR.getSoundSpeed();
@@ -481,6 +481,10 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     advanceLevelSet(SL,U,LS0,LS1,dt,dx);
 
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
+
+    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
 
     MultiFab::Copy(S_LS, S_LS_1, 0, 0, S_LS.nComp(), S_LS.nGrow());
 

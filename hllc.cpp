@@ -433,7 +433,7 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    for    			(auto n : U.accessPattern.conservativeVariables)
+    for    			(auto n : U.accessPattern.primitiveVariables)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -474,7 +474,7 @@ void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox,
 
     Real fluxL, fluxR;
 
-    for    			(auto n : ULbox.accessPattern.conservativeVariables)
+    for    			(auto n : ULbox.accessPattern.primitiveVariables)
     {
         for 		   (int k = lo.z; k <= hi.z; ++k)
         {
@@ -488,11 +488,11 @@ void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox,
                     Cell UL(ULbox,i,j,k,phase);
                     Cell UR(URbox,i,j,k,phase);
 
-                    fluxL = flux(n,UL,d);
-                    fluxR = flux(n,UR,d);
+                    /*fluxL = flux(n,UL,d);
+                    fluxR = flux(n,UR,d);*/
 
-                    ULboxnew(i,j,k,n) = ULbox(i,j,k,n) + 0.5*(dt/dx[d])*(fluxL - fluxR);
-                    URboxnew(i,j,k,n) = URbox(i,j,k,n) + 0.5*(dt/dx[d])*(fluxL - fluxR);
+                    ULboxnew(i,j,k,n) = ULbox(i,j,k,n);// + 0.5*(dt/dx[d])*(fluxL - fluxR);
+                    URboxnew(i,j,k,n) = URbox(i,j,k,n);// + 0.5*(dt/dx[d])*(fluxL - fluxR);
                 }
             }
         }
