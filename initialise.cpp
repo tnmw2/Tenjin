@@ -24,7 +24,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    std::vector< std::vector<Real> > V(initial.numberOfStates);
+    /*std::vector< std::vector<Real> > V(initial.numberOfStates);
 
     for(int s = 0; s < initial.numberOfStates; s++)
     {
@@ -44,9 +44,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 }
             }
         }
-    }
-
-    //Print() << "Here" << std::endl;
+    }*/
 
     int s=0;
 
@@ -66,76 +64,40 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
             {
                 x = prob_lo[0] + (Real(i)+0.5)*dx[0];
 
-                //chooseStateBasedOnInitialCondition(s,i,j,k,initial,parameters);
-
                 AMR_chooseStateBasedOnInitialCondition(s,x,y,z,initial,parameters);
 
 
-                //Print()<< s << " ";
-
-
-                for (int m = 0; m < parameters.numberOfMaterials; m++)
+                for (int m = 0; m < parameters.numberOfSharpMaterials; m++)
                 {
-                    U(i,j,k,ALPHA,m)    = initial.alpha[s][m];
-                    U(i,j,k,RHO_K,m)    = initial.rho[s][m];
-
-
-                    if(U.accessPattern.materialInfo[m].mixture)
+                    if(parameters.interfaceType[m] == SHARP)
                     {
-                        U(i,j,k,RHO_MIX,m,0)    = initial.rhoa[s][m];
-                        U(i,j,k,RHO_MIX,m,1)    = initial.rhob[s][m];
-                        U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
+                        U(i,j,k,RHO,m)    = initial.rho[s][m][0];
 
-                        U(i,j,k,RHO_K,m)        = 1.0/(U(i,j,k,LAMBDA,m)/U(i,j,k,RHO_MIX,m,0) +(1.0-U(i,j,k,LAMBDA,m))/U(i,j,k,RHO_MIX,m,1));
+                        U(i,j,k,P,m)      = initial.p[s][m][0];
+
+                        U(i,j,k,VELOCITY,m,0)  = initial.u[s][m][0];
+                        U(i,j,k,VELOCITY,m,1)  = initial.v[s][m][0];
+                        U(i,j,k,VELOCITY,m,2)  = initial.w[s][m][0];
+
                     }
-
-
-                    if(parameters.materialInfo[m].phase == solid)
+                    else
                     {
-                        U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][0]);
-                    }
+                        U(i,j,k,P,m)             = initial.p[s][m][0];
 
-                    if(parameters.PLASTIC)
-                    {
-                        U(i,j,k,EPSILON,m) = 0.0;
-                    }
-                }
+                        U(i,j,k,VELOCITY,m,0,0)  = initial.u[s][m][0];
+                        U(i,j,k,VELOCITY,m,0,1)  = initial.v[s][m][0];
+                        U(i,j,k,VELOCITY,m,0,2)  = initial.w[s][m][0];
 
-
-
-                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
-                //U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
-
-                U(i,j,k,P)             = initial.p[s];
-
-                U(i,j,k,VELOCITY,0,0)  = initial.u[s];
-                U(i,j,k,VELOCITY,0,1)  = initial.v[s];
-                U(i,j,k,VELOCITY,0,2)  = initial.w[s];
-
-                if(parameters.SOLID)
-                {
-                    for(int row = 0; row<U.numberOfComponents; row++)
-                    {
-                        for(int col = 0; col<U.numberOfComponents; col++)
+                        for(int comp = 0; comp < parameters.numberOfDiffuseMaterials[m]; comp++)
                         {
-                            U(i,j,k,V_TENSOR,0,row,col) = V[s][row*U.numberOfComponents+col];
+                            U(i,j,k,ALPHA,m,comp)    = initial.alpha[s][m][comp];
+                            U(i,j,k,RHO_K,m,comp)    = initial.rho  [s][m][comp];
                         }
                     }
                 }
-
-                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
-
-
-
             }
-
-            //Print() << "Here" << std::endl;
         }
     }
-
-    //Print() << "Here" << std::endl;
-
 }
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
@@ -150,118 +112,113 @@ void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStru
 
         initial_conditions(baca, parameters, initial,dx,prob_lo);
 
-        baca.primitiveToConservative();
+        //baca.primitiveToConservative();
     }
 }
 
-void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& parameters, int m, PlasticEOS& plastic)
+void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& parameters, int m, int comp, PlasticEOS& plastic)
 {
     using namespace libconfig;
 
     std::string EOSstring;
     std::string material1string;
+    std::string phasestring;
 
-    materialname[m].lookupValue("material",material1string);
 
-    int mix;
+    materialname[m][comp].lookupValue("material",material1string);
+    materialname[m][comp].lookupValue("EOS",EOSstring);
+    materialname[m][comp].lookupValue("phase",phasestring);
 
-    materialname[m].lookupValue("mixture" ,mix);
-
-    parameters.materialInfo[m].mixture = mix;
-
-    materialname[m].lookupValue("EOS",EOSstring);
 
     Vector<Real> temp;
 
-    temp.push_back(materialname[m]["adiabaticIndex"]);
-    temp.push_back(materialname[m]["pref"]);
-    temp.push_back(materialname[m]["eref"]);
-    temp.push_back(materialname[m]["CV"]);
+    temp.push_back(materialname[m][comp]["adiabaticIndex"]);
+    temp.push_back(materialname[m][comp]["pref"]);
+    temp.push_back(materialname[m][comp]["eref"]);
+    temp.push_back(materialname[m][comp]["CV"]);
 
-    if(EOSstring == "RomenskiiSolid")
+
+
+    if(material1string == "sharp")
     {
-        parameters.materialInfo[m].EOS = new RomenskiiSolidEOS();
+        parameters.interfaceType.push_back(SHARP);
 
-        temp.push_back(materialname[m]["rho0"]);
-        temp.push_back(materialname[m]["K0"]);
-        temp.push_back(materialname[m]["EOSalpha"]);
-        temp.push_back(materialname[m]["EOSbeta"]);
 
-        if(parameters.materialInfo[m].mixture)
+        if(EOSstring == "SINGLEMATERIAL_MieGruneisen")
         {
-            std::cout << "Error: solid can't be a mixture (atm)" << std::endl;
-            exit(1);
-        }
-    }
-    else if(EOSstring == "WilkinsSolid")
-    {
-        parameters.materialInfo[m].EOS = new WilkinsSolidEOS();
-
-        temp.push_back(materialname[m]["rho0"]);
-        temp.push_back(materialname[m]["e1"]);
-        temp.push_back(materialname[m]["e2"]);
-        temp.push_back(materialname[m]["e3"]);
-        temp.push_back(materialname[m]["e4"]);
-        temp.push_back(materialname[m]["e5"]);
-
-        if(parameters.materialInfo[m].mixture)
-        {
-            std::cout << "Error: solid can't be a mixture (atm)" << std::endl;
-            exit(1);
-        }
-    }
-    else if(EOSstring == "MieGruneisen")
-    {
-        if(parameters.materialInfo[m].mixture)
-        {
-            parameters.materialInfo[m].EOS = new MixtureEOS();
-
-            parameters.materialInfo[m].mixtureIndex = -1;
-
-
-            temp.push_back(materialname[m]["adiabaticIndexmix"]);
-            temp.push_back(materialname[m]["prefmix"]);
-            temp.push_back(materialname[m]["erefmix"]);
-            temp.push_back(materialname[m]["CVmix"]);
+            parameters.materialInfo[m][comp].EOS = new SINGLEMATERIAL_MieGruneisenEOS();
         }
         else
         {
-            parameters.materialInfo[m].EOS = new MieGruneisenEOS();
+            Vector<Real> err;
+
+            err.push_back(m);
+            err.push_back(comp);
+
+            std::string errstring = "No valid EOS selected for material";
+
+            customAbort(err,errstring);
+        }
+    }
+    else if(material1string == "diffuse")
+    {
+        parameters.interfaceType.push_back(DIFFUSE);
+
+        int mix;
+
+        materialname[m][comp].lookupValue("mixture" ,mix);
+
+        if(EOSstring == "MieGruneisen")
+        {
+            parameters.materialInfo[m][comp].EOS = new MieGruneisenEOS();
+        }
+        else
+        {
+            Vector<Real> err;
+
+            err.push_back(m);
+            err.push_back(comp);
+
+            std::string errstring = "No valid EOS selected for material";
+
+            customAbort(err,errstring);
         }
     }
     else
     {
-        std::cout << "No valid EOS selected for material " << m << std::endl;
-        exit(1);
+        Abort("Undefined interface type");
     }
+
 
     if(parameters.PLASTIC)
     {
-        plastic.yieldStress[m] = 0.0;
+        plastic.yieldStress[m][comp] = 0.0;
     }
 
-    if(material1string == "solid")
+    if(phasestring == "solid")
     {
-        parameters.materialInfo[m].phase = solid;
+        parameters.materialInfo[m][comp].phase = solid;
 
-        temp.push_back(materialname[m]["G0"]);
+        temp.push_back(materialname[m][comp]["G0"]);
 
         if(parameters.PLASTIC)
         {
-            plastic.yieldStress[m] = materialname[m]["yieldStress"];
-            parameters.materialInfo[m].plastic = true;
+            plastic.yieldStress[m][comp] = materialname[m][comp]["yieldStress"];
+            parameters.materialInfo[m][comp].plastic = true;
         }
 
     }
-    else if(material1string == "fluid")
+    else if(phasestring == "fluid")
     {
-        parameters.materialInfo[m].phase = fluid;
-        parameters.materialInfo[m].plastic = false;
+        parameters.materialInfo[m][comp].phase = fluid;
+        parameters.materialInfo[m][comp].plastic = false;
+    }
+    else
+    {
+        Abort("Incorrect phase string");
     }
 
-    parameters.materialInfo[m].EOS->define(temp);
-
-
+    parameters.materialInfo[m][comp].EOS->define(temp);
 
     return;
 }
@@ -270,33 +227,53 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
 {
     using namespace libconfig;
 
-    for(int m=0;m<parameters.numberOfMaterials;m++)
+    for(int mat=0;mat<parameters.numberOfSharpMaterials;mat++)
     {
-        initial.alpha[s][m] = state[s]["material"][m]["alpha"];
+        if(parameters.interfaceType[mat] == SHARP)
+        {
+            if(parameters.materialInfo[mat][0].phase == solid)
+            {
+                for(int i=0;i<9;i++)
+                {
+                    initial.F[s][mat][i] = state[s][mat]["F"][i];
+                }
+            }
 
-        if(parameters.materialInfo[m].mixture)
-        {
-            initial.lambda[s][m] = state[s]["material"][m]["lambda"];
-            initial.rhoa[s][m] = state[s]["material"][m]["rhoa"];
-            initial.rhob[s][m] = state[s]["material"][m]["rhob"];
-        }
-        else if(parameters.materialInfo[m].phase == fluid)
-        {
-            initial.rho[s][m] = state[s]["material"][m]["rho"];
+            initial.rho[s][mat][0] = state[s][mat]["rho"];
+            initial.p  [s][mat][0] = state[s][mat]["p"];
+            initial.u  [s][mat][0] = state[s][mat]["u"];
+            initial.v  [s][mat][0] = state[s][mat]["v"];
+            initial.w  [s][mat][0] = state[s][mat]["w"];
+
         }
         else
         {
-            for(int i=0;i<9;i++)
+            initial.p[s][mat][0] = state[s][mat]["p"];
+            initial.u[s][mat][0] = state[s][mat]["u"];
+            initial.v[s][mat][0] = state[s][mat]["v"];
+            initial.w[s][mat][0] = state[s][mat]["w"];
+
+            for(int m=0; m < parameters.numberOfDiffuseMaterials[s]; m++)
             {
-                initial.F[s][i] = state[s]["material"][m]["F"][i];
+                initial.alpha[s][mat][m] = state[s][mat]["components"][m]["alpha"];
+
+                if(parameters.materialInfo[mat][m].phase == fluid)
+                {
+                    initial.rho[s][mat][m] = state[s][mat]["components"][m]["rho"];
+                }
+                else
+                {
+                    for(int i=0;i<9;i++)
+                    {
+                        initial.F[s][mat][i] = state[s][mat]["components"][m]["F"][i];
+                    }
+                }
             }
         }
     }
 
-    initial.p[s] = state[s]["p"];
-    initial.u[s] = state[s]["u"];
-    initial.v[s] = state[s]["v"];
-    initial.w[s] = state[s]["w"];
+
+
 
     return;
 }
@@ -334,13 +311,20 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         /*****************************************************
          * General Simulation Parameters
          ****************************************************/
+        Setting& root = cfg.getRoot();
+
+        cfg.lookupValue("numberOfSharpMaterials",    parameters.numberOfSharpMaterials);
 
 
-        cfg.lookupValue("CFL",parameters.CFL);
+        for(int s=0;s<parameters.numberOfSharpMaterials;s++)
+        {
+            parameters.numberOfDiffuseMaterials.push_back(root["numberOfDiffuseMaterials"][s]);
+            parameters.diffuseMaterialContainsMixture.push_back(root["diffuseMaterialContainsMixture"][s]);
+        }
 
-        cfg.lookupValue("materials",    parameters.numberOfMaterials);
-        cfg.lookupValue("mixtures",     parameters.numberOfMixtures);
-        cfg.lookupValue("states",       initial.numberOfStates);
+
+
+        cfg.lookupValue("states",   initial.numberOfStates);
 
         cfg.lookupValue("interface",initial.interface);
 
@@ -353,7 +337,6 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         cfg.lookupValue("THINCbeta",parameters.THINCbeta);
 
-        Setting& root = cfg.getRoot();
 
         for(int dir; dir<AMREX_SPACEDIM;dir++)
         {
@@ -361,28 +344,29 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
             initial.highBoundary[dir] = root["highBoundary"][dir];
         }
 
-
-        int m = parameters.numberOfMaterials;
-        int mix = parameters.numberOfMixtures;
-
-        parameters.Ncomp = ((2+2)*mix)+m+m+m+3+3+1+1+1+1+1+9+(9+9+9+1)*parameters.SOLID;
-
         /**********************************************************
          * Material Parameters
          **********************************************************/
 
+        parameters.materialInfo.resize(parameters.numberOfSharpMaterials);
+        plastic.yieldStress.resize(parameters.numberOfSharpMaterials);
 
-        parameters.materialInfo.resize(parameters.numberOfMaterials);
-        Print() << " HERE" << std::endl;
+        for(int s=0;s<parameters.numberOfSharpMaterials;s++)
+        {
+            parameters.materialInfo[s].resize(parameters.numberOfDiffuseMaterials[s]);
+            plastic.yieldStress[s].resize(parameters.numberOfDiffuseMaterials[s]);
+        }
+
         initial.resize(parameters);
-        plastic.yieldStress.resize(parameters.numberOfMaterials);
-
 
         Setting* materials = &root["listOfMaterials"];
 
-        for(int material=0;material<parameters.numberOfMaterials;material++)
+        for(int s=0;s<parameters.numberOfSharpMaterials;s++)
         {
-            getMaterialParameters(*materials,parameters,material,plastic);
+            for(int m=0; m < parameters.numberOfDiffuseMaterials[s]; m++)
+            {
+                getMaterialParameters(*materials,parameters,s,m,plastic);
+            }
         }
 
         Setting* states = &root["listOfStates"];
@@ -391,11 +375,10 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
         {
             getState(*states,parameters,initial,s);
         }
-
     }
     catch( SettingException except)
     {
-        std::cout << except.getPath() << std::endl;
+        Abort(except.getPath());
     }
 
     return;

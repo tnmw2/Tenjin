@@ -602,3 +602,107 @@ Real WilkinsSolidEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m,
 
     return (U(i,j,k,P)-(2.0*e2*x*x*x+e3*x*x-e4-e5*x))/(U(i,j,k,RHO_K,m)*GruneisenGamma*CV);
 }
+
+
+
+/*****************************************************
+ * Single Material EOS
+ ****************************************************/
+
+SINGLEMATERIAL_MieGruneisenEOS::SINGLEMATERIAL_MieGruneisenEOS(Real gamma, Real _pref=0.0, Real _eref=0.0, Real _CV=0.0)
+{
+    adiabaticIndex 	= gamma;
+    GruneisenGamma 	= gamma-1.0;
+    pref 			= _pref;
+    eref	 		= _eref;
+    CV 				= _CV;
+}
+
+void SINGLEMATERIAL_MieGruneisenEOS::define(Vector<Real> &params)
+{
+
+
+    adiabaticIndex 	= params[0];
+    GruneisenGamma 	= adiabaticIndex-1.0;
+    pref 			= params[1];
+    eref	 		= params[2];
+    CV 				= params[3];
+
+
+
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return eref*U(i,j,k,RHO,m);
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return pref/GruneisenGamma;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 1.0/GruneisenGamma;
+}
+
+void SINGLEMATERIAL_MieGruneisenEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy)
+{
+    amrex::Abort("Trying to root find on a non-mixture EOS");
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::getSoundSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return U(i,j,k,P,m)*(GruneisenGamma+1.0)/U(i,j,k,RHO,m) - pref/U(i,j,k,RHO,m);
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx)
+{
+    return U(i,j,k,P,m)/(U(i,j,k,RHO,m)*GruneisenGamma*CV);
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 1.0/GruneisenGamma;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::componentShearModulus(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::dG2drho2(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::shearInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+Real SINGLEMATERIAL_MieGruneisenEOS::shearPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return 0.0;
+}
+
+void SINGLEMATERIAL_MieGruneisenEOS::setRhoFromDeformationTensor(BoxAccessCellArray& U, int i, int j, int k, int m, double* F)
+{
+    return;
+}
+
+void SINGLEMATERIAL_MieGruneisenEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
+{
+    return;
+}

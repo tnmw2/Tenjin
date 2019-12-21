@@ -28,25 +28,34 @@ public:
     AccessPattern(ParameterStruct &parameters);
 
     void define(ParameterStruct &parameters);
-    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Real lo, Real hi, Variable var, int materialNumber, int rowNumber, int colNumber);
+    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INREFINE, Real lo, Real hi, Variable var, int m, int componentNumber, int rowNumber, int colNumber);
+    int& operator[](MaterialSpecifier& m);
 
-    int& operator[](Variable var);
-
-    std::vector<int> data;
+    std::vector<std::vector<int> > data;
     std::map<Variable,std::pair<Real,Real> > limits;
 
-    Vector<MaterialSpecifier>   conservativeVariables;
-    Vector<MaterialSpecifier>   primitiveVariables;
-    Vector<MaterialSpecifier>   allVariables;
-    Vector<MaterialSpecifier>   refineVariables;
+    int numberOfSharpMaterials;
 
-    Vector<int>                 numberOfMaterialsForVariable;
-    Vector<int>                 numberOfRowsForVariable;
+    Vector<int>                 numberOfDiffuseMaterials;
+
+    Vector<Vector<MaterialSpecifier> >   conservativeVariables;
+    Vector<Vector<MaterialSpecifier> >   primitiveVariables;
+    Vector<MaterialSpecifier>            allVariables;
+    Vector<MaterialSpecifier>            refineVariables;
+
+    Vector<Vector<int> >                 numberOfComponentsForVariable;
+    Vector<Vector<int> >                 numberOfRowsForVariable;
 
     Vector<std::string>         variableNames;
-    Vector<MaterialDescriptor>&  materialInfo;
+    Vector< Vector<MaterialDescriptor> >&  materialInfo;
 
-    Vector<MaterialSpecifier>   cellVariables;
+    Vector<Interface_type>& interface;
+
+
+    Vector< Vector<MaterialSpecifier> > material_conservativeVariables;
+    Vector< Vector<MaterialSpecifier> > material_primitiveVariables;
+
+
 
 };
 

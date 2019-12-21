@@ -39,6 +39,12 @@ enum Material_type
     fluid
 };
 
+enum Interface_type
+{
+    DIFFUSE,
+    SHARP
+};
+
 enum Direction_enum
 {
     x,
@@ -64,13 +70,15 @@ struct MaterialSpecifier
 {
     Variable var;
     int      mat;
+    int      com;
     int      row;
     int      col;
 
-    MaterialSpecifier(Variable v=RHO, int m=0, int r=0, int c=0)
+    MaterialSpecifier(Variable v=RHO, int m=0, int p = 0, int r=0, int c=0)
     {
         var=v;
         mat=m;
+        com=p;
         row=r;
         col=c;
     }
@@ -95,9 +103,11 @@ class MieGruneisenEOS;
 struct MaterialDescriptor
 {
     Material_type   phase;
+    Interface_type  interface;
     bool            mixture = 0;
     int             mixtureIndex;
     int             plastic = false;
+
 
     MieGruneisenEOS* EOS;
 };
@@ -109,10 +119,6 @@ struct MaterialDescriptor
  */
 struct ParameterStruct
 {
-    Vector<Real> dimL;
-    Vector<Real> dx;
-    Vector<int>  n_cells;
-
     int SOLID;
     int THINC;
     int RADIAL;
@@ -120,32 +126,20 @@ struct ParameterStruct
     int REACTIVE;
     int MUSCL;
 
-    int Ncomp;
-    int Nghost;
     int numberOfMaterials;
-    int numberOfMixtures;
 
-    int max_grid_size;
+    int Ncomp;
 
-    Real CFL;
-    Real x0;
-    Real dt;
+    int         numberOfSharpMaterials;
+    Vector<int> numberOfDiffuseMaterials;
+    Vector<int> diffuseMaterialContainsMixture;
+    Vector<int> interfaceType;
+
     Real THINCbeta;
 
-    /*Vector<Real> adiabaticIndex;
-    Vector<Real> CV;
+    Vector< Vector<MaterialDescriptor> >  materialInfo;
 
-    Vector<Real> mixtureAdiabaticIndex;
-    Vector<Real> mixtureCV;*/
-
-    Vector<MaterialDescriptor>  materialInfo;
-
-    ParameterStruct()
-    {
-        dimL 	= Vector<Real>(AMREX_SPACEDIM);
-        dx	 	= Vector<Real>(AMREX_SPACEDIM);
-        n_cells = Vector<int> (AMREX_SPACEDIM);
-    }
+    ParameterStruct(){}
 };
 
 /** Holds data about initial conditions etc.
@@ -158,16 +152,17 @@ struct InitialStruct
     Real startT;
     Real finalT;
 
-    Vector<Real> u;
-    Vector<Real> v;
-    Vector<Real> w;
-    Vector<Real> p;
-    Vector<Vector<Real> > F;
-    Vector<Vector<Real> > rho;
-    Vector<Vector<Real> > rhoa;
-    Vector<Vector<Real> > rhob;
-    Vector<Vector<Real> > alpha;
-    Vector<Vector<Real> > lambda;
+    Vector<Vector<Vector<Real> > > u;
+    Vector<Vector<Vector<Real> > > v;
+    Vector<Vector<Vector<Real> > > w;
+    Vector<Vector<Vector<Real> > > p;
+    Vector<Vector<Vector<Real> > > F;
+    Vector<Vector<Vector<Real> > > rho;
+    Vector<Vector<Vector<Real> > > rhoa;
+    Vector<Vector<Vector<Real> > > rhob;
+    Vector<Vector<Vector<Real> > > alpha;
+    Vector<Vector<Vector<Real> > > lambda;
+
     Real interface;
 
     Vector<int> lowBoundary;
@@ -197,12 +192,30 @@ struct InitialStruct
 
         for(int i=0;i<numberOfStates;i++)
         {
-            F[i].resize(9);
-            rho[i].resize(parameters.numberOfMaterials);
-            rhoa[i].resize(parameters.numberOfMaterials);
-            rhob[i].resize(parameters.numberOfMaterials);
-            alpha[i].resize(parameters.numberOfMaterials);
-            lambda[i].resize(parameters.numberOfMaterials);
+            F     [i].resize(parameters.numberOfSharpMaterials);
+            u     [i].resize(parameters.numberOfSharpMaterials);
+            v     [i].resize(parameters.numberOfSharpMaterials);
+            w     [i].resize(parameters.numberOfSharpMaterials);
+            p     [i].resize(parameters.numberOfSharpMaterials);
+            rho   [i].resize(parameters.numberOfSharpMaterials);
+            rhoa  [i].resize(parameters.numberOfSharpMaterials);
+            rhob  [i].resize(parameters.numberOfSharpMaterials);
+            alpha [i].resize(parameters.numberOfSharpMaterials);
+            lambda[i].resize(parameters.numberOfSharpMaterials);
+
+            for(int s = 0; s < parameters.numberOfSharpMaterials; s++)
+            {
+                F     [i][s].resize(9);
+                u     [i][s].resize(1);
+                v     [i][s].resize(1);
+                w     [i][s].resize(1);
+                p     [i][s].resize(1);
+                rho   [i][s].resize(parameters.numberOfDiffuseMaterials[s]);
+                rhoa  [i][s].resize(parameters.numberOfDiffuseMaterials[s]);
+                rhob  [i][s].resize(parameters.numberOfDiffuseMaterials[s]);
+                alpha [i][s].resize(parameters.numberOfDiffuseMaterials[s]);
+                lambda[i][s].resize(parameters.numberOfDiffuseMaterials[s]);
+            }
         }
 
 

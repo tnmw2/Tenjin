@@ -9,43 +9,37 @@
  * Because AMReX stores things as n,i,j,k, rather than i,j,k,n
  * if we want to act on variables with the same index, then we
  * first group them into a Cell class for ease.
- *
  * \class Material
  * A sub-set of a cell which only contains information relating
  * to one material
  */
 
+class Cell;
+
 class Material
 {
-    public:
+   public:
 
 
-    Material(){}
+   Material(){}
 
+   void allocateSpace(Cell *ptr, int n);
+   void operator= (Material& M);
 
-    Material_type		phase;
+   Material_type		phase;
 
+   Cell*           parent;
 
-    //Thermodynamic Data ----------------
-
-    Real*	alpha;
-    Real* 	rho;
-    Real*	alphaRho;
-    Real*   lambda;
-    Real*   alphaRhoLambda;
-    Real*   epsilon;
-    Real*   alphaRhoEpsilon;
-
-
+   int             materialNumber;
 };
 
 class Cell
 {
 public:
 
-    Material_type phase;
-
     static const int numberOfComponents = 3;
+
+    std::vector<Material> materials;
 
     AccessPattern& accessPattern;
 
@@ -55,8 +49,6 @@ public:
 
     Real&  operator()(Variable var, int mat=0, int row=0, int col=0);
     Real&  operator()(MaterialSpecifier m);
-
-    void  assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m);
 
     void  operator= (Cell& U);
 

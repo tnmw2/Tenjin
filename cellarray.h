@@ -71,25 +71,25 @@ public:
     Real& neighbour(int di, int dj, int dk, int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
 
     Real& operator()(int i, int j, int k, MaterialSpecifier& m);
-    Real& operator()(int i, int j, int k, Variable var, int mat=0, int row=0, int col=0);
-    Real& operator()(int i, int j, int k, int var, int mat=0, int row=0, int col=0);
+    Real& operator()(int i, int j, int k, Variable var, int mat=0, int com =0, int row=0, int col=0);
+    Real& operator()(int i, int j, int k, int var,      int mat=0, int com =0, int row=0, int col=0);
 
     const Real operator()(int i, int j, int k, MaterialSpecifier& m) const;
-    const Real operator()(int i, int j, int k, Variable var, int mat, int row, int col) const;
+    const Real operator()(int i, int j, int k, Variable var, int mat, int com, int row, int col) const;
 
-    void  conservativeToPrimitive();
+    /*void  conservativeToPrimitive();
     void  primitiveToConservative();
 
     void  conservativeToPrimitive(int i, int j, int k);
     void  primitiveToConservative(int i, int j, int k);
 
-    void stressTensor                           (int i, int j, int k);
+    void stressTensor                           (int i, int j, int k);*/
 
     Real getEffectiveInverseGruneisen           (int i, int j, int k);
     Real getEffectiveNonThermalPressure         (int i, int j, int k);
     Real getEffectiveNonThermalInternalEnergy   (int i, int j, int k);
 
-    void getSoundSpeed();
+    /*void getSoundSpeed();
     void getSoundSpeed(int i, int j, int k);
     Real transverseWaveSpeed(int i, int j, int k);
 
@@ -110,7 +110,7 @@ public:
     bool check(MaterialSpecifier& m);
     bool contains_nan();
 
-    bool cellIsMostlyFluid(int i, int j, int k);
+    bool cellIsMostlyFluid(int i, int j, int k);*/
 
 
 };

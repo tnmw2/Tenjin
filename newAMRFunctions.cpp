@@ -32,11 +32,11 @@ int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
  * the new AMR_HLLC functions
  * -----------------------------------------------------------*/
 
-void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
+/*void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
 void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
 void MUSCLextrapolate(const BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, Direction_enum d);
-
+*/
 void customAbort(Vector<Real>& values, std::string& Message)
 {
     std::ostringstream stream;
@@ -53,55 +53,6 @@ void customAbort(Vector<Real>& values, std::string& Message)
     Abort(error);
 }
 
-void smooth(BoxAccessCellArray& U, BoxAccessCellArray& U1, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
-{
-    const auto lo = lbound(U.box);
-    const auto hi = ubound(U.box);
-
-    Real sum     = 0.0;
-    int  counter = 0;
-
-    Vector<int> pm {-1,0,1};
-
-    Vector<MaterialSpecifier> smoothing;
-
-    smoothing.push_back(MaterialSpecifier (ALPHA,0,0,0));
-    smoothing.push_back(MaterialSpecifier (ALPHA,1,0,0));
-    smoothing.push_back(MaterialSpecifier (ALPHA,2,0,0));
-
-    for(auto n : smoothing)
-    {
-        for 		(int k = lo.z; k <= hi.z; ++k)
-        {
-            for 	(int j = lo.y; j <= hi.y; ++j)
-            {
-                for (int i = lo.x; i <= hi.x; ++i)
-                {
-                    Real sum     = 0.0;
-                    int  counter = 0;
-
-
-                    for(auto nj : pm)
-                    {
-                        for(auto ni : pm)
-                        {
-                            sum += U.neighbour(ni,nj,0,i,j,k,n);
-
-                            counter++;
-                        }
-                    }
-
-                    /*if(std::abs(((1.0/counter)*(sum) - U1(i,j,k,n))/U1(i,j,k,n)) > 0.1 )
-                    {
-                        Print() << (1.0/counter)*(sum) << " " << U1(i,j,k,n) << std::endl;
-                    }*/
-
-                    U1(i,j,k,n) = (1.0/counter)*(sum);
-                }
-            }
-        }
-    }
-}
 
 void AmrLevelAdv::initData ()
 {
@@ -144,7 +95,7 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
      * to access them easily
      * -----------------------------------------------------------*/
 
-	CellArray F0(flux_arr[0],accessPattern,parameters);
+/*	CellArray F0(flux_arr[0],accessPattern,parameters);
 	CellArray F1(flux_arr[1],accessPattern,parameters);
 	CellArray F2(flux_arr[2],accessPattern,parameters);
 	
@@ -210,12 +161,12 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 		}
 	}
 		
-		
+*/
 }
 
 void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
 {
-    Direction_enum d; 
+   /* Direction_enum d;
 
 
     U.data.FillBoundary(geom.periodicity());
@@ -230,12 +181,12 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
         d = (Direction_enum)dir;
 
         UL = U;
-        UR = U;
+        UR = U;*/
 
         /*-------------------------------------------------------------
          * Perform MUSCL extrapolation.
          * -----------------------------------------------------------*/
-
+/*
         if(parameters.MUSCL)
         {
 #ifdef _OPENMP
@@ -244,13 +195,13 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
             for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
             {
                 const Box& bx = mfi.validbox();
-
+*/
                 /*-------------------------------------------------------------
                  * Data can't be accessed straight from a Multifab so we make
                  * some wrappers to hold the FArrayBoxes that can access the
                  * data called BoxAccessCellArray.
                  * -----------------------------------------------------------*/
-
+/*
                 BoxAccessCellArray  Ubox(mfi,bx,U);
                 BoxAccessCellArray  ULbox(mfi,bx,UL);
                 BoxAccessCellArray  URbox(mfi,bx,UR);
@@ -301,12 +252,12 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
         FillDomainBoundary(UL.data, geom, bc);
         FillDomainBoundary(UR.data, geom, bc);
 
-        
+        */
 
         /*-------------------------------------------------------------
          * Calulate HLLC flux and update the new array.
          * -----------------------------------------------------------*/
-
+/*
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -360,7 +311,7 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
     U1.data.FillBoundary(geom.periodicity());
     FillDomainBoundary(U1.data, geom, bc);
 
-    U1.conservativeToPrimitive();
+    U1.conservativeToPrimitive();*/
 
 }
 
@@ -372,7 +323,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * solution on a given level.
      * -----------------------------------------------------------*/
 
-    MultiFab& S_new = get_new_data(Phi_Type);
+  /*  MultiFab& S_new = get_new_data(Phi_Type);
 
 
 
@@ -402,7 +353,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     if (do_reflux && level > 0)
     {
 		current = &getFluxReg(level);
-    }
+    }*/
 
     /*-------------------------------------------------------------
      * Declared flux multifabs. Several are needed as we need to
@@ -410,7 +361,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * that we can reflux appropriately
      * -----------------------------------------------------------*/
 
-    Array <MultiFab, AMREX_SPACEDIM> fluxes;
+   /* Array <MultiFab, AMREX_SPACEDIM> fluxes;
     Array <MultiFab, AMREX_SPACEDIM> fluxes1;
     Array <MultiFab, AMREX_SPACEDIM> fluxes2;
     Array <MultiFab, AMREX_SPACEDIM> UStarflux;
@@ -427,7 +378,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         //fluxes2[j].setVal(0.0);
         UStarflux[j].define(ba, dmap, parameters.Ncomp, 0);
     }
-
+*/
 
     /*-------------------------------------------------------------
      * Declare some multifabs with Ghost cells to hold intermediate
@@ -437,7 +388,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     /*------------------------------------------------------------
      * States with Two Ghost Cells:
      * -----------------------------------------------------------*/
-    int TWOGHOST = 2;
+ /*   int TWOGHOST = 2;
 
     MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
     FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
@@ -445,11 +396,11 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     FillPatch(*this, S1, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
     MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
     FillPatch(*this, S2, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-
+*/
     /*-------------------------------------------------------------
      * States with One Ghost Cell:
      * -----------------------------------------------------------*/
-
+/*
     int ONEGHOST = 1;
 
     MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
@@ -488,7 +439,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
     U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
-
+*/
     /*MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
     FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);*/
 
@@ -507,7 +458,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         reactiveUpdate(U,U1,U2,parameters,dt,S_new);
     }*/
 
-    if(parameters.PLASTIC)
+  /*  if(parameters.PLASTIC)
     {
         plastic.plasticUpdate(U1,parameters,dt,S_new);
     }
@@ -556,7 +507,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     {
       TracerPC->AdvectWithUmac(Umac, level, dt);
     }
-    #endif
+    #endif*/
 
     return dt;
 }
@@ -571,7 +522,7 @@ Real AmrLevelAdv::estTimeStep (Real)
      * -----------------------------------------------------------*/
 
     // This is just a dummy value to start with 
-    Real dt_est  = 1.0e+20;
+   /* Real dt_est  = 1.0e+20;
 
     const Real* dx = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
@@ -604,7 +555,7 @@ Real AmrLevelAdv::estTimeStep (Real)
 					{
 						for(int n=0;n<AMREX_SPACEDIM;n++)
 						{
-							dt_est = std::min(dt_est, dx[n] / (Ubox(i,j,k,SOUNDSPEED) + fabs(Ubox(i,j,k,VELOCITY,0,n)))); //(advectionVeloctiy));//
+                            dt_est = std::min(dt_est, dx[n] / (Ubox(i,j,k,SOUNDSPEED) + fabs(Ubox(i,j,k,VELOCITY,0,n)))); //(advectionVeloctiy));//
 						}
 					}
 				}
@@ -623,8 +574,10 @@ Real AmrLevelAdv::estTimeStep (Real)
     if (verbose) {
 	amrex::Print() << "AmrLevelAdv::estTimeStep at level " << level 
                        << ":  dt_est = " << dt_est << std::endl;
-    }
-    
+    }*/
+
+    Real dt_est = 0.0;
+
     return dt_est;
 }
 
@@ -827,16 +780,8 @@ void AmrLevelAdv::variableSetUp ()
 
     /*-------------------------------------------------------------
      * This function sets names and boundary conditions for each
-     * variable.
-     *
-     *
-     * Question:
-     *
-     * Why do I have to write my own function (Phifill) to set
-     * the boundary conditions? Is this not something AMReX is
-     * capable of handling itself?
-     *
-     *
+     * variable, sets up the access pattern and reads parameters
+     * for the simulation
      * -----------------------------------------------------------*/
 
     BL_ASSERT(desc_lst.size() == 0);
@@ -844,6 +789,7 @@ void AmrLevelAdv::variableSetUp ()
     read_params();
 
     desc_lst.addDescriptor(Phi_Type,IndexType::TheCellType(),StateDescriptor::Point,0,parameters.Ncomp,&cell_cons_interp);
+
 
     bc.resize(parameters.Ncomp);
 
@@ -865,27 +811,15 @@ void AmrLevelAdv::read_params ()
 
     ParmParse pp("adv");   
 
-    pp.query("v",verbose);
     pp.query("cfl",cfl);
     pp.query("do_reflux",do_reflux);
-    pp.query("vel",advectionVeloctiy);
     pp.queryarr("level_Coeff",levelGradientCoefficients);
     
     libConfigInitialiseDataStructs(parameters,initial,plastic);
     
     accessPattern.define(parameters);
 
-    /*for(auto n : accessPattern.refineVariables)
-    {
-        Print() << accessPattern.variableNames[accessPattern[n.var]+n.mat] << std::endl;
-    }*/
-    
     parameters.Ncomp = accessPattern.variableNames.size();
 
-    Geometry const* gg = AMReX::top()->getDefaultGeometry();
 
-    // This tutorial code only supports Cartesian coordinates.
-    if (! gg->IsCartesian()) {
-	amrex::Abort("Please set geom.coord_sys = 0");
-    }
 }

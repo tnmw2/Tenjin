@@ -20,7 +20,7 @@ public:
     void plasticUpdate      (CellArray& U,          ParameterStruct& parameters, Real dt, MultiFab &S_new);
 
 
-    Vector<Real> yieldStress;
+    Vector< Vector<Real> > yieldStress;
 
     Real c1 = 0.324E9; //60E6;  //
     Real c2 = 0.114E9; //500E6; //

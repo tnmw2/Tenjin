@@ -4,7 +4,6 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    timestep.cpp \
     cellarray.cpp \
     initialise.cpp \
     boxaccesscellarray.cpp \
