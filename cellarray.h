@@ -37,7 +37,9 @@ public:
 
     AccessPattern& accessPattern;
 
-    int numberOfMaterials;
+    int numberOfSharpMaterials;
+
+    Vector<int>& numberOfDiffuseMaterials;
 
 
 
@@ -57,7 +59,9 @@ public:
 
     AccessPattern& accessPattern;
 
-    int numberOfMaterials;
+    int numberOfSharpMaterials;
+
+    Vector<int>& numberOfDiffuseMaterials;
 
     static const int numberOfComponents = 3;
 
@@ -77,13 +81,13 @@ public:
     const Real operator()(int i, int j, int k, MaterialSpecifier& m) const;
     const Real operator()(int i, int j, int k, Variable var, int mat, int com, int row, int col) const;
 
-    /*void  conservativeToPrimitive();
+    void  conservativeToPrimitive();
     void  primitiveToConservative();
 
     void  conservativeToPrimitive(int i, int j, int k);
     void  primitiveToConservative(int i, int j, int k);
 
-    void stressTensor                           (int i, int j, int k);*/
+    void stressTensor                           (int i, int j, int k);
 
     Real getEffectiveInverseGruneisen           (int i, int j, int k);
     Real getEffectiveNonThermalPressure         (int i, int j, int k);

@@ -1,6 +1,6 @@
 #include "cellarray.h"
 
-CellArray::CellArray(MultiFab& S, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(S), accessPattern(_accessPattern), numberOfMaterials{parameters.numberOfMaterials}{}
+CellArray::CellArray(MultiFab& S, AccessPattern &_accessPattern, ParameterStruct& parameters) : data(S), accessPattern(_accessPattern), numberOfSharpMaterials{parameters.numberOfSharpMaterials}, numberOfDiffuseMaterials{parameters.numberOfDiffuseMaterials}{}
 
 void CellArray::conservativeToPrimitive()
 {

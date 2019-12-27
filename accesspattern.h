@@ -46,7 +46,7 @@ public:
     Vector<Vector<int> >                 numberOfComponentsForVariable;
     Vector<Vector<int> >                 numberOfRowsForVariable;
 
-    Vector<std::string>         variableNames;
+    Vector<std::string>                  variableNames;
     Vector< Vector<MaterialDescriptor> >&  materialInfo;
 
     Vector<Interface_type>& interface;
