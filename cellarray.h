@@ -25,7 +25,7 @@ public:
     void conservativeToPrimitive();
     void getSoundSpeed          ();
     void cleanUpV               ();
-    void cleanUpAlpha           ();
+    void cleanUpAlpha           (const Real *dx, const Real *prob_lo);
 
     void        operator=(CellArray& U);
     CellArray&  operator*(Real d);
@@ -99,7 +99,7 @@ public:
     void getDeviatoricHenckyStrain(int i, int j, int k);
     void normaliseV();
     void cleanUpV();
-    void cleanUpAlpha();
+    void cleanUpAlpha(const Real *dx, const Real *prob_lo);
     void checkAndAmendVariable(MaterialSpecifier& m, int i, int j, int k);
     void checkLimits(Vector<MaterialSpecifier>& list);
     void checkLimits(MaterialSpecifier& m);

@@ -82,11 +82,11 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                     if(U.accessPattern.materialInfo[m].mixture)
                     {
-                        U(i,j,k,RHO_MIX,m,0)    = initial.rhoa[s][m];
-                        U(i,j,k,RHO_MIX,m,1)    = initial.rhob[s][m];
+                        //U(i,j,k,RHO_MIX,m,0)    = initial.rhoa[s][m];
+                        //U(i,j,k,RHO_MIX,m,1)    = initial.rhob[s][m];
                         U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
-
-                        U(i,j,k,RHO_K,m)        = 1.0/(U(i,j,k,LAMBDA,m)/U(i,j,k,RHO_MIX,m,0) +(1.0-U(i,j,k,LAMBDA,m))/U(i,j,k,RHO_MIX,m,1));
+                        //Print() << U(i,j,k,RHO_K,m) << std::endl;
+                        //U(i,j,k,RHO_K,m)        = 1.0/(U(i,j,k,LAMBDA,m)/U(i,j,k,RHO_MIX,m,0) +(1.0-U(i,j,k,LAMBDA,m))/U(i,j,k,RHO_MIX,m,1));
                     }
 
 
@@ -101,11 +101,14 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
+                U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
 
 
-                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
-                //U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));
+
+                /*U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                U(i,j,k,ALPHA,3) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0)+U(i,j,k,ALPHA,2));*/
 
                 U(i,j,k,P)             = initial.p[s];
 
@@ -122,20 +125,25 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                             U(i,j,k,V_TENSOR,0,row,col) = V[s][row*U.numberOfComponents+col];
                         }
                     }
+
+                    U.getHenckyJ2(i,j,k);
                 }
+
+
+                for (int m = 0; m < parameters.numberOfMaterials; m++)
+                {
+                    if(U.accessPattern.materialInfo[m].mixture)
+                    {
+                         U.accessPattern.materialInfo[m].EOS->defineMixtureDensities(U,i,j,k,m);
+                    }
+                }
+
 
                 U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
 
-
-
             }
-
-            //Print() << "Here" << std::endl;
         }
     }
-
-    //Print() << "Here" << std::endl;
-
 }
 
 void setInitialConditions(CellArray& U, ParameterStruct& parameters, InitialStruct& initial,const Real* dx, const Real* prob_lo)
@@ -279,6 +287,7 @@ void getState(libconfig::Setting& state, ParameterStruct& parameters, InitialStr
             initial.lambda[s][m] = state[s]["material"][m]["lambda"];
             initial.rhoa[s][m] = state[s]["material"][m]["rhoa"];
             initial.rhob[s][m] = state[s]["material"][m]["rhob"];
+            initial.rho[s][m] = state[s]["material"][m]["rho"];
         }
         else if(parameters.materialInfo[m].phase == fluid)
         {
@@ -605,7 +614,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -614,7 +623,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -691,9 +700,9 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      *****************************************/
     /*{
 
-        Real shock = 0.5E-3;
+        Real shock = 1E-3;
         Real interface = initial.interface;
-        Real radius = 4E-3; //15E-3;
+        Real radius = 15E-3;
 
         if(y < shock)
         {
@@ -747,6 +756,46 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
             s=3;
         }
     }*/
+
+    /******************************************
+     * Udaykunar Groove with explosive
+     *****************************************/
+
+   {
+        Real airgap    = 0.5E-3;
+        Real explosive = 25E-3;
+        Real booster   = 5E-3;
+        Real interface = initial.interface;
+        Real radius = 15E-3; //4E-3;
+
+        /*if(y < airgap)
+        {
+            s = 3;
+        }
+        else*/ if(y < booster)
+        {
+            s = 0;
+        }
+        else if(y < explosive)
+        {
+            s = 1;
+        }
+        else if(y < interface)
+        {
+            if( (y-interface)*(y-interface) + (x)*(x) < radius*radius  )
+            {
+                s = 3;
+            }
+            else
+            {
+                s = 2;
+            }
+        }
+        else
+        {
+            s = 3;
+        }
+    }
 
     /******************************************
      * Explosive Welding
@@ -968,42 +1017,39 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
 Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx)
 {
 
-        int sub = 11;
-        int counter = 0;
+    int sub = 11;
+    int counter = 0;
 
-        /*Real shock = 0.5E-3;
-        Real interface = initial.interface;
-        Real radius = 4E-3; //15E-3;
+    Real shock = 25E-3;
+    Real interface = initial.interface;
+    Real radius = 15E-3;
 
-        int sub = 11;
-        int counter = 0.0;
-
-        if(y < shock)
+    if(y < shock)
+    {
+        return 0.000001;
+    }
+    else if(y < interface)
+    {
+        for(int row = -(sub-1)/2; row< (sub+1)/2; row++)
         {
-            return 0.999999;
-        }
-        else if(y < interface)
-        {
-            for(int row = -(sub-1)/2; row< (sub+1)/2; row++)
+            for(int col = -(sub-1)/2; col < (sub+1)/2; col++)
             {
-                for(int col = -(sub-1)/2; col < (sub+1)/2; col++)
+                if( (y+((Real)col)/((Real)sub)*dx[1]-interface)*(y+((Real)col)/((Real)sub)*dx[1]-interface) + (x+((Real)row/((Real)sub))*dx[0])*(x+((Real)row/((Real)sub))*dx[0]) < radius*radius  )
                 {
-                    if( (y+((Real)col)/((Real)sub)*dx[1]-interface)*(y+((Real)col)/((Real)sub)*dx[1]-interface) + (x+((Real)row/((Real)sub))*dx[0])*(x+((Real)row/((Real)sub))*dx[0]) < radius*radius  )
-                    {
-                        counter++;
-                    }
+                    counter++;
                 }
             }
-
-            return 0.999998*(1.0 - ((Real) counter)/((Real) sub*sub))+0.000001;
         }
-        else
-        {
-            return 0.000001;
-        }*/
+
+        return 0.999997*(1.0 - ((Real) counter)/((Real) sub*sub))+0.000001;
+    }
+    else
+    {
+        return 0.000001;
+    }
 
 
-        Real tanalpha = tan(10.0*3.14159/180.0);
+   /*     Real tanalpha = tan(10.0*3.14159/180.0);
         Real tandelta = 0.1;
         Real tandelta2= 1.0;
 
@@ -1062,7 +1108,7 @@ Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& in
             {
                 return 0.000001;
             }
-        }
+        }*/
 
 
         /*if(y < interface)

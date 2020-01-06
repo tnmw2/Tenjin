@@ -62,7 +62,7 @@ void CellArray::cleanUpV()
     }
 }
 
-void CellArray::cleanUpAlpha()
+void CellArray::cleanUpAlpha(const Real* dx, const Real* prob_lo)
 {
 #ifdef _OPENMP
 #pragma omp parallel
@@ -73,7 +73,7 @@ void CellArray::cleanUpAlpha()
 
         BoxAccessCellArray baca(mfi,bx,(*this));
 
-        baca.cleanUpAlpha();
+        baca.cleanUpAlpha(dx,prob_lo);
     }
 }
 

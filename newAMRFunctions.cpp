@@ -278,8 +278,8 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
                     THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
 
-                    ULbox.cleanUpAlpha();
-                    URbox.cleanUpAlpha();
+                    ULbox.cleanUpAlpha(dx,prob_lo);
+                    URbox.cleanUpAlpha(dx,prob_lo);
 
                 }
             }
@@ -341,9 +341,9 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
             update(fluxbox1, Ubox, U1box, parameters,d,dt,dx);
 
-            calculatePathConservativeFluxes(fluxbox1,fluxbox2,Ubox, ULbox, URbox,fluxStyleUstar,parameters,d,dx);
+            //calculatePathConservativeFluxes(fluxbox1,fluxbox2,Ubox, ULbox, URbox,fluxStyleUstar,parameters,d,dx);
 
-            PCupdate(fluxbox1,fluxbox2, Ubox, U1box, parameters,d,dt,dx);
+            //PCupdate(fluxbox1,fluxbox2, Ubox, U1box, parameters,d,dt,dx);
 
             U1box.conservativeToPrimitive();
 
@@ -523,7 +523,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     }
 
     {
-        U1.cleanUpAlpha();
+        U1.cleanUpAlpha(dx,prob_lo);
     }
 
 
@@ -824,20 +824,6 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 
 void AmrLevelAdv::variableSetUp ()
 {
-
-    /*-------------------------------------------------------------
-     * This function sets names and boundary conditions for each
-     * variable.
-     *
-     *
-     * Question:
-     *
-     * Why do I have to write my own function (Phifill) to set
-     * the boundary conditions? Is this not something AMReX is
-     * capable of handling itself?
-     *
-     *
-     * -----------------------------------------------------------*/
 
     BL_ASSERT(desc_lst.size() == 0);
 

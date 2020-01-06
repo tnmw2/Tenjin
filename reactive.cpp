@@ -61,9 +61,6 @@ void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStr
     Real nu    = 0.5;
     Real n     = 1.5;
 
-    //Print() << U(i,j,k,ALPHARHOLAMBDA,m) << " " << dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n)) << std::endl;
-
-    Real before = U(i,j,k,ALPHARHOLAMBDA,m);
 
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
     {
@@ -76,11 +73,6 @@ void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStr
     {
         U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
     }
-
-    /*if(std::isnan(dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow((U(i,j,k,P)/1E6),n))))
-    {
-        Print() << before << " " << U(i,j,k,ALPHARHOLAMBDA,m) << " "  << dt << " " << sigma << " " <<std::pow(U(i,j,k,ALPHARHO,m),1.0-nu) << " " <<std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu) << " " <<std::pow((U(i,j,k,P)/1E6),n) << std::endl;
-    }*/
 }
 
 
@@ -158,10 +150,10 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
                 {
                     for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        if(U(i,j,k,ALPHA,m) < 0.5 )
+                        /*if(U(i,j,k,ALPHA,m) < 0.5 )
                         {
                             continue;
-                        }
+                        }*/
 
                         pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
                     }

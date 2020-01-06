@@ -117,6 +117,11 @@ void MieGruneisenEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j
  * Mixture EOS
  ****************************************************/
 
+Real  MixtureEOS::toleranceForSinglePhaseTreatment = 1E-3;
+Real  MixtureEOS::toleranceForConvergence          = 1E-5;
+Real  MixtureEOS::toleranceForBeingNearRoot        = 1E-3;
+
+
 Real MixtureEOS::dGdrho(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
     return 0.0;
@@ -155,6 +160,7 @@ MixtureEOS::MixtureEOS()
 
     first.mixtureIndex = 0;
     second.mixtureIndex = 1;
+
 }
 
 Real MixtureEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
@@ -171,7 +177,20 @@ Real MixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, in
 
 Real MixtureEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return first.inverseGruneisen(U,i,j,k,m);
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return second.inverseGruneisen(U,i,j,k,m);
+    }
+    else
+    {
+        return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
+    }
+
+    //return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
     //return U(i,j,k,ALPHA,m)/first.GruneisenGamma;
     //return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
 }
@@ -210,17 +229,39 @@ Real MixtureEOS::mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k, i
      * Assumed constant pref terms
      ********************************/
 
-    double dedrho = (U(i,j,k,LAMBDA,m))*((first.pref -U(i,j,k,P))/(first.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return first.getSoundSpeedContribution(U,i,j,k,m) ;
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return second.getSoundSpeedContribution(U,i,j,k,m);
+    }
+    else
+    {
+        Real dedrho = (U(i,j,k,LAMBDA,m))*((first.pref -U(i,j,k,P))/(first.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
 
-    dedrho +=   (1.0-U(i,j,k,LAMBDA,m))*((second.pref -U(i,j,k,P))/(second.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
+        dedrho +=   (1.0-U(i,j,k,LAMBDA,m))*((second.pref -U(i,j,k,P))/(second.GruneisenGamma*U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m)));
 
-    return (  U(i,j,k,P)/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m))  - dedrho )/(U(i,j,k,LAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(1.0-U(i,j,k,LAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma));
+        return (  U(i,j,k,P)/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m))  - dedrho )/(U(i,j,k,LAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(1.0-U(i,j,k,LAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma));
+    }
 
 }
 
 Real MixtureEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return 1.0/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return 1.0/first.GruneisenGamma;
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return 1.0/second.GruneisenGamma;
+    }
+    else
+    {
+        return 1.0/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
+    }
 }
 
 
@@ -249,13 +290,7 @@ Real rhobFunc(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoa)
 
 Real MixtureEOS::pressureFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real& p)
 {
-
-    //double prefa = getColdCompressionPressure(parameters,m,1,0,m);
-    //double prefb = getColdCompressionPressure(parameters,m,1,1,mixtureIndex())+parameters.pref[mixtureIndex()];
-
     return ((p-first.pref)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma*first.CV))-((p-second.pref)/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma*second.CV));
-    //return ((p-prefa)/(rho_mix[0]*parameters.GruneisenGamma[0]*parameters.CV[m]))-((p-prefb)/(rho_mix[1]*parameters.GruneisenGamma[mixtureIndex()]*parameters.CV[mixtureIndex()]));
-
 }
 
 Real MixtureEOS::bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p)
@@ -264,21 +299,17 @@ Real MixtureEOS::bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, i
     U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,rhoTry);
 
     p = (U(i,j,k,TOTAL_E) - kineticEnergy - U.getEffectiveNonThermalInternalEnergy(i,j,k)+ U.getEffectiveNonThermalPressure(i,j,k))/(U.getEffectiveInverseGruneisen(i,j,k));
-    //p = (U(i,j,k,TOTAL_E)-kineticEnergy)/(U.getEffectiveInverseGruneisen(i,j,k));
-    //p = (E- kineticEnergy(conservative) - getEffectiveNonThermalInternalEnergy(parameters) + getEffectiveNonThermalPressure(parameters))/getEffectiveInverseGruneisen(parameters) ;
 
     return pressureFunction(U,i,j,k,m,p);
 }
 
 void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy)
 {
-    static const Real toleranceForSinglePhaseTreatment = 1E-3;
-    static const Real toleranceForConvergence = 1E-7;
-    static const Real toleranceForBeingNearRoot = 1E-4;
 
     /****************************************************
      * NB: Changed these if clauses as they were giving NaNs
      * **************************************************/
+
 
     if(first.pref == 0.0 && second.pref == 0.0)
     {
@@ -310,7 +341,7 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 10000.0;
+    Real B = 20000.0;
 
     Real p;
 
@@ -391,10 +422,9 @@ void MixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int
     U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m)*(U(i,j,k,LAMBDA,m)+(1.0-U(i,j,k,LAMBDA,m))*((U(i,j,k,P)-first.pref)/(U(i,j,k,P)-second.pref))*((second.CV*second.GruneisenGamma)/(first.CV*first.GruneisenGamma)));
     U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
 
-    Print() << U(i,j,k,LAMBDA,m) << " " << U(i,j,k,RHO_K,m) << " " << U(i,j,k,RHO_MIX,m,0) << " " << U(i,j,k,RHO_MIX,m,1) << std::endl;
-
     return;
 }
+
 
 
 /*******************************************

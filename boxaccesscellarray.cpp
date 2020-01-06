@@ -139,7 +139,7 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
         {
             (*this)(i,j,k,ALPHARHOLAMBDA,m)  = (*this)(i,j,k,LAMBDA,m)*(*this)(i,j,k,ALPHA,m)*(*this)(i,j,k,RHO_K,m);
 
-            //accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
+            accessPattern.materialInfo[m].EOS->defineMixtureDensities((*this),i,j,k,m);
         }
 
         if(accessPattern.materialInfo[m].plastic)
@@ -157,14 +157,6 @@ void  BoxAccessCellArray::primitiveToConservative(int i, int j, int k)
         (*this)(i,j,k,RHOU,0,row) = (*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,RHO);
 
         kineticEnergy += 0.5*(*this)(i,j,k,RHO)*(*this)(i,j,k,VELOCITY,0,row)*(*this)(i,j,k,VELOCITY,0,row);
-    }
-
-    for(int m = 0; m < numberOfMaterials ; m++)
-    {
-        if(accessPattern.materialInfo[m].mixture)
-        {
-            accessPattern.materialInfo[m].EOS->rootFind((*this),i,j,k,m,kineticEnergy);
-        }
     }
 
     (*this)(i,j,k,TOTAL_E) = (*this)(i,j,k,P)*getEffectiveInverseGruneisen(i,j,k) + getEffectiveNonThermalInternalEnergy(i,j,k) - getEffectiveNonThermalPressure(i,j,k) + kineticEnergy;
@@ -324,7 +316,7 @@ void BoxAccessCellArray::getSoundSpeed(int i, int j, int k)
 
     if(a<=0.0)
     {
-        a = 1E-6;// soundSpeedTolerance
+        a = 1E-10;// soundSpeedTolerance
     }
 
     (*this)(i,j,k,SOUNDSPEED) = std::sqrt(a/xiTot);
@@ -348,14 +340,6 @@ Real BoxAccessCellArray::transverseWaveSpeed(int i, int j, int k)
     if(std::isnan(b) || b < 0.0)
     {
         b = 0.0;
-
-        /*Print() << "Nan in transverse wave speeds" << std::endl;
-        for(int m=0;m<numberOfMaterials;m++)
-        {
-            Print() <<  accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m) << " " << accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m) << " "<< ((*this)(i,j,k,RHO_K,m)) << std::endl;
-        }*/
-
-        //exit(1);
     }
 
     Real temp = sqrt(b/getEffectiveInverseGruneisen(i,j,k));
@@ -584,7 +568,7 @@ void BoxAccessCellArray::cleanUpV()
     return;
 }
 
-void BoxAccessCellArray::cleanUpAlpha()
+void BoxAccessCellArray::cleanUpAlpha(const Real* dx, const Real* prob_lo)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
@@ -592,12 +576,13 @@ void BoxAccessCellArray::cleanUpAlpha()
     Real totalAlpha;
     int Nan;
 
-    for    		   (int k = lo.z; k <= hi.z; ++k)
+    for 		(int k = lo.z; k <= hi.z; ++k)
     {
-        for        (int j = lo.y; j <= hi.y; ++j)
+        for 	(int j = lo.y; j <= hi.y; ++j)
         {
-            for    (int i = lo.x; i <= hi.x; ++i)
+            for (int i = lo.x; i <= hi.x; ++i)
             {
+
                 totalAlpha = 0.0;
                 Nan = 0;
 
@@ -613,7 +598,20 @@ void BoxAccessCellArray::cleanUpAlpha()
                         }
                         else
                         {
-                            Abort("Error in scaling volume fractions, too many Nans");
+
+                            Vector<Real> err;
+
+                            err.push_back(prob_lo[0] + (Real(i)+0.5)*dx[0]);
+                            err.push_back(prob_lo[1] + (Real(j)+0.5)*dx[1]);
+
+                            for(int m=0;m<numberOfMaterials;m++)
+                            {
+                                err.push_back((*this)(i,j,k,ALPHA,m));
+                            }
+
+                            std::string message = "Error in scaling volume fractions, too many Nans. at : ";
+
+                            customAbort(err,message);
                         }
                     }
                     else if((*this)(i,j,k,ALPHA,m)<0.0)
@@ -622,7 +620,7 @@ void BoxAccessCellArray::cleanUpAlpha()
                     }
                     else if((*this)(i,j,k,ALPHA,m)>1.0)
                     {
-                        (*this)(i,j,k,ALPHA,m) = 0.999999;
+                        (*this)(i,j,k,ALPHA,m) = 1.0;
                     }
 
                     totalAlpha += (*this)(i,j,k,ALPHA,m);
@@ -637,7 +635,7 @@ void BoxAccessCellArray::cleanUpAlpha()
 
                 if(totalAlpha <= 0.0)
                 {
-                    Print() << "Error in scaling volume fractions" << std::endl;
+                    Abort("Error in scaling volume fractions because total is less than zero.");
 
                     exit(1);
                 }

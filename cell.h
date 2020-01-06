@@ -56,8 +56,6 @@ public:
     Real&  operator()(Variable var, int mat=0, int row=0, int col=0);
     Real&  operator()(MaterialSpecifier m);
 
-    void  assignPointer(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier m);
-
     void  operator= (Cell& U);
 
     bool contains_nan();

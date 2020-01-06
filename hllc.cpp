@@ -177,8 +177,8 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
                 {
-                    //UL.parent->checking = 1;
-                    //UR.parent->checking = 1;
+                    UL.parent->checking = 1;
+                    UR.parent->checking = 1;
 
                     UL.parent->checkLimits(UL.accessPattern.allVariables);
                     UR.parent->checkLimits(UL.accessPattern.allVariables);
@@ -238,36 +238,36 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     }
                 }
 
-                //fluxbox(i,j,k,USTAR) = Sstar;
+                fluxbox(i,j,k,USTAR) = Sstar;
 
                 if(SL>=0.0)
                 {
-                    //getStarState(UL,ULStar,SL,Sstar,parameters,d);
+                    getStarState(UL,ULStar,SL,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        fluxbox(i,j,k,n)	= flux(n,UL,d);
+                        //fluxbox(i,j,k,n)	= flux(n,UL,d);
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d);
-                        }*/
+                        }
                     }
 
 
-                    /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                    for(int row=0;row<ULbox.numberOfComponents;row++)
                     {
                         for(int col=0;col<ULbox.numberOfComponents;col++)
                         {
                             fluxbox(i,j,k,VSTAR,0,row,col) = UL(V_TENSOR,0,row,col);
                         }
-                    }*/
+                    }
 
-                    UStarStar = UL;
+                    //UStarStar = UL;
 
                 }
                 else if(Sstar>=0.0)
@@ -280,28 +280,28 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
                     {
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
+                            //fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
 
-                            /*if(n.var == ALPHA)
+                            if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n));
-                            }*/
+                            }
                         }
 
 
-                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = ULStar(V_TENSOR,0,row,col);
                             }
-                        }*/
+                        }
 
-                        UStarStar = ULStar;
+                        //UStarStar = ULStar;
 
                     }
                     else
@@ -314,26 +314,26 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
+                            //fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
 
-                            /*if(n.var == ALPHA)
+                            if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,ULStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(ULStar(n)-UL(n))+SLT*(UStarStar(n)-ULStar(n));
-                            }*/
+                            }
                         }
 
 
-                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
                             }
-                        }*/
+                        }
                     }
                 }
                 else if(SR>=0.0)
@@ -352,51 +352,51 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
+                            //fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
 
-                            /*if(n.var == ALPHA)
+                            if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,URStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n))+SRT*(UStarStar(n)-URStar(n));
-                            }*/
+                            }
                         }
 
-                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = UStarStar(V_TENSOR,0,row,col);
                             }
-                        }*/
+                        }
                     }
                     else
                     {
                         for(auto n : ULbox.accessPattern.conservativeVariables)
                         {
-                            fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
+                            //fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
 
-                            /*if(n.var == ALPHA)
+                            if(n.var == ALPHA)
                             {
                                  fluxbox(i,j,k,n)	= flux(n,URStar,d);
                             }
                             else
                             {
                                 fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(URStar(n)-UR(n));
-                            }*/
+                            }
                         }
 
-                        /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                        for(int row=0;row<ULbox.numberOfComponents;row++)
                         {
                             for(int col=0;col<ULbox.numberOfComponents;col++)
                             {
                                 fluxbox(i,j,k,VSTAR,0,row,col) = URStar(V_TENSOR,0,row,col);
                             }
-                        }*/
+                        }
 
-                        UStarStar = URStar;
+                        //UStarStar = URStar;
                     }
                 }
                 else
@@ -405,31 +405,31 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        fluxbox(i,j,k,n)	= flux(n,UR,d);
+                        //fluxbox(i,j,k,n)	= flux(n,UR,d);
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,URStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d);
-                        }*/
+                        }
                     }
 
-                    /*for(int row=0;row<ULbox.numberOfComponents;row++)
+                    for(int row=0;row<ULbox.numberOfComponents;row++)
                     {
                         for(int col=0;col<ULbox.numberOfComponents;col++)
                         {
                             fluxbox(i,j,k,VSTAR,0,row,col) = UR(V_TENSOR,0,row,col);
                         }
-                    }*/
+                    }
 
-                    UStarStar = UR;
+                    //UStarStar = UR;
 
                 }
 
-                UStarStarbox.conservativeToPrimitive(i,j,k);
+                //UStarStarbox.conservativeToPrimitive(i,j,k);
 
                 if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar) || std::isnan(SLT) || std::isnan(SRT))
                 {
@@ -478,27 +478,27 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                 Sstar = getSstar(UL,UR,SL,SR,i,j,k,d);
 
-                //fluxbox(i,j,k,USTAR) = Sstar;
+                fluxbox(i,j,k,USTAR) = Sstar;
 
                 if(SL>=0.0)
                 {
-                    //getStarState(UL,UStar,SL,Sstar,parameters,d);
+                    getStarState(UL,UStar,SL,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        fluxbox(i,j,k,n)	= flux(n,UL,d);
+                        //fluxbox(i,j,k,n)	= flux(n,UL,d);
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d);
-                        }*/
+                        }
                     }
 
-                    UStar = UL;
+                    //UStar = UL;
                 }
                 else if(Sstar>=0.0)
                 {
@@ -506,16 +506,16 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(UStar(n)-UL(n));
+                        //fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(UStar(n)-UL(n));
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UL,d)+SL*(UStar(n)-UL(n));
-                        }*/
+                        }
                     }
 
                 }
@@ -525,37 +525,37 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
-                        fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(UStar(n)-UR(n));
+                        //fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(UStar(n)-UR(n));
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d)+SR*(UStar(n)-UR(n));
-                        }*/
+                        }
                     }
                 }
                 else
                 {
-                    //getStarState(UR,UStar,SR,Sstar,parameters,d);
+                    getStarState(UR,UStar,SR,Sstar,parameters,d);
 
                     for(auto n : ULbox.accessPattern.conservativeVariables)
                     {
                         fluxbox(i,j,k,n)	= flux(n,UR,d);
 
-                        /*if(n.var == ALPHA)
+                        if(n.var == ALPHA)
                         {
                              fluxbox(i,j,k,n)	= flux(n,UStar,d);
                         }
                         else
                         {
                             fluxbox(i,j,k,n)	= flux(n,UR,d);
-                        }*/
+                        }
                     }
 
-                    UStar = UR;
+                    //UStar = UR;
                 }
 
                 //UStarbox.conservativeToPrimitive(i,j,k);
@@ -585,10 +585,13 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    if(n.var == ALPHA || n.var == V_TENSOR)
+                    if(n.var == ALPHA)
                     {
-                        continue;
-                        //U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)));
+                    }
+                    else if(n.var == V_TENSOR)
+                    {
+                        U1box(i,j,k,n) += (dt/dx[d])*(fluxbox(i,j,k,n) - fluxbox.right(d,i,j,k,n) -(2.0/3.0)*Ubox(i,j,k,n)*(fluxbox(i,j,k,USTAR) - fluxbox.right(d,i,j,k,USTAR)) + Ubox(i,j,k,VELOCITY,0,n.row)*(fluxbox(i,j,k,VSTAR,0,d,n.col) - fluxbox.right(d,i,j,k,VSTAR,0,d,n.col)));
                     }
                     else
                     {
