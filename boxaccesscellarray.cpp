@@ -282,6 +282,8 @@ Real BoxAccessCellArray::getEffectiveNonThermalPressure(int i, int j, int k)
         tot += accessPattern.materialInfo[m].EOS->coldCompressionPressure((*this),i,j,k,m)+accessPattern.materialInfo[m].EOS->shearPressure((*this),i,j,k,m);
     }
 
+
+
     return tot;
 }
 

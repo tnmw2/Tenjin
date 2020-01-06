@@ -165,17 +165,50 @@ MixtureEOS::MixtureEOS()
 
 Real MixtureEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U(i,j,k,LAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (1.0-U(i,j,k,LAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return first.coldCompressionInternalEnergy(U,i,j,k,m);
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return second.coldCompressionInternalEnergy(U,i,j,k,m);
+    }
+    else
+    {
+        return U(i,j,k,LAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (1.0-U(i,j,k,LAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
+    }
 }
 
 Real MixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,0))+(second.coldCompressionPressure(U,i,j,k,m))*(1.0-U(i,j,k,LAMBDA,m))*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,1));
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return first.coldCompressionPressure(U,i,j,k,m);
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return second.coldCompressionPressure(U,i,j,k,m);
+    }
+    else
+    {
+        return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,0))+(second.coldCompressionPressure(U,i,j,k,m))*(1.0-U(i,j,k,LAMBDA,m))*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,1));
+    }
 }
 
 Real MixtureEOS::inverseGruneisen(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        return first.inverseGruneisen(U,i,j,k,m);
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        return second.inverseGruneisen(U,i,j,k,m);
+    }
+    else
+    {
+        return U(i,j,k,ALPHARHOLAMBDA,m)/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0))+(U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1));
+    }
 
     //return U(i,j,k,ALPHA,m)/((U(i,j,k,LAMBDA,m)*first.adiabaticIndex*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.adiabaticIndex*second.CV)/(U(i,j,k,LAMBDA,m)*first.CV+(1.0-U(i,j,k,LAMBDA,m))*second.CV)-1.0);
     //return U(i,j,k,ALPHA,m)/first.GruneisenGamma;

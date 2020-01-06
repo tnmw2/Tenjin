@@ -57,21 +57,59 @@ void Arrhenius_UpdateMassFraction(BoxAccessCellArray& U, BoxAccessCellArray& U1,
 void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
+    /*Real sigma = 20.0;
+    Real nu    = 0.5;
+    Real n     = 1.5;*/
+
     Real sigma = 20.0;
     Real nu    = 0.5;
     Real n     = 1.5;
 
 
+
+
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
     {
-        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
     }
 
     U(i,j,k,ALPHARHOLAMBDA,m) -=  dt*(sigma*std::pow(U(i,j,k,ALPHARHO,m),1.0-nu)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m),nu)*std::pow( ((U(i,j,k,P) > 1E6 ? U(i,j,k,P) : 0.0)/1E6),n));
 
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
     {
-        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+    }
+}
+
+void Arrhenius_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
+{
+
+    Real Tc = 5000.0; //Reference temp;
+    Real A = 2E13;    //Pre-exponential factor
+    Real T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+    }
+
+    if(T<=0.0)
+    {
+        T = 1E-20;
+    }
+
+    Real temp = -A*U(i,j,k,ALPHARHOLAMBDA,m)*std::exp(-Tc/T);
+
+    if(std::isnan(temp))
+    {
+        temp = 0.0;
+    }
+
+    U(i,j,k,ALPHARHOLAMBDA,m) +=  dt*temp;
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
     }
 }
 
@@ -134,7 +172,6 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
     }
 }
 
-
 void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt)
 {
     const auto lo = lbound(U.box);
@@ -156,6 +193,8 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
                         }*/
 
                         pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+
+                        //Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
                     }
                 }
             }

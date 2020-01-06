@@ -87,6 +87,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                         U(i,j,k,LAMBDA,m)       = initial.lambda[s][m];
                         //Print() << U(i,j,k,RHO_K,m) << std::endl;
                         //U(i,j,k,RHO_K,m)        = 1.0/(U(i,j,k,LAMBDA,m)/U(i,j,k,RHO_MIX,m,0) +(1.0-U(i,j,k,LAMBDA,m))/U(i,j,k,RHO_MIX,m,1));
+
+
                     }
 
 
@@ -101,8 +103,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-                U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                /*U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));*/
 
 
 
@@ -139,8 +141,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 }
 
 
-                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
-
+                //U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
             }
         }
     }
@@ -416,7 +417,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         Print() << i << " " << (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]) << std::endl;
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
@@ -427,7 +428,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
             Print() << "HERE" << std::endl;
             s=1;
         }
-    }*/
+    }
 
     /******************************************
      * Wilkins
@@ -614,7 +615,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    /*{
+    {
         if(x < initial.interface)
         {
             s=0;
@@ -623,7 +624,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }*/
+    }
 
     /******************************************
      * 2D Sod
@@ -761,18 +762,20 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * Udaykunar Groove with explosive
      *****************************************/
 
-   {
+   /*{
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
         Real booster   = 5E-3;
         Real interface = initial.interface;
         Real radius = 15E-3; //4E-3;
 
-        /*if(y < airgap)
-        {
-            s = 3;
-        }
-        else*/ if(y < booster)
+        //if(y < airgap)
+        //{
+        //    s = 3;
+        //}
+        //else
+
+        if(y < booster)
         {
             s = 0;
         }
@@ -795,7 +798,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 3;
         }
-    }
+    }*/
 
     /******************************************
      * Explosive Welding
