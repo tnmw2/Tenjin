@@ -132,12 +132,6 @@ struct ParameterStruct
     Real dt;
     Real THINCbeta;
 
-    /*Vector<Real> adiabaticIndex;
-    Vector<Real> CV;
-
-    Vector<Real> mixtureAdiabaticIndex;
-    Vector<Real> mixtureCV;*/
-
     Vector<MaterialDescriptor>  materialInfo;
 
     ParameterStruct()
@@ -145,6 +139,14 @@ struct ParameterStruct
         dimL 	= Vector<Real>(AMREX_SPACEDIM);
         dx	 	= Vector<Real>(AMREX_SPACEDIM);
         n_cells = Vector<int> (AMREX_SPACEDIM);
+    }
+
+    ~ParameterStruct()
+    {
+        for(unsigned int i = 0; i< materialInfo.size(); i++)
+        {
+            delete materialInfo[i].EOS;
+        }
     }
 };
 

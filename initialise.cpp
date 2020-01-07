@@ -365,7 +365,7 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         Setting& root = cfg.getRoot();
 
-        for(int dir; dir<AMREX_SPACEDIM;dir++)
+        for(int dir = 0; dir<AMREX_SPACEDIM;dir++)
         {
             initial.lowBoundary[dir]  = root["lowBoundary"][dir];
             initial.highBoundary[dir] = root["highBoundary"][dir];
