@@ -58,12 +58,7 @@ Real BoxAccessLevelSet::levelSetDerivative(Real v, const Real* dx, int dir, int 
 
 Real BoxAccessLevelSet::D1(int dir, int i, int j, int k, int n, int sign, const Real* dx)
 {
-    IntVect extra(AMREX_D_DECL(0,0,0));
-
-    for(int n = 0; n < 3 ;n++)
-    {
-        extra[n] = 0;
-    }
+    int extra[3] = {0,0,0};
 
     extra[dir]=1;
 

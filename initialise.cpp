@@ -75,6 +75,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 {
                     U(i,j,k,RHO,m)    = initial.rho[s][m];
 
+                    //Print() << "Here" << std::endl;
+
                     if(parameters.materialInfo[m].phase == solid)
                     {
                         U.accessPattern.materialInfo[m].EOS->setRhoFromDeformationTensor(U,i,j,k,m,&initial.F[s][m][0]);
@@ -314,31 +316,12 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
          * General Simulation Parameters
          ****************************************************/
 
-        //pp.get("max_grid_size", parameters.max_grid_size);
-        //pp.get("Nghost",        parameters.Nghost);
-
-        //pp.get("plotDirectory", initial.filename);
-
-
-        cfg.lookupValue("finalTime",initial.finalT);
-
-        cfg.lookupValue("numberOfxCells",parameters.n_cells[0]);
-        cfg.lookupValue("numberOfyCells",parameters.n_cells[1]);
-        cfg.lookupValue("numberOfzCells",parameters.n_cells[2]);
-
-        cfg.lookupValue("xdomainLength",parameters.dimL[0]);
-        cfg.lookupValue("ydomainLength",parameters.dimL[1]);
-        cfg.lookupValue("zdomainLength",parameters.dimL[2]);
-
-        cfg.lookupValue("CFL",parameters.CFL);
 
         cfg.lookupValue("materials",    parameters.numberOfMaterials);
         cfg.lookupValue("mixtures",     parameters.numberOfMixtures);
         cfg.lookupValue("states",       initial.numberOfStates);
 
         cfg.lookupValue("interface",initial.interface);
-
-        cfg.lookupValue("numberOfPictures",initial.numberOfPictures);
 
         cfg.lookupValue("SOLID",    parameters.SOLID);
         cfg.lookupValue("THINC",    parameters.THINC);
@@ -351,7 +334,7 @@ void libConfigInitialiseDataStructs(ParameterStruct& parameters, InitialStruct& 
 
         Setting& root = cfg.getRoot();
 
-        for(int dir; dir<AMREX_SPACEDIM;dir++)
+        for(int dir = 0; dir < AMREX_SPACEDIM;dir++)
         {
             initial.lowBoundary[dir]  = root["lowBoundary"][dir];
             initial.highBoundary[dir] = root["highBoundary"][dir];

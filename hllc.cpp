@@ -132,7 +132,7 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
     Real SRT    = 0.0;
     Real Sstar  = 0.0;
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
 
@@ -310,7 +310,7 @@ void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAcce
     Vector<Real> SL(parameters.numberOfMaterials);
     Vector<Real> Sstar(parameters.numberOfMaterials);
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
 
@@ -426,12 +426,14 @@ Real vanLeerlimiter(Real r)
 
 /** Performs MUSCL extrapolation on the primitive variables.
  */
-void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d)
+void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, Direction_enum d)
 {
     Real r;
 
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
+
+    Real grad;
 
     for    			(auto n : U.accessPattern.primitiveVariables)
     {
@@ -448,11 +450,11 @@ void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCe
                         r = 0.0;
                     }
 
-                    grad(i,j,k,n) = vanLeerlimiter(r)*0.5*(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
+                    grad = vanLeerlimiter(r)*0.5*(U.right(d,i,j,k,n)-U.left(d,i,j,k,n));
 
 
-                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad(i,j,k,n);
-                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad(i,j,k,n);
+                    UL(i,j,k,n) = U(i,j,k,n) - 0.5*grad;
+                    UR(i,j,k,n) = U(i,j,k,n) + 0.5*grad;
 
                 }
             }

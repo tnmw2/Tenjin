@@ -243,7 +243,7 @@ void sweep(MultiFab& S_new, CellArray& U, LevelSet& LS, const Real* dx, Geometry
     }
 
     U.data.FillBoundary(geom.periodicity());
-    FillDomainBoundary(U.data, geom, bc);
+    //FillDomainBoundary(U.data, geom, bc);
 }
 
 Real getSstarFromDifferentMaterials(Cell& UL, Cell& UR, Real SL, Real SR, int i, int j, int k, Direction_enum d, Vector<int>& m)
@@ -294,7 +294,7 @@ void getStarStarStateFromDifferentMaterials(Cell& UL, Cell& UR, Cell& UStar, Cel
 
     //UStarStar = UKStar;
 
-    UStarStar.materials[matK] = UStar.materials[matK];
+    UStarStar.setMaterial(UStar,matK);
 
     getSigmaStarFromDifferentMaterials(UKStar,Sstar,SLT,SRT,UL,UR,UStar,UStar,d,parameters,matL,matR,matK);
 
@@ -702,6 +702,8 @@ void setGhostFluidValues(MultiFab& S_new,CellArray& U, CellArray& U1, CellArray&
             break;
         }
     }
+
+    FillDomainBoundary(U1.data, geom, bc);
 
     U1.primitiveToConservative();
 

@@ -18,7 +18,10 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, int var, int mat, int 
 
 Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 {
-    switch(m.var)
+    return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
+
+
+    /*switch(m.var)
     {
     case RHO:               return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
         break;
@@ -50,12 +53,15 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
         break;
     default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
         exit(1);
-    }
+    }*/
 }
 
 int BoxAccessCellArray::getArrayPosition(MaterialSpecifier& m)
 {
-    switch(m.var)
+    return (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col);
+
+
+    /*switch(m.var)
     {
         case RHO:               return (accessPattern[m.var]+m.mat);
             break;
@@ -87,7 +93,7 @@ int BoxAccessCellArray::getArrayPosition(MaterialSpecifier& m)
             break;
     default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
         exit(1);
-    }
+    }*/
 }
 
 void  BoxAccessCellArray::conservativeToPrimitive()

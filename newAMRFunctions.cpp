@@ -36,7 +36,7 @@ int      AmrLevelAdv::NUM_GROW        = 2;  // number of ghost cells
 void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULStarbox, BoxAccessCellArray& URStarbox, BoxAccessCellArray& UStarStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo);
 void calc_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d,const Real* dx, const Real* prob_lo, BoxAccessLevelSet& LS);
 void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCellArray& U1box, ParameterStruct& parameters, Direction_enum d, Real dt, const Real* dx);
-void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, BoxAccessCellArray& grad, Direction_enum d);
+void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, Direction_enum d);
 void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULboxnew, BoxAccessCellArray& URboxnew, Direction_enum d, ParameterStruct& parameters, const Real* dx, Real dt);
 
 void AmrLevelAdv::initData ()
@@ -184,8 +184,6 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
         if(parameters.MUSCL)
         {
-            ULStar = U;
-            URStar = U;
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -201,24 +199,15 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
                  * -----------------------------------------------------------*/
 
                 BoxAccessCellArray  Ubox(mfi,bx,U);
-                BoxAccessCellArray  ULbox(mfi,bx,ULStar);
-                BoxAccessCellArray  URbox(mfi,bx,URStar);
                 BoxAccessCellArray  ULboxnew(mfi,bx,UL);
                 BoxAccessCellArray  URboxnew(mfi,bx,UR);
-                BoxAccessCellArray  gradbox(mfi,bx,MUSCLgrad);
 
-                MUSCLextrapolate(Ubox,ULbox,URbox,gradbox,d);
-
-                halfTimeStepEvolution(ULbox,URbox,ULboxnew,URboxnew,d,parameters,dx,dt);
-
+                MUSCLextrapolate(Ubox,ULboxnew,URboxnew,d);
             }
 
 
             UL.primitiveToConservative();
             UR.primitiveToConservative();
-
-            //UL.conservativeToPrimitive();
-            //UR.conservativeToPrimitive();
 
             UL.getSoundSpeed();
             UR.getSoundSpeed();

@@ -56,11 +56,11 @@ class Cell
 {
 public:
 
-    //Material_type phase;
+    Material_type phase;
 
     static const int numberOfComponents = 3;
 
-    std::vector<Material> materials;
+    //std::vector<Material> materials;
 
     AccessPattern& accessPattern;
 
@@ -75,6 +75,8 @@ public:
 
     bool contains_nan();
     bool check(MaterialSpecifier &n);
+
+    void setMaterial(Cell& U, int m);
 
     BoxAccessCellArray* parent;
 

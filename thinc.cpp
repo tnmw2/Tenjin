@@ -274,7 +274,7 @@ void BoxAccessTHINCArray::cautiousTHINCreconstruction(BoxAccessCellArray& U, Box
         }
     }
 
-    IntVect extra(AMREX_D_DECL(0,0,0));
+    int extra[3] = {0,0,0};
 
     extra[d]=1;
 

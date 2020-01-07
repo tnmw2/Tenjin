@@ -32,13 +32,16 @@ public:
 
     int& operator[](Variable var);
 
-    std::map<Variable,int> data;
+    std::vector<int> data;
     std::map<Variable,std::pair<Real,Real> > limits;
 
     Vector<MaterialSpecifier>   conservativeVariables;
     Vector<MaterialSpecifier>   primitiveVariables;
     Vector<MaterialSpecifier>   allVariables;
     Vector<MaterialSpecifier>   refineVariables;
+
+    Vector<int>                 numberOfMaterialsForVariable;
+    Vector<int>                 numberOfRowsForVariable;
 
     Vector<std::string>         variableNames;
     Vector<MaterialDescriptor>&  materialInfo;

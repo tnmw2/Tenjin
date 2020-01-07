@@ -4,7 +4,10 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
 {
     if(materialNumber*rowNumber*colNumber > 0)
     {
-        data.insert(std::pair<Variable,int>(var,position));
+        data[var] = position;
+
+        numberOfMaterialsForVariable[var] = ( (materialNumber > 1 && rowNumber*colNumber > 1) ? rowNumber*colNumber : 1  );
+        numberOfRowsForVariable[var]      = ( (rowNumber > 1 && colNumber > 1) ? colNumber : 1);
 
         limits.insert(std::pair<Variable,std::pair<Real,Real> >(var,std::make_pair(lo,hi)));
 
@@ -70,6 +73,9 @@ void AccessPattern::define(ParameterStruct& parameters)
     refineVariables.clear();
     variableNames.clear();
     cellVariables.clear();
+    numberOfMaterialsForVariable.clear();
+    numberOfRowsForVariable.clear();
+
 
     material_conservativeVariables.clear();
     material_conservativeVariables.resize(parameters.numberOfMaterials);
@@ -81,6 +87,19 @@ void AccessPattern::define(ParameterStruct& parameters)
     Real c   = 3E8;
     Real min = 1E-20;
     Real max = 1E20;
+
+    data.resize(50);
+
+    numberOfMaterialsForVariable.resize(50);
+    numberOfRowsForVariable.resize(50);
+
+
+    std::fill(data.begin(),data.end(),0);
+    std::fill(numberOfMaterialsForVariable.begin(),numberOfMaterialsForVariable.end(),0);
+    std::fill(numberOfRowsForVariable.begin(),numberOfRowsForVariable.end(),0);
+
+
+
 
 
 
