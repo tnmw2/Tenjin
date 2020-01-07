@@ -439,8 +439,24 @@ Real MixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, int 
 
 void MixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
-    U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m)*(U(i,j,k,LAMBDA,m)+(1.0-U(i,j,k,LAMBDA,m))*((U(i,j,k,P)-first.pref)/(U(i,j,k,P)-second.pref))*((second.CV*second.GruneisenGamma)/(first.CV*first.GruneisenGamma)));
-    U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
+    if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)
+    {
+        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,1) = U(i,j,k,RHO_K,m); //rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
+
+    }
+    else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
+    {
+        U(i,j,k,RHO_MIX,m,1) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m); //rhoaFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,1));
+
+    }
+    else
+    {
+        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m)*(U(i,j,k,LAMBDA,m)+(1.0-U(i,j,k,LAMBDA,m))*((U(i,j,k,P)-first.pref)/(U(i,j,k,P)-second.pref))*((second.CV*second.GruneisenGamma)/(first.CV*first.GruneisenGamma)));
+        U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
+    }
+
 
     return;
 }

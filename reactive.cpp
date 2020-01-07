@@ -84,13 +84,15 @@ void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStr
 void Arrhenius_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
-    Real Tc = 5000.0; //Reference temp;
-    Real A = 2E13;    //Pre-exponential factor
+    Real Tc = 210.0; //Reference temp;
+    Real A = 2.6E6;    //Pre-exponential factor
     Real T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
 
-    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 1E-6)
     {
         U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+
+        return;
     }
 
     if(T<=0.0)
@@ -98,7 +100,7 @@ void Arrhenius_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct&
         T = 1E-20;
     }
 
-    Real temp = -A*U(i,j,k,ALPHARHOLAMBDA,m)*std::exp(-Tc/T);
+    Real temp = -A*U(i,j,k,ALPHARHOLAMBDA,m)*( (T > Tc) ? std::exp(-Tc/T) : 0.0);
 
     if(std::isnan(temp))
     {
@@ -192,9 +194,9 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
                             continue;
                         }*/
 
-                        pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                        //pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 
-                        //Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                        Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
                     }
                 }
             }
