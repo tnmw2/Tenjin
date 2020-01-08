@@ -119,39 +119,9 @@ bool CellArray::contains_nan()
 
 int CellArray::getArrayPosition(MaterialSpecifier& m)
 {
-    switch(m.var)
-    {
-        case RHO:               return (accessPattern[m.var]+m.mat);
-            break;
-        case RHOU:              return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
-            break;
-        case TOTAL_E:           return (accessPattern[m.var]+m.mat);
-            break;
-        case VELOCITY:          return (accessPattern[m.var]+m.mat*numberOfComponents+m.row);
-            break;
-        case P:                 return (accessPattern[m.var]+m.mat);
-            break;
-        case SOUNDSPEED:        return (accessPattern[m.var]+m.mat);
-            break;
-        case USTAR:             return (accessPattern[m.var]+m.mat);
-            break;
-        case SIGMA:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
-            break;
-        case V_TENSOR:          return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
-            break;
-        case DEVH:              return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
-            break;
-        case VSTAR:             return (accessPattern[m.var]+m.mat*numberOfComponents*numberOfComponents+m.row*numberOfComponents+m.col);
-            break;
-        case HJ2:               return (accessPattern[m.var]+m.mat);
-            break;
-        case EPSILON:           return (accessPattern[m.var]+m.mat);
-            break;
-        case ALPHARHOEPSILON:   return (accessPattern[m.var]+m.mat);
-            break;
-    default: Print() << "Incorrect Access variable " << m.var << " in boxaccesscellarray: " << accessPattern.variableNames[getArrayPosition(m)] << std::endl;
-        exit(1);
-    }
+    // Note: If you change this, change the corresponding function for boxaccesscellarray.
+
+    return (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col);
 }
 
 

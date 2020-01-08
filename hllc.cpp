@@ -158,9 +158,20 @@ void calc_5Wave_fluxes(BoxAccessCellArray& fluxbox, BoxAccessCellArray& ULbox, B
 
                     Sstar = getSstar(UL,UR,SL,SR,i,j,k,d,m);
 
-                    if(std::isnan(SL) || std::isnan(SR) || std::isnan(Sstar))
+
+                    if(std::isnan(SL) || std::isnan(SR))
                     {
+                        Print() << "material: " << m << std::endl;
+                        Print() << SL << " " << Sstar << " " << SR << std::endl;
+                        Print() << UL(VELOCITY,m,d) << " " << UR(VELOCITY,m,d) << std::endl;
+                        Print() << UL(SOUNDSPEED,m) << " " << UR(SOUNDSPEED,m) << std::endl;
+
                        amrex::Abort("Nan in SL SR wavespeeds before flux");
+                    }
+
+                    if(std::isnan(Sstar))
+                    {
+                       amrex::Abort("Nan in SStar wavespeeds before flux");
                     }
 
                     fluxbox(i,j,k,USTAR,m) = Sstar;

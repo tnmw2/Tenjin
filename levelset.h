@@ -14,7 +14,7 @@ public:
 
     int NLevelSets;
 
-    void initialise         (const Real* dx, const Real* prob_lo);
+    void initialise         (InitialStruct& initial, const Real* dx, const Real* prob_lo);
     void resetLevelSet      (MultiFab &S_new);
     void sweep              (MultiFab &S_new, const Real* dx, Geometry& geom, Vector<BCRec>& levelSet_bc, int dir, int sense, int sign);
 
@@ -32,7 +32,7 @@ public:
 
     int NLevelSets;
 
-    void initialise(const Real* dx, const Real* prob_lo);
+    void initialise(InitialStruct& initial, const Real* dx, const Real* prob_lo);
 
     Real& operator()(int i, int j, int k, int mat=0);
 

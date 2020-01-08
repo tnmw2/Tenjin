@@ -3,12 +3,17 @@
 
 BoxAccessLevelSet::BoxAccessLevelSet(MFIter& mfi, const Box& bx, LevelSet &U) : box{bx}, fab{U.data[mfi]}, NLevelSets{U.NLevelSets}{}
 
-void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
+void  BoxAccessLevelSet::initialise(InitialStruct& initial, const Real* dx, const Real* prob_lo)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
     Real x,y,z;
+
+    Real chamfer = 0.0;//1E-3;
+    Real length  = 2.347E-2;
+    Real radius  = initial.interface;
+
 
     for             (int n = 0; n < NLevelSets; n++)
     {
@@ -31,8 +36,36 @@ void  BoxAccessLevelSet::initialise(const Real* dx, const Real* prob_lo)
 
                     //(*this)(i,j,k,n) = 0.5-x;
 
-                    (*this)(i,j,k,n) = 0.005-x;
+                    //(*this)(i,j,k,n) = x-0.005;
 
+                    //(*this)(i,j,k,n) = 0.005-x;
+
+                    if(x<radius)
+                    {
+                        if(y< length-chamfer)
+                        {
+                            (*this)(i,j,k,n) = 0.5*dx[0];
+                        }
+                        else if(y<length)
+                        {
+                            if( (x< radius-chamfer) || (x - (radius-chamfer))*(x - (radius-chamfer))+(y - (length-chamfer))*(y - (length-chamfer)) < chamfer*chamfer     )
+                            {
+                                (*this)(i,j,k,n) = 0.5*dx[0];
+                            }
+                            else
+                            {
+                                (*this)(i,j,k,n) = -0.5*dx[0];
+                            }
+                        }
+                        else
+                        {
+                            (*this)(i,j,k,n) = -0.5*dx[0];
+                        }
+                    }
+                    else
+                    {
+                        (*this)(i,j,k,n) = -0.5*dx[0];
+                    }
                 }
             }
         }

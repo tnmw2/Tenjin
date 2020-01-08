@@ -296,36 +296,39 @@ void getStarStarStateFromDifferentMaterials(Cell& UL, Cell& UR, Cell& UStar, Cel
 
     UStarStar.setMaterial(UStar,matK);
 
-    getSigmaStarFromDifferentMaterials(UKStar,Sstar,SLT,SRT,UL,UR,UStar,UStar,d,parameters,matL,matR,matK);
-
-    for(int row =0;row<N;row++)
+    if(UL.accessPattern.materialInfo[matK].phase == solid)
     {
-        if(row == d)
-        {
-            continue;
-        }
-        else
-        {
-            UStarStar(RHOU,matK,row) += (UKStar(SIGMA,matK,row,d)-UK(SIGMA,matK,row,d))/(Sstar-SKT);
-        }
+        getSigmaStarFromDifferentMaterials(UKStar,Sstar,SLT,SRT,UL,UR,UStar,UStar,d,parameters,matL,matR,matK);
 
-        UStarStar(VELOCITY,matK,row) = UStarStar(RHOU,matK,row)/UStarStar(RHO,matK);
-    }
-
-
-    for(int row =0;row<N;row++)
-    {
-        if(row == d)
+        for(int row =0;row<N;row++)
         {
-            continue;
-        }
-        else
-        {
-            UStarStar(TOTAL_E,matK) += (UStarStar(VELOCITY,matK,row)*UKStar(SIGMA,matK,row,d)-UK(VELOCITY,matK,row)*UK(SIGMA,matK,row,d))/(Sstar-SKT);
-
-            for(int col =0;col<N;col++)
+            if(row == d)
             {
-                UStarStar(V_TENSOR,matK,row,col) += (UStarStar(V_TENSOR,matK,d,col)*(UStarStar(VELOCITY,matK,row)-UK(VELOCITY,matK,row)))/(Sstar-SKT);
+                continue;
+            }
+            else
+            {
+                UStarStar(RHOU,matK,row) += (UKStar(SIGMA,matK,row,d)-UK(SIGMA,matK,row,d))/(Sstar-SKT);
+            }
+
+            UStarStar(VELOCITY,matK,row) = UStarStar(RHOU,matK,row)/UStarStar(RHO,matK);
+        }
+
+
+        for(int row =0;row<N;row++)
+        {
+            if(row == d)
+            {
+                continue;
+            }
+            else
+            {
+                UStarStar(TOTAL_E,matK) += (UStarStar(VELOCITY,matK,row)*UKStar(SIGMA,matK,row,d)-UK(VELOCITY,matK,row)*UK(SIGMA,matK,row,d))/(Sstar-SKT);
+
+                for(int col =0;col<N;col++)
+                {
+                    UStarStar(V_TENSOR,matK,row,col) += (UStarStar(V_TENSOR,matK,d,col)*(UStarStar(VELOCITY,matK,row)-UK(VELOCITY,matK,row)))/(Sstar-SKT);
+                }
             }
         }
     }
@@ -399,9 +402,6 @@ void getBothStarStatesAndSetNewValue_5Wave(int i, int j, int k, BoxAccessCellArr
     U = UStarStar;
 
     Ubox.conservativeToPrimitive(i,j,k);
-
-    //Print() << UStar(VELOCITY,probe_m[0],y) << " " << UStar(VELOCITY,probe_m[1],y) << std::endl;
-    //Print() << U(VELOCITY,probe_m[0],y) << " " << U(VELOCITY,probe_m[1],y) << std::endl;
 
 }
 
@@ -484,7 +484,7 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
 
                     if(probe_m[0] == probe_m[1])
                     {
-                        /*if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
+                        if((current_x-probe_x[0])*(current_x-probe_x[0])+(current_y-probe_y[0])*(current_y-probe_y[0]) <  (current_x-probe_x[1])*(current_x-probe_x[1])+(current_y-probe_y[1])*(current_y-probe_y[1]) )
                         {
                             probe_m[0] = m;
                             probe_m[1] = ( m==0 ? 1 : 0);
@@ -493,17 +493,27 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
                         {
                             probe_m[1] = m;
                             probe_m[0] = ( m==0 ? 1 : 0);
-                        }*/
+                        }
 
                         if(probe_m[0] == probe_m[1])
                         {
-                            Print() << nx << " " << ny << std::endl;
-                            Print() << probe_x[0] << " " << probe_y[0] << std::endl;
-                            Print() << probe_x[1] << " " << probe_y[1] << std::endl;
-                            Print() << LS0.whatMaterialIsValid(i-3,j,k) << " " << LS0.whatMaterialIsValid(i-2,j,k)<< " " << LS0.whatMaterialIsValid(i-1,j,k) << " " << LS0.whatMaterialIsValid(i,j,k) << " " << LS0.whatMaterialIsValid(i+1,j,k) << " " << LS0.whatMaterialIsValid(i+2,j,k) << " " << LS0.whatMaterialIsValid(i+3,j,k) << std::endl;
+                            Vector<Real> err;
+                            err.push_back(current_x);
+                            err.push_back(current_y);
+                            err.push_back(nx);
+                            err.push_back(ny);
+                            err.push_back(interface_x);
+                            err.push_back(interface_y);
+                            err.push_back(probe_x[0]);
+                            err.push_back(probe_y[0]);
+                            err.push_back(probe_x[1]);
+                            err.push_back(probe_y[1]);
+                            err.push_back(probe_m[0]);
+                            err.push_back(probe_m[1]);
 
-                            Abort("Error in probe extrapolation: materials are the same");
+                            std::string mess = "Error in probe extrapolation: materials are the same";
 
+                            customAbort(err,mess);
 
                         }
                     }
@@ -516,7 +526,6 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
 
                     UL.primitiveToConservative(i,j,k);
                     UR.primitiveToConservative(i,j,k);
-
 
                     UL.getSoundSpeed(i,j,k);
                     UR.getSoundSpeed(i,j,k);

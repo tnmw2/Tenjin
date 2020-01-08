@@ -58,6 +58,8 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 
 int BoxAccessCellArray::getArrayPosition(MaterialSpecifier& m)
 {
+   // Note: If you change this, change the corresponding function for cellarray.
+
     return (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col);
 
 

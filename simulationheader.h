@@ -48,5 +48,6 @@ void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct&
 
 void setGhostFluidValues(MultiFab& S_new, CellArray& U, CellArray &U1, CellArray& UL, CellArray& UR, CellArray& UStar, CellArray& UStarStar, LevelSet& LS0, const Real *dx, const Real *prob_lo, ParameterStruct &parameters, Geometry &geom, Vector<BCRec> &bc);
 
+void customAbort(Vector<Real>& values, std::string& Message);
 #endif // SIMULATIONHEADER
 

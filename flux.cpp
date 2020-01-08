@@ -36,6 +36,7 @@ Real flux(MaterialSpecifier n, Cell& U, Direction_enum d)
     {
         case RHO:       	  return U(RHO,     n.mat)*            U(VELOCITY,n.mat,d);
         case RHOU: 			  return U(RHOU,    n.mat,n.row)*      U(VELOCITY,n.mat,d)-U(SIGMA,n.mat,n.row,d);
+        case RHOEPSILON:      return U(RHOEPSILON, n.mat)*         U(VELOCITY,n.mat,d);
         case TOTAL_E:	   	  return U(TOTAL_E, n.mat)*            U(VELOCITY,n.mat,d)-vdotsigma(U,d,n.mat);
         case V_TENSOR:        return U(V_TENSOR,n.mat,n.row,n.col)*U(VELOCITY,n.mat,d)-U(V_TENSOR,n.mat,d,n.col)*U(VELOCITY,n.mat,n.row);
         default:   amrex::Print() << "Bad flux variable" << std::endl; exit(1);
@@ -49,10 +50,8 @@ Real geometricFlux(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier
 {
     switch(n.var)
     {
-    case ALPHA:          return 0.0;
-    case ALPHARHO:  	 return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
-    case ALPHARHOLAMBDA: return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
-    case ALPHARHOEPSILON:return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
+    case RHO:  	            return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
+    case RHOEPSILON:        return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);
 
     case RHOU:
         if(n.row==0){       return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x) - U(i,j,k,SIGMA,n.mat,0,0) + U(i,j,k,SIGMA,n.mat,2,2);}
@@ -60,7 +59,7 @@ Real geometricFlux(BoxAccessCellArray& U, int i, int j, int k, MaterialSpecifier
         else if(n.row==2){  return -2.0*U(i,j,k,SIGMA,n.mat,0,2);}
         else {Print() << "Bad radial flux variable" << std::endl;}
 
-    //case TOTAL_E:	    return U(i,j,k,n)*U(i,j,k,VELOCITY,0,x) - vdotsigma(U,i,j,k,x);
+    case TOTAL_E:	    return U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x) - vdotsigma(U,i,j,k,x,n.mat);
 
     case V_TENSOR:
         if(n.row==0){       return  (1.0/3.0)*U(i,j,k,n)*U(i,j,k,VELOCITY,n.mat,x);}

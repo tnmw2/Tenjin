@@ -584,7 +584,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -593,7 +593,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -608,6 +608,25 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
              s=1;
         }
     }*/
+
+    /******************************************
+    * Rod Impact
+    *****************************************/
+
+   {
+       Real chamfer = 0.0;//1E-3;
+       Real length  = 2.347E-2;
+       Real radius  = initial.interface;
+
+       if(x<radius)
+       {
+           s = 0;
+       }
+       else
+       {
+           s = 1;
+       }
+   }
 
     /******************************************
      * RateStick

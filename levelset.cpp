@@ -2,7 +2,7 @@
 
 LevelSet::LevelSet(MultiFab& S, ParameterStruct& parameters) : data(S), NLevelSets(parameters.NLevelSets){}
 
-void LevelSet::initialise(const Real* dx, const Real* prob_lo)
+void LevelSet::initialise(InitialStruct &initial, const Real* dx, const Real* prob_lo)
 {
 #ifdef _OPENMP
 #pragma omp parallel
@@ -13,7 +13,7 @@ void LevelSet::initialise(const Real* dx, const Real* prob_lo)
 
         BoxAccessLevelSet bals(mfi,bx,(*this));
 
-        bals.initialise(dx,prob_lo);
+        bals.initialise(initial,dx,prob_lo);
     }
 
 

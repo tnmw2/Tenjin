@@ -39,6 +39,24 @@ void update(BoxAccessCellArray& fluxbox, BoxAccessCellArray& Ubox, BoxAccessCell
 void MUSCLextrapolate(BoxAccessCellArray& U, BoxAccessCellArray& UL, BoxAccessCellArray& UR, Direction_enum d);
 void halfTimeStepEvolution(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& ULboxnew, BoxAccessCellArray& URboxnew, Direction_enum d, ParameterStruct& parameters, const Real* dx, Real dt);
 
+void customAbort(Vector<Real>& values, std::string& Message)
+{
+    std::ostringstream stream;
+
+    stream << std::endl;
+
+    for(auto n : values)
+    {
+        stream << n << std::endl;
+    }
+
+    std::string error = Message + stream.str();
+
+    Abort(error);
+}
+
+
+
 void AmrLevelAdv::initData ()
 {
     const Real* dx      = geom.CellSize();
@@ -69,7 +87,26 @@ void AmrLevelAdv::initData ()
 
 
     setInitialConditions(U,parameters,initial,dx,prob_lo);
-    LS.initialise(dx,prob_lo);
+    LS.initialise(initial,dx,prob_lo);
+
+    int REINITIALISE = 1;
+
+    if(REINITIALISE)
+    {
+
+        MultiFab& S_new         = get_new_data(Phi_Type);
+        MultiFab& S_LS          = get_new_data(LevelSet_Type);
+
+        MultiFab S_LS_0(grids, dmap, parameters.NLevelSets, 1);
+        FillPatch(*this, S_LS_0, 1, time, LevelSet_Type, 0, parameters.NLevelSets);
+
+        LevelSet LS(S_LS_0,parameters);
+        CellArray U(S_new,accessPattern,parameters);
+
+        resetLevelSet_ALL_LEVELS();
+
+        sweepLevelSet_ALL_LEVELS();
+    }
 
 
     #ifdef AMREX_PARTICLES
@@ -896,9 +933,9 @@ void AmrLevelAdv::variableSetUp ()
 
     setBoundaryConditions(bogus,bc,parameters,initial,accessPattern);
 
-    for(int n = 0; n<parameters.Ncomp; n++)
+    for(int n = 0; n < parameters.Ncomp; n++)
     {
-        desc_lst.setComponent(Phi_Type,      n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
+        desc_lst.setComponent(Phi_Type, n, accessPattern.variableNames[n] , bc[n], StateDescriptor::BndryFunc(phifill));
 	}
 
 

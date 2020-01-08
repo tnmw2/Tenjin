@@ -88,10 +88,10 @@ void AccessPattern::define(ParameterStruct& parameters)
     Real min = 1E-20;
     Real max = 1E20;
 
-    data.resize(50);
+    data.resize(150);
 
-    numberOfMaterialsForVariable.resize(50);
-    numberOfRowsForVariable.resize(50);
+    numberOfMaterialsForVariable.resize(150);
+    numberOfRowsForVariable.resize(150);
 
 
     std::fill(data.begin(),data.end(),0);

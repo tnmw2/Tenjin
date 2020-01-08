@@ -25,10 +25,10 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
     }
     else
     {
-        std::cout << "Incorrect plasticity type" << std::endl;
-
-        exit(1);
+        Abort("Incorrect plasticity type");
     }
+
+    return 0.0;
 }
 
 /** Function used in bisection of which we find the root.
@@ -56,14 +56,11 @@ Real PlasticEOS::bisection(BoxAccessCellArray& U, int i, int j, int k, Real J, P
     if(parameters.PLASTIC == 2)
     {
        Tstar = std::max((293.0+U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0) - 293.0)/(273.0+600.0-293.0),tolerance);
-
-       //Print() << Tstar << std::endl;
     }
 
     if(sgn<Real,int>(bisectionFunction(JA,J,U,i,j,k,parameters,m,dt,Tstar)) == sgn<Real,int>(bisectionFunction(JB,J,U,i,j,k,parameters,m,dt,Tstar)) )
     {
-        Print() << "Error in plastic Bisection " << std::endl;
-        exit(1);
+        Abort("Error in plastic Bisection ");
     }
 
     while(true)
@@ -100,6 +97,10 @@ bool PlasticEOS::overYieldStress(Real& J, BoxAccessCellArray& U, int i, int j, i
 void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& parameters, Real dt)
 {
 
+    Real  JBefore;
+    Real  JTotal;
+    Real  norm;
+
     Real  J;
     Real  Jnew;
 
@@ -110,65 +111,78 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
     const auto lo = lbound(U.box);
     const auto hi = ubound(U.box);
 
-    for(int m = 0; m < U.numberOfMaterials; m++)
+    for 		(int k = lo.z; k <= hi.z; ++k)
     {
-        if(U.accessPattern.materialInfo[m].phase == solid)
+        for 	(int j = lo.y; j <= hi.y; ++j)
         {
-            for 		(int k = lo.z; k <= hi.z; ++k)
+            for (int i = lo.x; i <= hi.x; ++i)
             {
-                for 	(int j = lo.y; j <= hi.y; ++j)
+                for(int m=0;m<U.numberOfMaterials;m++)
                 {
-                    for (int i = lo.x; i <= hi.x; ++i)
-                    {
 
-                        U.getHenckyJ2(i,j,k,m);
+                    U.getHenckyJ2(i,j,k,m);
+
+                    JTotal  = 0.0;
+                    JBefore = 0.0;
+                    norm    = 0.0;
+
+                    if(U.accessPattern.materialInfo[m].phase == solid)
+                    {
 
                         J = sqrt(U(i,j,k,HJ2,m));
 
                         Jnew = bisection(U,i,j,k,J,parameters,m,dt);
 
-
-                        U(i,j,k,EPSILON,m)          += sqrt(2.0/3.0)*(J-Jnew);
+                        U(i,j,k,EPSILON,m)     += sqrt(2.0/3.0)*(J-Jnew);
                         U(i,j,k,RHOEPSILON,m)   = U(i,j,k,EPSILON,m)*U(i,j,k,RHO,m);
 
-                        if(J == 0.0 && Jnew == 0.0 )
-                        {
-                            J    = 1.0;
-                            Jnew = 1.0;
-                        }
+                    }
+                    else
+                    {
+                        J       = 0.0;
+                        Jnew    = 0.0;
+
+                        U(i,j,k,EPSILON,m)          = 0.0;
+                        U(i,j,k,RHOEPSILON,m)  = 0.0;
+                    }
 
 
-                        for(int row =0;row<U.numberOfComponents;row++)
+                    if(J == 0.0 && Jnew == 0.0 )
+                    {
+                        J    = 1.0;
+                        Jnew = 1.0;
+                    }
+
+
+                    for(int row =0;row<U.numberOfComponents;row++)
+                    {
+                        for(int col =0;col<U.numberOfComponents;col++)
                         {
-                            for(int col =0;col<U.numberOfComponents;col++)
+                            if(U(i,j,k,DEVH,m,row,col) != 0.0 && J == 0.0 && Jnew != 0.0)
                             {
-                                if(U(i,j,k,DEVH,m,row,col) != 0.0 && J == 0.0 && Jnew != 0.0)
-                                {
-                                    std::cout << "Divide by zero error" << std::endl;
-                                    exit(1);
-                                }
-                                else
-                                {
-                                    U(i,j,k,DEVH,m,row,col)	*= Jnew/J;
-                                }
-
-
-                                temp1[row*U.numberOfComponents+col]				 = delta<Real>(row,col)+0.5*U(i,j,k,DEVH,m,row,col);
-                                temp2[row*U.numberOfComponents+col]				 = delta<Real>(row,col)-0.5*U(i,j,k,DEVH,m,row,col);
-
+                                Abort("Divide by zero error in plastic update");
                             }
-                        }
-
-                        invert(temp2,temp2inv);
-
-                        squareMatrixMultiply(temp2inv,temp1,temp2);
-
-                        for(int row =0;row<U.numberOfComponents;row++)
-                        {
-                            for(int col =0;col<U.numberOfComponents;col++)
+                            else
                             {
-                                U(i,j,k,V_TENSOR,m,row,col) = temp2[row*U.numberOfComponents+col];
+                                U(i,j,k,DEVH,m,row,col)	*= Jnew/J;
                             }
+
+
+                            temp1[row*U.numberOfComponents+col]				 = delta<Real>(row,col)+0.5*U(i,j,k,DEVH,m,row,col);
+                            temp2[row*U.numberOfComponents+col]				 = delta<Real>(row,col)-0.5*U(i,j,k,DEVH,m,row,col);
+
+                        }
+                    }
+
+                    invert(temp2,temp2inv);
+
+                    squareMatrixMultiply(temp2inv,temp1,temp2);
+
+                    for(int row =0;row<U.numberOfComponents;row++)
+                    {
+                        for(int col =0;col<U.numberOfComponents;col++)
+                        {
+                            U(i,j,k,V_TENSOR,m,row,col) = temp2[row*U.numberOfComponents+col];
                         }
                     }
                 }
@@ -179,7 +193,6 @@ void PlasticEOS::boxPlasticUpdate(BoxAccessCellArray& U,ParameterStruct& paramet
 
     return;
 }
-
 
 /** Loops over all cells performing the plastic update.
  */
@@ -201,3 +214,6 @@ void PlasticEOS::plasticUpdate(CellArray& U, ParameterStruct& parameters, Real d
 
     return;
 }
+
+
+
