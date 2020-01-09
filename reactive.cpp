@@ -84,7 +84,7 @@ void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStr
 void Arrhenius_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
-    Real Tc = 210.0; //Reference temp;
+    Real Tc = 210.0;   //Reference temp;
     Real A = 2.6E6;    //Pre-exponential factor
     Real T = U.accessPattern.materialInfo[m].EOS->getTemp(U,i,j,k,m,0);
 
@@ -189,10 +189,10 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
                 {
                     for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        /*if(U(i,j,k,ALPHA,m) < 0.5 )
+                        if(U(i,j,k,ALPHA,m) < 0.5 )
                         {
                             continue;
-                        }*/
+                        }
 
                         //pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 

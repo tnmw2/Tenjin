@@ -103,8 +103,10 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                     }
                 }
 
-                /*U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));*/
+
+                //Udaykumar groove explosive
+                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
 
 
 
@@ -615,7 +617,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         if(x < initial.interface)
         {
             s=0;
@@ -624,7 +626,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
              s=1;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -762,7 +764,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * Udaykunar Groove with explosive
      *****************************************/
 
-   /*{
+   {
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
         Real booster   = 5E-3;
@@ -798,7 +800,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 3;
         }
-    }*/
+    }
 
     /******************************************
      * Explosive Welding
@@ -981,7 +983,6 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Rod Impact
      *****************************************/
-
     /*{
         Real chamfer = 1E-3;
         Real length  = 32.4E-3;
@@ -1014,6 +1015,31 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
             s=0;
         }
     }*/
+
+    /******************************************
+     * Bubble
+     *****************************************/
+    {
+        Real bubbleCentre_x  = 0.7;
+        Real radius          = 0.2;
+        Real shock           = initial.interface;
+
+        if(x<shock)
+        {
+            s = 2;
+        }
+        else
+        {
+            if((x-bubbleCentre_x)*(x-bubbleCentre_x)+y*y < radius*radius)
+            {
+                s = 0;
+            }
+            else
+            {
+                s = 1;
+            }
+        }
+    }
 
 }
 
