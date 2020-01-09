@@ -10,9 +10,14 @@ void  BoxAccessLevelSet::initialise(InitialStruct& initial, const Real* dx, cons
 
     Real x,y,z;
 
-    Real chamfer = 0.0;//1E-3;
+    /*Real chamfer = 0.0;//1E-3;
     Real length  = 2.347E-2;
-    Real radius  = initial.interface;
+    Real radius  = initial.interface;*/
+
+    Real bubbleCentre_x  = 0.7;
+    Real radius          = 0.2;
+    Real shock           = initial.interface;
+
 
 
     for             (int n = 0; n < NLevelSets; n++)
@@ -40,7 +45,11 @@ void  BoxAccessLevelSet::initialise(InitialStruct& initial, const Real* dx, cons
 
                     //(*this)(i,j,k,n) = 0.005-x;
 
-                    if(x<radius)
+                    /*******************************
+                     * Rod Impact
+                     ******************************/
+
+                    /*if(x<radius)
                     {
                         if(y< length-chamfer)
                         {
@@ -65,6 +74,28 @@ void  BoxAccessLevelSet::initialise(InitialStruct& initial, const Real* dx, cons
                     else
                     {
                         (*this)(i,j,k,n) = -0.5*dx[0];
+                    }*/
+
+
+                    /*******************************
+                     * Bubble
+                     ******************************/
+
+
+                    if(x<shock)
+                    {
+                        (*this)(i,j,k,n) = -0.5*dx[0];
+                    }
+                    else
+                    {
+                        if((x-bubbleCentre_x)*(x-bubbleCentre_x)+y*y < radius*radius)
+                        {
+                            (*this)(i,j,k,n) = 0.5*dx[0];
+                        }
+                        else
+                        {
+                            (*this)(i,j,k,n) = -0.5*dx[0];
+                        }
                     }
                 }
             }

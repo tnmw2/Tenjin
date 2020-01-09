@@ -108,7 +108,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
                     }
 
-                    U(i,j,k,P,m) += U.getEffectiveNonThermalPressure(i,j,k,m)/U.getEffectiveInverseGruneisen(i,j,k,m);
+                    //U(i,j,k,P,m) += U.getEffectiveNonThermalPressure(i,j,k,m)/U.getEffectiveInverseGruneisen(i,j,k,m);
 
                 }
 
@@ -613,7 +613,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     * Rod Impact
     *****************************************/
 
-   {
+   /*{
        Real chamfer = 0.0;//1E-3;
        Real length  = 2.347E-2;
        Real radius  = initial.interface;
@@ -626,7 +626,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
        {
            s = 1;
        }
-   }
+   }*/
 
     /******************************************
      * RateStick
@@ -728,6 +728,23 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
             s=3;
         }
     }*/
+
+
+    /******************************************
+     * Bubble
+     *****************************************/
+    {
+        Real shock = initial.interface;
+
+        if(x<shock)
+        {
+            s = 1;
+        }
+        else
+        {
+            s = 0;
+        }
+    }
 
 
 }
