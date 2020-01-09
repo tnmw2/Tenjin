@@ -1020,11 +1020,11 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * Bubble
      *****************************************/
     {
-        Real bubbleCentre_x  = 0.7;
-        Real radius          = 0.2;
+        Real bubbleCentre_x  = 0.175;
+        Real radius          = 0.025;
         Real shock           = initial.interface;
 
-        if(x<shock)
+        if(x>shock)
         {
             s = 2;
         }
