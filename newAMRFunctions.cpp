@@ -55,8 +55,6 @@ void customAbort(Vector<Real>& values, std::string& Message)
     Abort(error);
 }
 
-
-
 void AmrLevelAdv::initData ()
 {
     const Real* dx      = geom.CellSize();
@@ -236,15 +234,19 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
                  * -----------------------------------------------------------*/
 
                 BoxAccessCellArray  Ubox(mfi,bx,U);
-                BoxAccessCellArray  ULboxnew(mfi,bx,UL);
-                BoxAccessCellArray  URboxnew(mfi,bx,UR);
+                BoxAccessCellArray  ULbox(mfi,bx,UL);
+                BoxAccessCellArray  URbox(mfi,bx,UR);
 
-                MUSCLextrapolate(Ubox,ULboxnew,URboxnew,d);
+                MUSCLextrapolate(Ubox,ULbox,URbox,d);
+
+                halfTimeStepEvolution(ULbox,URbox,ULbox,URbox,d,parameters,dx,dt);
             }
 
+            UL.conservativeToPrimitive();
+            UR.conservativeToPrimitive();
 
-            UL.primitiveToConservative();
-            UR.primitiveToConservative();
+            //UL.primitiveToConservative();
+            //UR.primitiveToConservative();
 
             UL.getSoundSpeed();
             UR.getSoundSpeed();
@@ -300,11 +302,11 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
     }
 
 
-
     U1.data.FillBoundary(geom.periodicity());
     FillDomainBoundary(U1.data, geom, bc);
 
     U1.conservativeToPrimitive();
+
 
 }
 
@@ -476,7 +478,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * Levelset
      * -----------------------------------------------------------*/
 
-    int LSGHOST = 2;
+    int LSGHOST = 3; //2
 
     MultiFab& S_LS  = get_new_data(LevelSet_Type);
     FillPatch(*this, S_LS  , 0, time, LevelSet_Type, 0, parameters.NLevelSets);
@@ -504,13 +506,17 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }
 
-    advanceLevelSet(SL,U,LS0,LS1,dt,dx);
+    advanceLevelSet(S_new,U,LS0,LS1,dt,dx);
 
     AMR_HLLCadvance(S_new,U,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
 
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time,LS1);
+    //advanceLevelSet(S_new,U1,LS1,LS2,dt,dx);
 
-    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+    //AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time,LS2);
+
+    //U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+
+    //MultiFab::LinComb(LS1.data,0.5,LS0.data,0,0.5,LS2.data,0,0,1,0);
 
     MultiFab::Copy(S_LS, S_LS_1, 0, 0, S_LS.nComp(), S_LS.nGrow());
 

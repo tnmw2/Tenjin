@@ -174,7 +174,7 @@ void fastSweep(BoxAccessCellArray& U, BoxAccessLevelSet& LS, const Real* dx, int
             {
                 for (int i = xlo; LS.customComparator(i,xhi,xsense) ; LS.customChanger(i,xsense))
                 {
-                    if( (sgn<Real,int>(LS(i,j,k,0)) != sgn<int,int>(sign)) && !LS.cellIsNextToAnInterface(i,j,k,0)  &&  LS.cellIsNearInterface(i,j,k,dx))
+                    if( (sgn<Real,int>(LS(i,j,k,0)) != sgn<int,int>(sign))  &&  LS.cellIsNearInterface(i,j,k,dx)) // && !LS.cellIsNextToAnInterface(i,j,k,0)
                     {
                         phix = ( std::abs(LS(i-1,j  ,k,0)) < std::abs(LS(i+1,j  ,k,0)) ? U(i-1,j  ,k,n) : U(i+1,j  ,k,n));
                         phiy = ( std::abs(LS(i  ,j-1,k,0)) < std::abs(LS(i  ,j+1,k,0)) ? U(i  ,j-1,k,n) : U(i  ,j+1,k,n));
@@ -465,7 +465,6 @@ void boxGhostFluidValues(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAcces
 
             for (int i = lo.x; i <= hi.x; ++i)
             {
-
                 current_x = prob_lo[0] + (Real(i)+0.5)*dx[0];
 
                 if(LS0.cellIsNextToAnInterface(i,j,k,0))
@@ -576,8 +575,6 @@ void boxGhostFluidValues_1D(BoxAccessCellArray& U, BoxAccessCellArray& U1, BoxAc
     const auto hi = ubound(U.box);
 
     Real current_x,   current_y,  current_z;
-
-
 
     Vector<int>  probe_m(2);
 

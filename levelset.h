@@ -38,6 +38,8 @@ public:
 
     Real  levelSetDerivative        (Real v, const Real* dx, int dir, int i, int j, int k, int n);
     Real  D1                        (int dir, int i, int j, int k, int n, int sign, const Real *dx);
+    Real  D2                        (int dir, int i, int j, int k, int n, int sign, const Real* dx);
+    Real  D3                        (int dir, int i, int j, int k, int n, int sign, const Real* dx);
     void  resetLevelSet             ();
     void  fastSweep                 (const Real *dx, int xsense, int ysense, int sign);
     bool  cellIsNextToAnInterface   (int i , int j , int k, int n, int limiter=-1);
