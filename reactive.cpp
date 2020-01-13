@@ -81,6 +81,25 @@ void pressureBased_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStr
     }
 }
 
+void Schoch_ProgrammedBurn_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
+{
+
+    Real A = 2.0E6;
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+    }
+
+    //U(i,j,k,ALPHARHOLAMBDA,m) -=  dt*A*std::pow(U(i,j,k,ALPHARHOLAMBDA,m)*U(i,j,k,ALPHARHOLAMBDA,m)/U(i,j,k,ALPHARHO,m),0.75)*(U(i,j,k,P) > 1E8 ? 1.0 : 0.0);
+    U(i,j,k,ALPHARHOLAMBDA,m) -=  dt*A*U(i,j,k,ALPHARHOLAMBDA,m)*std::pow(U(i,j,k,ALPHARHOLAMBDA,m)/U(i,j,k,ALPHARHO,m),0.5)*(U(i,j,k,P) > 9.9E8 ? 1.0 : 0.0);
+
+    if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
+    {
+        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+    }
+}
+
 void Arrhenius_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt, int i, int j, int k, int m)
 {
 
@@ -196,7 +215,9 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
 
                         //pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 
-                        Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                        //Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+
+                        Schoch_ProgrammedBurn_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
                     }
                 }
             }

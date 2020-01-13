@@ -629,6 +629,26 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     }*/
 
     /******************************************
+     * Schoch 1D
+     *****************************************/
+    Real booster = 0.35;
+
+    {
+        if(x < initial.interface)
+        {
+            s = 0;
+        }
+        else if(x < booster)
+        {
+            s = 1;
+        }
+        else
+        {
+            s = 2;
+        }
+    }
+
+    /******************************************
      * 2D Sod
      *****************************************/
     /*{
@@ -764,7 +784,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
      * Udaykunar Groove with explosive
      *****************************************/
 
-   {
+   /*{
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
         Real booster   = 5E-3;
@@ -800,7 +820,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 3;
         }
-    }
+    }*/
 
     /******************************************
      * Explosive Welding
@@ -1019,7 +1039,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Bubble
      *****************************************/
-    {
+    /*{
         Real bubbleCentre_x  = 0.175;
         Real radius          = 0.025;
         Real shock           = initial.interface;
@@ -1039,7 +1059,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
                 s = 1;
             }
         }
-    }
+    }*/
 
 }
 
