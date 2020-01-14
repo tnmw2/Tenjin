@@ -215,9 +215,9 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
 
                         //pressureBased_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 
-                        //Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                        Arrhenius_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 
-                        Schoch_ProgrammedBurn_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
+                        //Schoch_ProgrammedBurn_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
                     }
                 }
             }

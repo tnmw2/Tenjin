@@ -419,7 +419,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
     /******************************************
      * 1D RP
      *****************************************/
-    {
+    /*{
         Print() << i << " " << (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]) << std::endl;
         if(i < (int)((initial.interface/parameters.dimL[0])*parameters.n_cells[0]))
         {
@@ -430,7 +430,7 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
             Print() << "HERE" << std::endl;
             s=1;
         }
-    }
+    }*/
 
     /******************************************
      * Wilkins
@@ -611,6 +611,12 @@ void chooseStateBasedOnInitialCondition(int& s, int i, int j, int k, InitialStru
 
 }
 
+bool insideChamfer(Real x, Real xc, Real y, Real yc, Real r)
+{
+    return ((x-xc)*(x-xc)+(y-yc)*(y-yc) < r*r);
+}
+
+
 void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters)
 {
 
@@ -630,10 +636,10 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
 
     /******************************************
      * Schoch 1D
-     *****************************************/
-    Real booster = 0.35;
+     *****************************************/   
+    /*{
+        Real booster = 0.35;
 
-    {
         if(x < initial.interface)
         {
             s = 0;
@@ -646,7 +652,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 2;
         }
-    }
+    }*/
 
     /******************************************
      * 2D Sod
@@ -783,7 +789,6 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove with explosive
      *****************************************/
-
    /*{
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
@@ -1061,6 +1066,133 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         }
     }*/
 
+
+    /******************************************
+     * Schoch Can flyerplate
+     *****************************************/
+    {
+        Real extRadius = 14.0E-2;
+        Real extLength = 25.0E-2;
+        Real wall      = 2E-2;
+        Real chamfer   = 0.2E-2;
+        Real side      = (40E-2 - extLength)/2.0;
+        Real flyerPlateThickness = 2E-2;
+        Real flyerPlateRadius = 9.6E-2;
+
+        if(x < extRadius && y < (extLength + side) )
+        {
+            if(y < side)
+            {
+                if(x < flyerPlateRadius)
+                {
+                    if(y < side - flyerPlateThickness)
+                    {
+                        s = 3; //moving air
+                    }
+                    else if(x < flyerPlateRadius - chamfer)
+                    {
+                        s = 4; //flyerplate
+                    }
+                    else if(y > side - flyerPlateThickness + chamfer)
+                    {
+                        s = 4; //flyerplate
+                    }
+                    else if(insideChamfer(x,(flyerPlateRadius - chamfer),y,(side-flyerPlateThickness+chamfer),chamfer))
+                    {
+                        s = 4;
+                    }
+                    else
+                    {
+                        s = 3;
+                    }
+                }
+                else
+                {
+                    s = 0;
+                }
+            }
+            else if(y < side + wall)
+            {
+                if(x< extRadius - chamfer || y > side + chamfer)
+                {
+                    s = 1;
+                }
+                else if(insideChamfer(x,extRadius - chamfer,y,side + chamfer,chamfer))
+                {
+                    s = 1;
+                }
+                else
+                {
+                    s = 0;
+                }
+            }
+            else if(y < side + extLength/2.0 + wall/2.0)
+            {
+                if( y > side + extLength/2.0 - wall/2.0 )
+                {
+                    s = 1;
+                }
+                else if(x < extRadius - wall - chamfer )
+                {
+                    s = 2;
+                }
+                else if( (y < side + extLength/2.0 - wall/2.0 - chamfer) && (y > side + wall + chamfer) && (x < extRadius-wall))
+                {
+                    s = 2;
+                }
+                else if( insideChamfer(x,extRadius - wall - chamfer,y,side + extLength/2.0 - wall/2.0 - chamfer,chamfer) || insideChamfer(x,extRadius - wall - chamfer,y,side + wall + chamfer,chamfer))
+                {
+                    s = 2;
+                }
+                else
+                {
+                    s = 1;
+                }
+            }
+            else if(y < side + extLength - wall)
+            {
+                if(x < extRadius - wall - chamfer )
+                {
+                    s = 2;
+                }
+                else if( (y > side + extLength/2.0 + wall/2.0 + chamfer) && (y < side + extLength - wall - chamfer) && (x < extRadius-wall))
+                {
+                    s = 2;
+                }
+                else if( insideChamfer(x,extRadius - wall - chamfer,y,side + extLength/2.0 + wall/2.0 + chamfer,chamfer) || insideChamfer(x,extRadius - wall - chamfer,y,side + extLength - wall - chamfer,chamfer))
+                {
+                    s = 2;
+                }
+                else
+                {
+                    s = 1;
+                }
+            }
+            else
+            {
+                if( y < side + extLength - chamfer)
+                {
+                    s = 1;
+                }
+                else if( x < extRadius - chamfer)
+                {
+                    s = 1;
+                }
+                else if( insideChamfer(x,extRadius - chamfer,y,side + extLength - chamfer,chamfer) )
+                {
+                    s = 1;
+                }
+                else
+                {
+                    s = 0;
+                }
+            }
+        }
+        else
+        {
+            s = 0; //air
+        }
+    }
 }
 
 Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx)
