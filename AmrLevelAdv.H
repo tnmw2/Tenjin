@@ -91,11 +91,25 @@ public:
                                  amrex::Real dt,
                                  int  iteration,
                                  int  ncycle) override;
-    
+
+    Real new_advance (Real time, Real dt, int  iteration, int  ncycle);
+
+    //
+    // Runge Kutta updates of various orders
+    //
+    void SINGLE_HLLC_advance(MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+
+    void RK2_HLLC_advance   (MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+
+    void RK3_HLLC_advance   (MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+
+    void FourStage_RK3_HLLC_advance   (MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+
     //
 	// My own HLLC
 	//
-    void AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+    void AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
+    void AMR_PathConservative_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time);
     //
     //Estimate time step.
     //

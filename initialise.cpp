@@ -46,8 +46,6 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
         }
     }
 
-    //Print() << "Here" << std::endl;
-
     int s=0;
 
     Real volfrac;
@@ -105,8 +103,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
 
                 //Udaykumar groove explosive
-                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
 
 
 
@@ -143,7 +141,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 }
 
 
-                //U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
+                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
             }
         }
     }
@@ -616,7 +614,6 @@ bool insideChamfer(Real x, Real xc, Real y, Real yc, Real r)
     return ((x-xc)*(x-xc)+(y-yc)*(y-yc) < r*r);
 }
 
-
 void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters)
 {
 
@@ -789,18 +786,12 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove with explosive
      *****************************************/
-   /*{
+   {
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
         Real booster   = 5E-3;
         Real interface = initial.interface;
         Real radius = 15E-3; //4E-3;
-
-        //if(y < airgap)
-        //{
-        //    s = 3;
-        //}
-        //else
 
         if(y < booster)
         {
@@ -825,7 +816,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 3;
         }
-    }*/
+    }
 
     /******************************************
      * Explosive Welding
@@ -1066,11 +1057,10 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         }
     }*/
 
-
     /******************************************
      * Schoch Can flyerplate
      *****************************************/
-    {
+    /*{
         Real extRadius = 14.0E-2;
         Real extLength = 25.0E-2;
         Real wall      = 2E-2;
@@ -1192,7 +1182,109 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 0; //air
         }
-    }
+    }*/
+
+    /******************************************
+     * Schoch Can
+     *****************************************/
+    /*{
+        Real extRadius = 14.0E-2;
+        Real extLength = 24.6E-2;
+        Real wall      = 2E-2;
+        Real chamfer   = 0.4E-2;
+        Real side      = (40E-2 - extLength)/2.0;
+        Real booster   = 1E-2;
+
+        if(x < extRadius && y < (extLength + side) )
+        {
+            if(y < side)
+            {
+                s = 0;
+            }
+            else if(y < side + wall)
+            {
+                if(x< extRadius - chamfer || y > side + chamfer)
+                {
+                    s = 1;
+                }
+                else if(insideChamfer(x,extRadius - chamfer,y,side + chamfer,chamfer))
+                {
+                    s = 1;
+                }
+                else
+                {
+                    s = 0;
+                }
+            }
+            else if(y < side + extLength + wall)
+            {
+                if( y > side + extLength - wall )
+                {
+                    s = 1;
+                }
+                else if(x < extRadius - wall - chamfer )
+                {
+                    if( y < side + wall + booster)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 2;
+                    }
+                }
+                else if( (y < side + extLength - wall - chamfer) && (y > side + wall + chamfer) && (x < extRadius-wall))
+                {
+                    if( y < side + wall + booster)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 2;
+                    }
+                }
+                else if( insideChamfer(x,extRadius - wall - chamfer,y,side + extLength - wall - chamfer,chamfer) || insideChamfer(x,extRadius - wall - chamfer,y,side + wall + chamfer,chamfer))
+                {
+                    if( y < side + wall + booster)
+                    {
+                        s = 3;
+                    }
+                    else
+                    {
+                        s = 2;
+                    }
+                }
+                else
+                {
+                    s = 1;
+                }
+            }
+            else
+            {
+                if( y < side + extLength - chamfer)
+                {
+                    s = 1;
+                }
+                else if( x < extRadius - chamfer)
+                {
+                    s = 1;
+                }
+                else if( insideChamfer(x,extRadius - chamfer,y,side + extLength - chamfer,chamfer) )
+                {
+                    s = 1;
+                }
+                else
+                {
+                    s = 0;
+                }
+            }
+        }
+        else
+        {
+            s = 0; //air
+        }
+    }*/
 }
 
 Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx)

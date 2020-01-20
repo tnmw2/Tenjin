@@ -208,12 +208,458 @@ void ScaleFluxes(Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Real dt, const Real*
 				}
 			}
 		}
-	}
-		
-		
+	}	
 }
 
-void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& MUSCLgrad, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+void AmrLevelAdv::SINGLE_HLLC_advance(MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+{
+    Array <MultiFab, AMREX_SPACEDIM> fluxes1;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes2;
+
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+        ba.surroundingNodes(j);
+
+        fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+
+    }
+
+
+    const int TWOGHOST = 2;
+    const int ONEGHOST = 1;
+
+    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+
+    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+
+    THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
+
+    CellArray U (S0,accessPattern,parameters);
+    CellArray U1(S1,accessPattern,parameters);
+    CellArray UL(SL,accessPattern,parameters);
+    CellArray UR(SR,accessPattern,parameters);
+    CellArray ULStar (SLStar,accessPattern,parameters);
+    CellArray URStar (SRStar,accessPattern,parameters);
+    CellArray UStarStar (SRStar,accessPattern,parameters);
+
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,ULStar,URStar,UStarStar,fluxes,fluxes1,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
+
+}
+
+void AmrLevelAdv::RK2_HLLC_advance(MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+{
+
+    const int TWOGHOST = 2;
+    const int ONEGHOST = 1;
+
+    /*-------------------------------------------------------------
+   * Declared flux multifabs. Several are needed as we need to
+   * keep track of the flux in each Runge-Kutta timestep to such
+   * that we can reflux appropriately
+   * -----------------------------------------------------------*/
+
+    Array <MultiFab, AMREX_SPACEDIM> fluxes1;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes2;
+
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+        ba.surroundingNodes(j);
+
+        fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+
+    }
+
+
+    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+    MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
+
+    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+
+    THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
+
+    CellArray U (S0,accessPattern,parameters);
+    CellArray U1(S1,accessPattern,parameters);
+    CellArray U2(S2,accessPattern,parameters);
+    CellArray UL(SL,accessPattern,parameters);
+    CellArray UR(SR,accessPattern,parameters);
+    CellArray ULStar (SLStar,accessPattern,parameters);
+    CellArray URStar (SRStar,accessPattern,parameters);
+    CellArray UStarStar (SRStar,accessPattern,parameters);
+
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,fluxes2,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes2, fluxes, fluxes1,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+
+    MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
+
+    /*if(do_reflux)
+    {
+        for (int j = 0; j < BL_SPACEDIM; j++)
+        {
+            MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
+        }
+
+        ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
+    }*/
+
+
+}
+
+void AmrLevelAdv::RK3_HLLC_advance(MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+{
+
+    const int TWOGHOST = 2;
+    const int ONEGHOST = 1;
+
+    /*-------------------------------------------------------------
+   * Declared flux multifabs. Several are needed as we need to
+   * keep track of the flux in each Runge-Kutta timestep to such
+   * that we can reflux appropriately
+   * -----------------------------------------------------------*/
+
+    Array <MultiFab, AMREX_SPACEDIM> fluxes1;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes2;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes3;
+
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+        ba.surroundingNodes(j);
+
+        fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes3[j].define(ba, dmap, parameters.Ncomp, 0);
+
+    }
+
+
+    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+
+    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+    MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
+    MultiFab S3(grids, dmap, parameters.Ncomp, TWOGHOST);
+
+    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+
+    THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
+
+    CellArray U (S0,accessPattern,parameters);
+    CellArray U1(S1,accessPattern,parameters);
+    CellArray U2(S2,accessPattern,parameters);
+    CellArray U3(S3,accessPattern,parameters);
+    CellArray UL(SL,accessPattern,parameters);
+    CellArray UR(SR,accessPattern,parameters);
+    CellArray ULStar (SLStar,accessPattern,parameters);
+    CellArray URStar (SRStar,accessPattern,parameters);
+    CellArray UStarStar (SRStar,accessPattern,parameters);
+
+    AMR_HLLCadvance(S_new,U,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U1 = ((U*(3.0/4.0))+(U2*(1.0/4.0)));
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    FillPatch(*this, U.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
+
+    U1 = ((U*(1.0/3.0))+(U2*(2.0/3.0)));
+
+
+    MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
+
+
+    /*****************************************
+     * This flux addition needs to be updated
+     * to match the RK3 method
+     * ***************************************/
+
+    /*if(do_reflux)
+    {
+        for (int j = 0; j < BL_SPACEDIM; j++)
+        {
+            MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
+        }
+        ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
+    }*/
+
+}
+
+void AmrLevelAdv::FourStage_RK3_HLLC_advance(MultiFab& S_new, Array<MultiFab, AMREX_SPACEDIM>& fluxes, ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+{
+
+    const int TWOGHOST = 2;
+    const int ONEGHOST = 1;
+
+    /*-------------------------------------------------------------
+   * Declared flux multifabs. Several are needed as we need to
+   * keep track of the flux in each Runge-Kutta timestep to such
+   * that we can reflux appropriately
+   * -----------------------------------------------------------*/
+
+    Array <MultiFab, AMREX_SPACEDIM> fluxes1;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes2;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes3;
+    Array <MultiFab, AMREX_SPACEDIM> fluxes4;
+
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+        ba.surroundingNodes(j);
+
+        fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes3[j].define(ba, dmap, parameters.Ncomp, 0);
+        fluxes4[j].define(ba, dmap, parameters.Ncomp, 0);
+
+    }
+
+
+    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+
+    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+    MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
+    MultiFab S3(grids, dmap, parameters.Ncomp, TWOGHOST);
+
+    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+
+    THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
+
+    CellArray U (S0,accessPattern,parameters);
+    CellArray U1(S1,accessPattern,parameters);
+    CellArray U2(S2,accessPattern,parameters);
+    CellArray U3(S3,accessPattern,parameters);
+
+    CellArray UL(SL,accessPattern,parameters);
+    CellArray UR(SR,accessPattern,parameters);
+    CellArray ULStar (SLStar,accessPattern,parameters);
+    CellArray URStar (SRStar,accessPattern,parameters);
+    CellArray UStarStar (SRStar,accessPattern,parameters);
+
+    AMR_HLLCadvance(S_new,U,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+
+    AMR_HLLCadvance(S_new,U1,U3,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U2 = ((U1*(1.0/2.0))+(U3*(1.0/2.0)));
+
+    AMR_HLLCadvance(S_new,U2,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    FillPatch(*this, U.data, TWOGHOST, time, Phi_Type, 0, U.data.nComp());
+
+    U3 = ((U*(2.0/3.0))+(U2*(1.0/6.0))+(U1*(1.0/6.0)));
+
+    AMR_HLLCadvance(S_new,U3,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes2,fluxes3,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U1 = ((U3*(1.0/2.0))+(U2*(1.0/2.0)));
+
+
+    MultiFab::Copy(S_new, U1.data, 0, 0, U1.data.nComp(), S_new.nGrow());
+    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
+
+
+    /*****************************************
+     * This flux addition needs to be updated
+     * to match the RK3 method
+     * ***************************************/
+
+    /*if(do_reflux)
+    {
+        for (int j = 0; j < BL_SPACEDIM; j++)
+        {
+            MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
+        }
+        ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
+    }*/
+
+}
+
+void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
+{
+    Direction_enum d;
+
+
+    U.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U.data, geom, bc);
+
+    U.conservativeToPrimitive();
+
+    U1 = U;
+
+    for(int dir = 0; dir < AMREX_SPACEDIM ; dir++)
+    {
+        d = (Direction_enum)dir;
+
+        UL = U;
+        UR = U;
+
+        /*-------------------------------------------------------------
+         * Perform MUSCL extrapolation.
+         * -----------------------------------------------------------*/
+
+        if(parameters.MUSCL)
+        {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+            for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
+            {
+                const Box& bx = mfi.validbox();
+
+                /*-------------------------------------------------------------
+                 * Data can't be accessed straight from a Multifab so we make
+                 * some wrappers to hold the FArrayBoxes that can access the
+                 * data called BoxAccessCellArray.
+                 * -----------------------------------------------------------*/
+
+                BoxAccessCellArray  Ubox(mfi,bx,U);
+                BoxAccessCellArray  ULbox(mfi,bx,UL);
+                BoxAccessCellArray  URbox(mfi,bx,UR);
+
+                MUSCLextrapolate(Ubox,ULbox,URbox,d);
+
+            }
+
+
+            if(parameters.THINC)
+            {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+                for(MFIter mfi(UL.data); mfi.isValid(); ++mfi )
+                {
+                    const Box& bx = mfi.validbox();
+
+                    BoxAccessCellArray  Ubox(mfi,bx,U);
+                    BoxAccessCellArray  ULbox(mfi,bx,UL);
+                    BoxAccessCellArray  URbox(mfi,bx,UR);
+                    BoxAccessCellArray ULTHINC(mfi,bx,ULStar);
+                    BoxAccessCellArray URTHINC(mfi,bx,URStar);
+                    BoxAccessTHINCArray THINCbox(mfi,bx,THINC);
+
+                    THINCbox.THINCreconstruction(Ubox,ULbox,URbox,ULTHINC,URTHINC,parameters,dx,d);
+
+                    ULbox.cleanUpAlpha(dx,prob_lo);
+                    URbox.cleanUpAlpha(dx,prob_lo);
+
+                }
+            }
+
+
+            UL.primitiveToConservative();
+            UR.primitiveToConservative();
+
+            UL.getSoundSpeed();
+            UR.getSoundSpeed();
+
+        }
+
+
+
+        UL.data.FillBoundary(geom.periodicity());
+        UR.data.FillBoundary(geom.periodicity());
+
+        FillDomainBoundary(UL.data, geom, bc);
+        FillDomainBoundary(UR.data, geom, bc);
+
+
+
+        /*-------------------------------------------------------------
+         * Calulate HLLC flux and update the new array.
+         * -----------------------------------------------------------*/
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
+        {
+            const Box& bx = mfi.validbox();
+
+            FArrayBox& flux_fab1        = flux_arr[d][mfi];
+            FArrayBox& flux_fab2        = flux_arr_diff[d][mfi];
+            FArrayBox& flux_fab_UStar   = flux_arr_Ustar[d][mfi];
+
+            BoxAccessCellArray Ubox(mfi,bx,U);
+            BoxAccessCellArray U1box(mfi,bx,U1);
+            BoxAccessCellArray ULbox(mfi,bx,UL);
+            BoxAccessCellArray URbox(mfi,bx,UR);
+            BoxAccessCellArray ULStarbox(mfi,bx,ULStar);
+            BoxAccessCellArray URStarbox(mfi,bx,URStar);
+            BoxAccessCellArray UStarStarbox(mfi,bx,UStarStar);
+            BoxAccessCellArray fluxbox1(bx,flux_fab1,U);
+            BoxAccessCellArray fluxbox2(bx,flux_fab2,U);
+            BoxAccessCellArray fluxStyleUstar(bx,flux_fab_UStar,U);
+
+
+            if(parameters.SOLID)
+            {
+                calc_5Wave_fluxes(fluxbox1, ULbox, URbox, ULStarbox, URStarbox,fluxStyleUstar, parameters,d,dx,prob_lo); //UStarStarbox
+            }
+            else
+            {
+                calc_fluxes(fluxbox1, ULbox, URbox, fluxStyleUstar, parameters,d,dx,prob_lo);
+            }
+
+            update(fluxbox1, Ubox, U1box, parameters,d,dt,dx);
+
+            //calculatePathConservativeFluxes(fluxbox1,fluxbox2,Ubox, ULbox, URbox,fluxStyleUstar,parameters,d,dx);
+
+            //PCupdate(fluxbox1,fluxbox2, Ubox, U1box, parameters,d,dt,dx);
+
+            U1box.conservativeToPrimitive();
+
+            if(parameters.REACTIVE)
+            {
+                reactiveUpdateInHLLC(U1box,parameters,dt);
+            }
+
+        }
+    }
+
+
+
+    U1.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U1.data, geom, bc);
+
+    U1.conservativeToPrimitive();
+
+}
+
+void AmrLevelAdv::AMR_PathConservative_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, CellArray& UL, CellArray& UR, CellArray& ULStar, CellArray& URStar, CellArray& UStarStar, Array<MultiFab, AMREX_SPACEDIM>& flux_arr, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_diff, Array<MultiFab, AMREX_SPACEDIM>& flux_arr_Ustar,THINCArray& THINC,ParameterStruct& parameters, const Real* dx, const Real* prob_lo, Real dt, Real time)
 {
     Direction_enum d; 
 
@@ -332,7 +778,7 @@ void AmrLevelAdv::AMR_HLLCadvance(MultiFab& S_new,CellArray& U,CellArray& U1, Ce
 
             if(parameters.SOLID)
             {
-                calc_5Wave_fluxes(fluxbox1, ULbox, URbox, ULStarbox, URStarbox,fluxStyleUstar, parameters,d,dx,prob_lo); //UStarStarbox
+                calc_5Wave_fluxes(fluxbox1, ULbox, URbox, ULStarbox, URStarbox, fluxStyleUstar, parameters,d,dx,prob_lo); //UStarStarbox
             }
             else
             {
@@ -390,18 +836,18 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     //
     FluxRegister *fine    = 0;
     FluxRegister *current = 0;
-    
+
     int finest_level = parent->finestLevel();
 
     if (do_reflux && level < finest_level)
     {
-		fine = &getFluxReg(level+1);
-		fine->setVal(0.0);
+        fine = &getFluxReg(level+1);
+        fine->setVal(0.0);
     }
 
     if (do_reflux && level > 0)
     {
-		current = &getFluxReg(level);
+        current = &getFluxReg(level);
     }
 
     /*-------------------------------------------------------------
@@ -420,11 +866,8 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         BoxArray ba = S_new.boxArray();
         ba.surroundingNodes(j);
         fluxes [j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes [j].setVal(0.0);
         fluxes1[j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes1[j].setVal(0.0);
         fluxes2[j].define(ba, dmap, parameters.Ncomp, 0);
-        //fluxes2[j].setVal(0.0);
         UStarflux[j].define(ba, dmap, parameters.Ncomp, 0);
     }
 
@@ -439,41 +882,41 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
      * -----------------------------------------------------------*/
     int TWOGHOST = 2;
 
-    MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
-    FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
-    FillPatch(*this, S1, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
-    FillPatch(*this, S2, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab S0(grids, dmap, parameters.Ncomp, TWOGHOST);
+     FillPatch(*this, S0, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab S1(grids, dmap, parameters.Ncomp, TWOGHOST);
+     FillPatch(*this, S1, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab S2(grids, dmap, parameters.Ncomp, TWOGHOST);
+     FillPatch(*this, S2, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);
 
-    /*-------------------------------------------------------------
-     * States with One Ghost Cell:
-     * -----------------------------------------------------------*/
+     /*-------------------------------------------------------------
+      * States with One Ghost Cell:
+      * -----------------------------------------------------------*/
 
-    int ONEGHOST = 1;
+     int ONEGHOST = 1;
 
-    MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, SL, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, SR, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, SLStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, SRStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, SStarStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
-    MultiFab Sgrad(grids, dmap, parameters.Ncomp, ONEGHOST);
-    FillPatch(*this, Sgrad, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab SL(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, SL, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab SR(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, SR, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab SLStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, SLStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab SRStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, SRStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab SStarStar(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, SStarStar, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
+     MultiFab Sgrad(grids, dmap, parameters.Ncomp, ONEGHOST);
+     FillPatch(*this, Sgrad, ONEGHOST, time, Phi_Type, 0, parameters.Ncomp);
 
     CellArray U (S0,accessPattern,parameters);
     CellArray U1(S1,accessPattern,parameters);
     CellArray U2(S2,accessPattern,parameters);
+    CellArray U3(S2,accessPattern,parameters);
     CellArray UL(SL,accessPattern,parameters);
     CellArray UR(SR,accessPattern,parameters);
     CellArray ULStar(SLStar,accessPattern,parameters);
     CellArray URStar(SRStar,accessPattern,parameters);
-	CellArray UStarStar(SStarStar,accessPattern,parameters);
-    CellArray MUSCLgrad(Sgrad,accessPattern,parameters);
+    CellArray UStarStar(SStarStar,accessPattern,parameters);
 
     THINCArray THINCArr(this->grids,this->dmap,ONEGHOST,parameters);
 
@@ -482,30 +925,25 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
     {
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }
-    
-    AMR_HLLCadvance(S_new,U ,U1,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    AMR_HLLCadvance(S_new,U1,U2,UL,UR,MUSCLgrad,ULStar,URStar,UStarStar,fluxes2,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
+    AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    /*MultiFab::Copy(S_new, U1.data, 0, 0, S_new.nComp(), S_new.nGrow());
-    FillPatch(*this, U1.data, TWOGHOST, time, Phi_Type, 0, parameters.Ncomp);*/
+    U1 = ((U*(3.0/4.0))+(U2*(1.0/4.0)));
 
-    /*if(do_reflux)
-    {
-        for (int j = 0; j < BL_SPACEDIM; j++)
-        {
-            MultiFab::LinComb(fluxes[j],0.5,fluxes1[j],0,0.5,fluxes2[j],0,0,fluxes[j].nComp(),0);
-        }
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
-        ScaleFluxes(fluxes,dt,dx,accessPattern,parameters);
-    }*/
+    FillPatch(*this, U.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
 
-    /*if(parameters.REACTIVE)
-    {
-        reactiveUpdate(U,U1,U2,parameters,dt,S_new);
-    }*/
+    U1 = ((U*(1.0/3.0))+(U2*(2.0/3.0)));
+
+
+    /*AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes2,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
+
+    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));*/
 
     if(parameters.PLASTIC)
     {
@@ -535,6 +973,163 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     if (do_reflux)
     {
+        if (current)
+        {
+            for (int i = 0; i < BL_SPACEDIM ; i++)
+            {
+                current->FineAdd(fluxes[i],i,0,0,parameters.Ncomp,1.);
+            }
+        }
+        if (fine)
+        {
+            for (int i = 0; i < BL_SPACEDIM ; i++)
+            {
+                fine->CrseInit(fluxes[i],i,0,0,parameters.Ncomp,-1.);
+            }
+        }
+    }
+
+
+    return dt;
+}
+
+
+Real AmrLevelAdv::new_advance (Real time, Real dt, int  iteration, int  ncycle)
+{
+
+    /*-------------------------------------------------------------
+     * Runge-Kutta time integration with MUSCL/HLLC is used to update the
+     * solution on a given level.
+     * -----------------------------------------------------------*/
+
+    MultiFab& S_new = get_new_data(Phi_Type);
+
+    CellArray U1(S_new,accessPattern,parameters);
+
+    const Real prev_time = state[Phi_Type].prevTime();
+    const Real cur_time = state[Phi_Type].curTime();
+    const Real ctr_time = 0.5*(prev_time + cur_time);
+
+    const Real* dx = geom.CellSize();
+    const Real* prob_lo = geom.ProbLo();
+
+
+    /*********************************************************************
+    * Get pointers to Flux registers, or set pointer to zero if not there.
+    *********************************************************************/
+
+    FluxRegister *fine    = 0;
+    FluxRegister *current = 0;
+    
+    int finest_level = parent->finestLevel();
+
+    if (do_reflux && level < finest_level)
+    {
+		fine = &getFluxReg(level+1);
+		fine->setVal(0.0);
+    }
+
+    if (do_reflux && level > 0)
+    {
+		current = &getFluxReg(level);
+    }
+
+    /**************************************
+     * Array to store fluxes before adding
+     * them to the flux register
+     *************************************/
+
+    Array <MultiFab, AMREX_SPACEDIM> fluxes ;
+
+    for (int j = 0; j < BL_SPACEDIM; j++)
+    {
+        BoxArray ba = S_new.boxArray();
+
+        ba.surroundingNodes(j);
+
+        fluxes[j].define(ba, dmap, parameters.Ncomp, 0);
+    }
+
+
+    if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
+    }
+
+
+    /******************************
+     * Choose update order
+     *****************************/
+
+    //SINGLE_HLLC_advance(S_new,fluxes,parameters,dx,prob_lo,dt,time);
+
+    RK2_HLLC_advance(S_new,fluxes,parameters,dx,prob_lo,dt,time);
+
+    //RK3_HLLC_advance(S_new,fluxes,parameters,dx,prob_lo,dt,time);
+
+    //FourStage_RK3_HLLC_advance(S_new,fluxes,parameters,dx,prob_lo,dt,time);
+
+    /******************************/
+
+    //sourceUpdate(dt,mat);
+
+    /*if(parameters.REACTIVE)
+    {
+        #ifdef _OPENMP
+        #pragma omp parallel
+        #endif
+        for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
+        {
+            const Box& bx = mfi.validbox();
+
+            BoxAccessCellArray U1box(mfi,bx,U1);
+
+            reactiveUpdateInHLLC(U1box,parameters,dt);
+
+        }
+
+        U1.conservativeToPrimitive();
+    }*/
+
+
+    /*if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
+    }*/
+    
+
+    /*if(parameters.REACTIVE)
+    {
+        reactiveUpdate(U,U1,U2,parameters,dt,S_new);
+    }*/
+
+    if(parameters.PLASTIC)
+    {
+        plastic.plasticUpdate(U1,parameters,dt,S_new);
+    }
+
+    if(parameters.RADIAL)
+    {
+        geometricSourceTerm(U1,parameters,dx,dt/2.0,prob_lo,S_new);
+    }
+
+    if(parameters.SOLID)
+    {
+        U1.cleanUpV();
+    }
+
+
+    {
+        U1.cleanUpAlpha(dx,prob_lo);
+    }
+
+
+    U1.data.FillBoundary(geom.periodicity());
+    FillDomainBoundary(U1.data, geom, bc);
+    FillPatch(*this, U1.data, 0, time, Phi_Type, 0, parameters.Ncomp);
+
+    if (do_reflux)
+    {
 		if (current)
 		{
 			for (int i = 0; i < BL_SPACEDIM ; i++)
@@ -550,13 +1145,6 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 			}
 		}
     }
-
-    #ifdef AMREX_PARTICLES
-    if (TracerPC)
-    {
-      TracerPC->AdvectWithUmac(Umac, level, dt);
-    }
-    #endif
 
     return dt;
 }

@@ -31,51 +31,6 @@ Real& BoxAccessCellArray::operator()(int i, int j, int k, MaterialSpecifier& m)
 {
     return (fab.array())(i, j, k, (accessPattern[m.var]+accessPattern.numberOfMaterialsForVariable[m.var]*m.mat+accessPattern.numberOfRowsForVariable[m.var]*m.row+m.col));
 
-    /*switch(m.var)
-    {
-    case ALPHA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case ALPHARHO:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case RHO_K:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case RHO:               return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case RHOU:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
-        break;
-    case TOTAL_E:           return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case VELOCITY:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.row));
-        break;
-    case P:                 return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case SOUNDSPEED:        return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case USTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case RHO_MIX:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat+m.row));
-        break;
-    case LAMBDA:            return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case ALPHARHOLAMBDA:    return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case SIGMA:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
-        break;
-    case V_TENSOR:          return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
-        break;
-    case VSTAR:             return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
-        break;
-    case DEVH:              return (fab.array())(i, j, k, (accessPattern[m.var]+m.row*numberOfComponents+m.col));
-        break;
-    case HJ2:               return (fab.array())(i, j, k, (accessPattern[m.var]));
-        break;
-    case EPSILON:           return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    case ALPHARHOEPSILON:   return (fab.array())(i, j, k, (accessPattern[m.var]+m.mat));
-        break;
-    default: Print() << "Incorrect Access variable " << m.var << std::endl;
-        exit(1);
-    }*/
 }
 
 void  BoxAccessCellArray::conservativeToPrimitive(int i, int j, int k)

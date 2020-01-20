@@ -22,10 +22,17 @@ public:
 
     Vector<Real> yieldStress;
 
-    Real c1 = 0.324E9; //60E6;  //
-    Real c2 = 0.114E9; //500E6; //
-    Real c3 = 0.002;   //0.02;  //
-    Real n  = 0.42;    //0.3;   //
+    /*Real c1 = 0.324E9; //AL
+    Real c2 = 0.114E9;
+    Real c3 = 0.002;
+    Real n  = 0.42;
+    */
+
+    Real c1 = 0.4E9;  //Cu
+    Real c2 = 0.177E9;
+    Real c3 = 0.025;
+    Real n  = 1.0;
+
     Real mt = 1.0;
 
     Real udaykumarConstant = 100E6;

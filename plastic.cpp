@@ -13,7 +13,7 @@ Real PlasticEOS::plasticStrainRate(double Jnew, double J, BoxAccessCellArray& U,
 {
     if(parameters.PLASTIC==1)
     {
-        return 1E20*Heaviside<Real,Real>(U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew*sqrt(3.0) - (*this).yieldStress[m]);
+        return 1E20*Heaviside<Real,Real>(U.accessPattern.materialInfo[m].EOS->componentShearModulus(U,i,j,k,m)*Jnew*sqrt(3.0/2.0)*2.0 - (*this).yieldStress[m]); //Changed!!! from sqrt(3) -> sqrt(3/2)*2
     }
     else if(parameters.PLASTIC==2)                                                                                          //((1.0-std::pow(Tstar,mt))*
     {
