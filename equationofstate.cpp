@@ -359,6 +359,15 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
         return;
     }
 
+    if(U(i,j,k,ALPHA,m) < 0.5)
+    {
+        U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
+        U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0)); //U(i,j,k,RHO_K,m);
+
+        return;
+    }
+
+
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
     Real B = 20000.0;
@@ -385,11 +394,19 @@ void MixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, Rea
 
     if(sgn(bisectionFunction(U,i,j,k,m,A,kineticEnergy,p)) == sgn(bisectionFunction(U,i,j,k,m,B,kineticEnergy,p)) )
     {
-        Print() << "Error in root Bisection " << std::endl;
+        std::string err = "Error in root Bisection";
 
-        Print() << " A: " << A << " B: " << B << std::endl;
-        Print() << bisectionFunction(U,i,j,k,m,A,kineticEnergy,p) << " " << bisectionFunction(U,i,j,k,m,B,kineticEnergy,p)<< std::endl;
-        exit(1);
+        Vector<Real> vec;
+
+        vec.push_back(A);
+        vec.push_back(B);
+        vec.push_back(bisectionFunction(U,i,j,k,m,A,kineticEnergy,p));
+        vec.push_back(bisectionFunction(U,i,j,k,m,B,kineticEnergy,p));
+        vec.push_back(U(i,j,k,ALPHA,m));
+
+
+        customAbort(vec,err);
+
     }
 
 
