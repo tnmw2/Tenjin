@@ -27,6 +27,8 @@ public:
 
     AccessPattern(ParameterStruct &parameters);
 
+    ParameterStruct& parameters;
+
     void define(ParameterStruct &parameters);
     void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Real lo, Real hi, Variable var, int materialNumber, int rowNumber, int colNumber);
 

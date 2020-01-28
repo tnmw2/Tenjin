@@ -20,7 +20,7 @@ void THINCArray::addTHINCvariable(Variable var, int materialNumber, int rowNumbe
 THINCArray::THINCArray(BoxArray& ba, DistributionMapping& dm, const int Nghost, ParameterStruct &parameters) : data(ba,dm,parameters.numberOfMaterials+1,Nghost)
 {
     addTHINCvariable(ALPHA,parameters.numberOfMaterials);
-    //addTHINCvariable(ALPHARHO,parameters.numberOfMaterials);
+    addTHINCvariable(ALPHARHO,parameters.numberOfMaterials);
     //addTHINCvariable(P);
     //addTHINCvariable(VELOCITY,0,3);
     //addTHINCvariable(V_TENSOR,0,3,3);
@@ -237,11 +237,11 @@ void BoxAccessTHINCArray::THINCreconstruction(BoxAccessCellArray& U, BoxAccessCe
                         }
                     }*/
 
-                    /*for(int m = 0; m < U.numberOfMaterials; m++)
+                    for(int m = 0; m < U.numberOfMaterials; m++)
                     {
                         UL(i,j,k,RHO_K,m) = UL(i,j,k,ALPHARHO,m)/UL(i,j,k,ALPHA,m);
                         UR(i,j,k,RHO_K,m) = UR(i,j,k,ALPHARHO,m)/UR(i,j,k,ALPHA,m);
-                    }*/
+                    }
                 }
             }
         }

@@ -103,8 +103,8 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
 
 
                 //Udaykumar groove explosive
-                U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
-                U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
+                //U(i,j,k,ALPHA,1) = solidVolumeFractionWeight(s,x,y,z,initial,parameters,dx);
+                //U(i,j,k,ALPHA,2) = 1.0-(U(i,j,k,ALPHA,1)+U(i,j,k,ALPHA,0));
 
 
 
@@ -141,7 +141,7 @@ void initial_conditions(BoxAccessCellArray& U, ParameterStruct& parameters, Init
                 }
 
 
-                U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
+                //U(i,j,k,P) += U.getEffectiveNonThermalPressure(i,j,k)/U.getEffectiveInverseGruneisen(i,j,k);
             }
         }
     }
@@ -238,10 +238,39 @@ void getMaterialParameters(libconfig::Setting& materialname, ParameterStruct& pa
             parameters.materialInfo[m].EOS = new MieGruneisenEOS();
         }
     }
+    else if(EOSstring == "JWL")
+    {
+        temp.push_back(materialname[m]["A"]);
+        temp.push_back(materialname[m]["B"]);
+        temp.push_back(materialname[m]["R1"]);
+        temp.push_back(materialname[m]["R2"]);
+        temp.push_back(materialname[m]["rho0"]);
+
+        if(parameters.materialInfo[m].mixture)
+        {
+            parameters.materialInfo[m].EOS = new JWLMixtureEOS();
+
+            parameters.materialInfo[m].mixtureIndex = -1;
+
+            temp.push_back(materialname[m]["adiabaticIndexmix"]);
+            temp.push_back(materialname[m]["prefmix"]);
+            temp.push_back(materialname[m]["erefmix"]);
+            temp.push_back(materialname[m]["CVmix"]);
+
+            temp.push_back(materialname[m]["Amix"]);
+            temp.push_back(materialname[m]["Bmix"]);
+            temp.push_back(materialname[m]["R1mix"]);
+            temp.push_back(materialname[m]["R2mix"]);
+            temp.push_back(materialname[m]["rho0mix"]);
+        }
+        else
+        {
+            parameters.materialInfo[m].EOS = new JWLEOS();
+        }
+    }
     else
     {
-        std::cout << "No valid EOS selected for material " << m << std::endl;
-        exit(1);
+        Abort("Invalid EOS selected for material");
     }
 
     if(parameters.PLASTIC)
@@ -686,7 +715,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * RateStick
      *****************************************/
-    /*{
+    {
         Real radius       = initial.interface;
         Real startOfTube  = initial.interface;
         Real endOfBooster = 2.0*initial.interface;
@@ -719,7 +748,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=1;
         }
-    }*/
+    }
 
     /******************************************
      * Udaykunar Groove
@@ -786,7 +815,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * Udaykunar Groove with explosive
      *****************************************/
-   {
+   /*{
         Real airgap    = 0.5E-3;
         Real explosive = 25E-3;
         Real booster   = 5E-3;
@@ -816,7 +845,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s = 3;
         }
-    }
+    }*/
 
     /******************************************
      * Explosive Welding

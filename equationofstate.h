@@ -4,29 +4,6 @@
 #include "amrexheader.h"
 #include "cellarray.h"
 
-/*
-class EquationOfState
-{
-public:
-    EquationOfState();
-    virtual ~EquationOfState(){}
-
-    Real adiabaticIndex;
-    Real GruneisenGamma;
-    Real CV;
-
-    bool mixture = false;
-    int  mixtureIndex;
-
-    virtual void define(Vector<Real>& params) = 0;
-    virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m) = 0;
-    virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m) = 0;
-    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m) = 0;
-    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m) = 0;
-    virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m) = 0;
-
-};
-*/
 
 class MieGruneisenEOS // : public EquationOfState
 {
@@ -70,6 +47,85 @@ public:
 
 };
 
+class JWLEOS : public MieGruneisenEOS
+{
+
+public:
+
+    ~JWLEOS(){}
+
+    JWLEOS(){}
+
+    virtual void define(Vector<Real>& params);
+            Real referencePressure              (BoxAccessCellArray& U, int i, int j, int k, int m);
+            Real dpcdrho                        (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearPressure                  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
+    virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
+    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real componentShearModulus          (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void setRhoFromDeformationTensor    (BoxAccessCellArray& U, int i, int j, int k, int m, double* F);
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
+
+    void copy(JWLEOS& C);
+
+
+    Real A,B;
+    Real R1,R2;
+    Real rho0;
+
+};
+
+class JWLMixtureEOS : public MieGruneisenEOS
+{
+
+public:
+
+    ~JWLMixtureEOS(){}
+
+    JWLMixtureEOS();
+
+    virtual void define(Vector<Real>& params);
+
+            Real primitiveBisectionFunction     (BoxAccessCellArray& U, int i, int j, int k, int m, Real& rhoaGuess);
+    virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
+    virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
+    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real shearPressure                  (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real componentShearModulus          (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
+    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
+
+    Real bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p);
+    Real pressureFunction (BoxAccessCellArray& U, int i, int j, int k, int m, Real& p);
+    Real mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k, int m);
+
+
+    JWLEOS first;
+    JWLEOS second;
+
+    static Real toleranceForSinglePhaseTreatment;
+    static Real toleranceForConvergence         ;
+    static Real toleranceForBeingNearRoot       ;
+
+
+};
+
 class MixtureEOS : public MieGruneisenEOS
 {
 
@@ -110,43 +166,6 @@ public:
 
 };
 
-class NewMixtureEOS : public MieGruneisenEOS
-{
-
-public:
-
-    ~NewMixtureEOS(){}
-
-    NewMixtureEOS();
-
-    virtual void define(Vector<Real>& params);
-    virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real inverseGruneisen               (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual void rootFind                       (BoxAccessCellArray& U, int i, int j, int k, int m, Real kineticEnergy);
-    virtual Real getSoundSpeedContribution      (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real getTemp                        (BoxAccessCellArray& U, int i, int j, int k, int m, int mixidx);
-    virtual Real xi                             (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real shearPressure                  (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real componentShearModulus          (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real dGdrho                         (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real dG2drho2                       (BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual Real transverseWaveSpeedContribution(BoxAccessCellArray& U, int i, int j, int k, int m);
-    virtual void defineMixtureDensities         (BoxAccessCellArray& U, int i, int j, int k, int m);
-
-    Real bisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real rhoTry, Real kineticEnergy, Real& p);
-    Real pressureFunction (BoxAccessCellArray& U, int i, int j, int k, int m, Real& p);
-    Real mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k, int m);
-
-    Real adiabaticIndex_mix;
-    Real GruneisenGamma_mix;
-    Real CV_mix;
-    Real pref_mix;
-    Real eref_mix;
-
-
-};
 
 class RomenskiiSolidEOS : public MieGruneisenEOS
 {

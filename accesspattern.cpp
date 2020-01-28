@@ -56,9 +56,9 @@ void AccessPattern::addVariable(int& position, std::string nameBase, Var_type ty
     }
 }
 
-AccessPattern::AccessPattern(ParameterStruct& parameters) : materialInfo(parameters.materialInfo)
+AccessPattern::AccessPattern(ParameterStruct& _parameters) : materialInfo(_parameters.materialInfo), parameters(_parameters)
 {
-    define(parameters);
+    define(_parameters);
 }
 
 void AccessPattern::define(ParameterStruct& parameters)

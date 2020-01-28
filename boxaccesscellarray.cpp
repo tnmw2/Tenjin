@@ -164,44 +164,37 @@ void  BoxAccessCellArray::primitiveToConservative()
 
 void BoxAccessCellArray::stressTensor(int i, int j, int k)
 {
+    if(accessPattern.parameters.SOLID)
+    {
         Real TotalShearModulus = 0.0;
-
-        int checkSolid = 0;
 
         for(int m=0;m<numberOfMaterials;m++)
         {
-            if(accessPattern.materialInfo[m].phase == solid)
-            {
-                checkSolid = 1;
-
-                TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
-            }
+            TotalShearModulus += accessPattern.materialInfo[m].EOS->componentShearModulus((*this),i,j,k,m)*(accessPattern.materialInfo[m].EOS->inverseGruneisen((*this),i,j,k,m));
         }
 
         TotalShearModulus = TotalShearModulus/getEffectiveInverseGruneisen(i,j,k);
 
-        if(checkSolid)
+        for(int row=0;row<numberOfComponents;row++)
         {
-            for(int row=0;row<numberOfComponents;row++)
+            for(int col=0;col<numberOfComponents;col++)
             {
-                for(int col=0;col<numberOfComponents;col++)
-                {
-                    (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col) + 2.0*TotalShearModulus*(*this)(i,j,k,DEVH,0,row,col);
-                }
+                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col) + 2.0*TotalShearModulus*(*this)(i,j,k,DEVH,0,row,col);
             }
         }
-        else
+    }
+    else
+    {
+        for(int row=0;row<numberOfComponents;row++)
         {
-            for(int row=0;row<numberOfComponents;row++)
+            for(int col=0;col<numberOfComponents;col++)
             {
-                for(int col=0;col<numberOfComponents;col++)
-                {
-                    (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col);
-                }
+                (*this)(i,j,k,SIGMA,0,row,col)=-(*this)(i,j,k,P)*delta<Real>(row,col);
             }
         }
+    }
 
-        return;
+    return;
 }
 
 Real BoxAccessCellArray::getEffectiveInverseGruneisen(int i, int j, int k)
@@ -593,8 +586,6 @@ void BoxAccessCellArray::cleanUpAlpha(const Real* dx, const Real* prob_lo)
                 if(totalAlpha <= 0.0)
                 {
                     Abort("Error in scaling volume fractions because total is less than zero.");
-
-                    exit(1);
                 }
 
                 for(int m=0;m<numberOfMaterials;m++)
