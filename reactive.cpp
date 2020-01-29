@@ -90,10 +90,10 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
         U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
     }
 
-    if(U(i,j,k,LAMBDA,m) < 1E-6)
+    /*if(U(i,j,k,LAMBDA,m) < 1E-6)
     {
         return;
-    }
+    }*/
 
     /*static Real rho0 = 1905.0;
     static Real I  = 4E12;
@@ -129,7 +129,7 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
     Real phi_G1 = 0.8;
     Real phi_G2 = 0.8;
 
-    Real phi = 1.0 - U(i,j,k,LAMBDA,m);
+    Real phi = 0.999999 - U(i,j,k,LAMBDA,m);
 
     Real r = 0.0;
 
@@ -138,7 +138,7 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
         r += I*std::pow(1.0-phi,b)*std::pow(U(i,j,k,RHO_K,m)/rho0-(1.0+a),X);
     }
 
-    if( phi_G1-phi > 1E-6)
+    if( phi_G1-phi > 0.0)
     {
         r += G1*std::pow(1.0-phi,c)*std::pow(phi,d)*std::pow(U(i,j,k,P)/1E9,Y);
     }
@@ -150,7 +150,7 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
 
     r = std::max(0.0,r);
 
-    U(i,j,k,ALPHARHOLAMBDA,m) -=  dt*U(i,j,k,ALPHARHO,m)*r;
+    U(i,j,k,ALPHARHOLAMBDA,m) -= dt*U(i,j,k,ALPHARHO,m)*r;
 
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
     {
@@ -285,10 +285,10 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
                 {
                     for (int i = lo.x; i <= hi.x; ++i)
                     {
-                        if(U(i,j,k,ALPHA,m) < 1E-3 )
+                        /*if(U(i,j,k,ALPHA,m) < 1E-3 )
                         {
                             continue;
-                        }
+                        }*/
 
                         IandG_UpdateMassFraction_single(U,parameters,dt,i,j,k,m);
 
@@ -303,3 +303,30 @@ void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Re
         }
     }
 }
+
+void reactiveUpdateOutHLLC(CellArray& U,CellArray& U1,CellArray& U2, ParameterStruct& parameters, Real dt)
+{
+    U1 = U;
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    for(MFIter mfi(U.data); mfi.isValid(); ++mfi )
+    {
+        const Box& bx = mfi.validbox();
+
+        BoxAccessCellArray U1box(mfi,bx,U);
+
+        reactiveUpdateInHLLC(U1box,parameters,dt);
+
+        U1box.conservativeToPrimitive();
+
+        reactiveUpdateInHLLC(U1box,parameters,dt);
+
+    }
+
+
+
+
+}
+

@@ -791,13 +791,22 @@ void AmrLevelAdv::AMR_PathConservative_HLLCadvance(MultiFab& S_new,CellArray& U,
 
             //PCupdate(fluxbox1,fluxbox2, Ubox, U1box, parameters,d,dt,dx);
 
-            U1box.conservativeToPrimitive();
+            //U1box.conservativeToPrimitive();
 
-            if(parameters.REACTIVE)
-            {
-                reactiveUpdateInHLLC(U1box,parameters,dt);
-            }
+        }
+    }
 
+    U1.conservativeToPrimitive();
+
+
+    if(parameters.REACTIVE)
+    {
+        for(MFIter mfi(S_new); mfi.isValid(); ++mfi )
+        {
+            const Box& bx = mfi.validbox();
+            BoxAccessCellArray U1box(mfi,bx,U1);
+
+            reactiveUpdateInHLLC(U1box,parameters,dt);
         }
     }
 
@@ -926,7 +935,7 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
         geometricSourceTerm(U,parameters,dx,dt/2.0,prob_lo,S_new);
     }
 
-    /*AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
+    AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
@@ -936,14 +945,19 @@ Real AmrLevelAdv::advance (Real time, Real dt, int  iteration, int  ncycle)
 
     FillPatch(*this, U.data, TWOGHOST, time, Phi_Type, 0, U1.data.nComp());
 
-    U1 = ((U*(1.0/3.0))+(U2*(2.0/3.0)));*/
+    U1 = ((U*(1.0/3.0))+(U2*(2.0/3.0)));
 
 
-    AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
+    /*AMR_HLLCadvance(S_new,U ,U1,UL,UR,ULStar,URStar,UStarStar,fluxes1,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
     AMR_HLLCadvance(S_new,U1,U2,UL,UR,ULStar,URStar,UStarStar,fluxes2,fluxes,UStarflux,THINCArr,parameters,dx,prob_lo,dt,time);
 
-    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));
+    U1 = ((U*(1.0/2.0))+(U2*(1.0/2.0)));*/
+
+    /*if(parameters.REACTIVE)
+    {
+        reactiveUpdateOutHLLC(U1,U,U2,parameters,dt);
+    }*/
 
     if(parameters.PLASTIC)
     {

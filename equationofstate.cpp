@@ -656,18 +656,58 @@ JWLMixtureEOS::JWLMixtureEOS()
 
 }
 
+Real JWLMixtureEOS::mixture_coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m, int idx)
+{
+    if(idx == 0)
+    {
+        return (first.eref + (first.A/(first.rho0*first.R1))*std::exp(-first.R1*first.rho0/U(i,j,k,RHO_MIX,m,0)) + (first.B/(first.rho0*first.R2))*std::exp(-first.R2*first.rho0/U(i,j,k,RHO_MIX,m,0))  );
+    }
+    else
+    {
+        return (second.eref + (second.A/(second.rho0*second.R1))*std::exp(-second.R1*second.rho0/U(i,j,k,RHO_MIX,m,1)) + (second.B/(second.rho0*second.R2))*std::exp(-second.R2*second.rho0/U(i,j,k,RHO_MIX,m,1))  );
+    }
+}
+
+Real JWLMixtureEOS::mixture_coldCompressionPressure(BoxAccessCellArray& U, int i, int j, int k, int m, int idx)
+{
+    if(idx == 0)
+    {
+        return (1.0/(first.GruneisenGamma*U(i,j,k,RHO_MIX,m,0)))*mixture_referencePressure(U,i,j,k,m,0);
+    }
+    else
+    {
+        return (1.0/(second.GruneisenGamma*U(i,j,k,RHO_MIX,m,1)))*mixture_referencePressure(U,i,j,k,m,1);
+    }
+}
+
+Real JWLMixtureEOS::mixture_referencePressure(BoxAccessCellArray& U, int i, int j, int k, int m, int idx)
+{
+    if(idx == 0)
+    {
+        return (first.pref + first.A*std::exp(-first.R1*first.rho0/U(i,j,k,RHO_MIX,m,0)) + first.B*std::exp(-first.R2*first.rho0/U(i,j,k,RHO_MIX,m,0)));
+    }
+    else
+    {
+        return (second.pref + second.A*std::exp(-second.R1*second.rho0/U(i,j,k,RHO_MIX,m,1)) + second.B*std::exp(-second.R2*second.rho0/U(i,j,k,RHO_MIX,m,1)));
+    }
+}
+
 Real JWLMixtureEOS::coldCompressionInternalEnergy(BoxAccessCellArray& U, int i, int j, int k, int m)
 {
     if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)// || U(i,j,k,ALPHA,m) < 0.5 )
     {
+        //return U(i,j,k,ALPHARHO,m)*mixture_coldCompressionInternalEnergy(U,i,j,k,m,0);
         return first.coldCompressionInternalEnergy(U,i,j,k,m);
     }
     else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
     {
+        //return U(i,j,k,ALPHARHO,m)*mixture_coldCompressionInternalEnergy(U,i,j,k,m,1);
         return second.coldCompressionInternalEnergy(U,i,j,k,m);
     }
     else
     {
+        //return U(i,j,k,ALPHARHO,m)*U(i,j,k,LAMBDA,m)*mixture_coldCompressionInternalEnergy(U,i,j,k,m,0) + U(i,j,k,ALPHARHO,m)*(1.0-U(i,j,k,LAMBDA,m))*mixture_coldCompressionInternalEnergy(U,i,j,k,m,1);
+        //return U(i,j,k,ALPHARHOLAMBDA,m)*mixture_coldCompressionInternalEnergy(U,i,j,k,m,0) + (U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))*mixture_coldCompressionInternalEnergy(U,i,j,k,m,1);
         return U(i,j,k,LAMBDA,m)*first.coldCompressionInternalEnergy(U,i,j,k,m) + (1.0-U(i,j,k,LAMBDA,m))*second.coldCompressionInternalEnergy(U,i,j,k,m);
     }
 }
@@ -676,15 +716,18 @@ Real JWLMixtureEOS::coldCompressionPressure(BoxAccessCellArray& U, int i, int j,
 {
     if(U(i,j,k,LAMBDA,m) > 1.0-toleranceForSinglePhaseTreatment)//  || U(i,j,k,ALPHA,m) < 0.5 )
     {
+        //return U(i,j,k,ALPHARHO,m)*mixture_coldCompressionPressure(U,i,j,k,m,0);
         return first.coldCompressionPressure(U,i,j,k,m);
     }
     else if(U(i,j,k,LAMBDA,m) < toleranceForSinglePhaseTreatment)
     {
+        //return U(i,j,k,ALPHARHO,m)*mixture_coldCompressionPressure(U,i,j,k,m,1);
         return second.coldCompressionPressure(U,i,j,k,m);
     }
     else
     {
-        return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,0))+(second.coldCompressionPressure(U,i,j,k,m))*(1.0-U(i,j,k,LAMBDA,m))*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,1));
+        return U(i,j,k,ALPHARHOLAMBDA,m)*mixture_coldCompressionPressure(U,i,j,k,m,0) + (U(i,j,k,ALPHARHO,m)-U(i,j,k,ALPHARHOLAMBDA,m))*mixture_coldCompressionPressure(U,i,j,k,m,1);
+        //return (first.coldCompressionPressure(U,i,j,k,m))*U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,0))+(second.coldCompressionPressure(U,i,j,k,m))*(1.0-U(i,j,k,LAMBDA,m))*U(i,j,k,RHO_K,m)/(U(i,j,k,RHO_MIX,m,1));
     }
 }
 
@@ -784,10 +827,9 @@ Real JWLMixtureEOS::xi(BoxAccessCellArray& U, int i, int j, int k, int m)
 
 Real JWLMixtureEOS::pressureFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real& p)
 {
-    Real rho = U(i,j,k,RHO_MIX,m,0);
-    Real prefa = (first.pref + first.A*std::exp(-first.R1*first.rho0/rho) + first.B*std::exp(-first.R2*first.rho0/rho)) ;
-    rho = U(i,j,k,RHO_MIX,m,1);
-    Real prefb = (second.pref + second.A*std::exp(-second.R1*second.rho0/rho) + second.B*std::exp(-second.R2*second.rho0/rho)) ;
+    Real prefa = mixture_referencePressure(U,i,j,k,m,0);
+
+    Real prefb = mixture_referencePressure(U,i,j,k,m,1);
 
 
     return ((p-prefa)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma*first.CV))-((p-prefb)/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma*second.CV));
@@ -837,7 +879,7 @@ void JWLMixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, 
 
 
     Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-10; //parameters.initialMixtureGuesses[0];
-    Real B = 20000.0;
+    Real B = 100000.0;
 
     Real p;
 
@@ -858,7 +900,7 @@ void JWLMixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, 
 
 
 
-    for(int it = 0; it < 10; it++)
+    for(int it = 0; it < 50; it++)
     {
         int stop = 0;
 
@@ -883,6 +925,8 @@ void JWLMixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, 
             else
             {
                 B = A + (B-A)/2.0;
+
+                //B *= 2.0;
             }
         }
         else
@@ -948,16 +992,13 @@ Real JWLMixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, i
 {
     if(mixidx == 0)
     {
-        Real rho = U(i,j,k,RHO_MIX,m,0);
-        Real prefa = (first.pref + first.A*std::exp(-first.R1*first.rho0/rho) + first.B*std::exp(-first.R2*first.rho0/rho)) ;
+        Real prefa = mixture_referencePressure(U,i,j,k,m,0);
 
         return (U(i,j,k,P)-prefa)/(U(i,j,k,RHO_MIX,m,mixidx)*first.GruneisenGamma*first.CV);
     }
     else
     {
-        Real rho = U(i,j,k,RHO_MIX,m,1);
-        Real prefb = (second.pref + second.A*std::exp(-second.R1*second.rho0/rho) + second.B*std::exp(-second.R2*second.rho0/rho)) ;
-
+        Real prefb = mixture_referencePressure(U,i,j,k,m,1);
 
         return (U(i,j,k,P)-prefb)/(U(i,j,k,RHO_MIX,m,mixidx)*second.GruneisenGamma*second.CV);
     }
@@ -991,7 +1032,7 @@ void JWLMixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, 
     }
     else
     {
-        if(U(i,j,k,ALPHA,m) < toleranceForSinglePhaseTreatment)
+        if(U(i,j,k,ALPHA,m) < 0.5)
         {
             U(i,j,k,RHO_MIX,m,0) = U(i,j,k,RHO_K,m);
             U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0)); //U(i,j,k,RHO_K,m);
@@ -1001,11 +1042,11 @@ void JWLMixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, 
 
 
         Real A = U(i,j,k,LAMBDA,m)*U(i,j,k,RHO_K,m)+1E-20; //parameters.initialMixtureGuesses[0];
-        Real B = 20000;
+        Real B = 100000.0;
 
 
 
-        for(int it = 0; it < 10; it++)
+        for(int it = 0; it < 50; it++)
         {
             int stop = 0;
 
@@ -1030,6 +1071,7 @@ void JWLMixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, 
                 else
                 {
                     B = A + (B-A)/2.0;
+                    //B *= 2.0;
                 }
             }
             else

@@ -687,6 +687,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         if((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5) < 0.2*0.2)
         {
             s=0;
+
         }
         else
         {
@@ -715,10 +716,10 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
     /******************************************
      * RateStick
      *****************************************/
-    {
+    /*{
         Real radius       = initial.interface;
         Real startOfTube  = initial.interface;
-        Real endOfBooster = 2.0*initial.interface;
+        Real endOfBooster = 1.1*initial.interface;
         Real chamfer      = 0.2*initial.interface;
 
         if(y<startOfTube ||  x > radius)
@@ -748,7 +749,7 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
         {
             s=1;
         }
-    }
+    }*/
 
     /******************************************
      * Udaykunar Groove
@@ -1314,6 +1315,28 @@ void AMR_chooseStateBasedOnInitialCondition(int& s, Real x, Real y, Real z, Init
             s = 0; //air
         }
     }*/
+
+
+    /**************************
+     * 1D LX17 test
+     *************************/
+
+    {
+        Real booster = 0.5*initial.interface;
+
+        if(x< booster)
+        {
+            s = 0;
+        }
+        else if(x < initial.interface)
+        {
+            s = 1;
+        }
+        else
+        {
+            s = 2;
+        }
+    }
 }
 
 Real solidVolumeFractionWeight(int& s, Real x, Real y, Real z, InitialStruct& initial, ParameterStruct& parameters, const Real* dx)

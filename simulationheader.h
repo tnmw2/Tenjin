@@ -43,6 +43,8 @@ void geometricSourceTerm(CellArray& U, ParameterStruct& parameters, const Real *
 
 void reactiveUpdate(CellArray& U, CellArray& U1, CellArray& U2, ParameterStruct& parameters, Real dt, MultiFab &S_new);
 void reactiveUpdateInHLLC(BoxAccessCellArray& U, ParameterStruct& parameters, Real dt);
+void reactiveUpdateOutHLLC(CellArray& U, CellArray &U1, CellArray &U2, ParameterStruct& parameters, Real dt);
+
 
 void customAbort(Vector<Real>& values, std::string& Message);
 void getStarStateAlone(BoxAccessCellArray& ULbox, BoxAccessCellArray& URbox, BoxAccessCellArray& UStarbox, ParameterStruct& parameters, Direction_enum d, const Real *dx);
