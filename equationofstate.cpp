@@ -788,15 +788,15 @@ Real JWLMixtureEOS::mixtureSoundSpeed(BoxAccessCellArray& U, int i, int j, int k
     else
     {
         Real rho = U(i,j,k,RHO_MIX,m,0);
-        Real prefa = (first.pref + first.A*std::exp(-first.R1*first.rho0/rho) + first.B*std::exp(-first.R2*first.rho0/rho)) ;
+        Real prefa = mixture_referencePressure(U,i,j,k,m,0);
         Real dpca = first.A*(first.R1*first.rho0/(rho*rho))*std::exp(-first.R1*first.rho0/rho) + first.B*(first.R2*first.rho0/(rho*rho))*std::exp(-first.R2*first.rho0/rho);
 
         rho = U(i,j,k,RHO_MIX,m,1);
-        Real prefb = (second.pref + second.A*std::exp(-second.R1*second.rho0/rho) + second.B*std::exp(-second.R2*second.rho0/rho)) ;
+        Real prefb = mixture_referencePressure(U,i,j,k,m,1);
         Real dpcb = second.A*(second.R1*second.rho0/(rho*rho))*std::exp(-second.R1*second.rho0/rho) + second.B*(second.R2*second.rho0/(rho*rho))*std::exp(-second.R2*second.rho0/rho);
 
 
-        Real dedrho = (U(i,j,k,LAMBDA,m)*( (first.GruneisenGamma+1.0)*prefa - U(i,j,k,P) - U(i,j,k,RHO_MIX,m,0)*dpca)/(first.GruneisenGamma) + (1-U(i,j,k,LAMBDA,m))*( (second.GruneisenGamma+1.0)*prefb - U(i,j,k,P) - U(i,j,k,RHO_MIX,m,1)*dpcb)/(second.GruneisenGamma))/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m));
+        Real dedrho = (U(i,j,k,LAMBDA,m)*( (first.GruneisenGamma+1.0)*prefa - U(i,j,k,P) - U(i,j,k,RHO_MIX,m,0)*dpca)/(first.GruneisenGamma) + (1.0-U(i,j,k,LAMBDA,m))*( (second.GruneisenGamma+1.0)*prefb - U(i,j,k,P) - U(i,j,k,RHO_MIX,m,1)*dpcb)/(second.GruneisenGamma))/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m));
 
         return (  U(i,j,k,P)/(U(i,j,k,RHO_K,m)*U(i,j,k,RHO_K,m))  - dedrho )/(U(i,j,k,LAMBDA,m)/(U(i,j,k,RHO_MIX,m,0)*first.GruneisenGamma)+(1.0-U(i,j,k,LAMBDA,m))/(U(i,j,k,RHO_MIX,m,1)*second.GruneisenGamma));
     }
@@ -973,7 +973,7 @@ void JWLMixtureEOS::rootFind(BoxAccessCellArray& U, int i, int j, int k, int m, 
         mid = 0.5*(A+B);
 
 
-        if(std::abs(A-B)/(A+B)<toleranceForConvergence)
+        if(std::abs((A-B)/(A+B))<toleranceForConvergence)
         {
             U(i,j,k,RHO_MIX,m,0) = mid;
             U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
@@ -1006,11 +1006,14 @@ Real JWLMixtureEOS::getTemp(BoxAccessCellArray& U, int i, int j, int k, int m, i
 
 Real JWLMixtureEOS::primitiveBisectionFunction(BoxAccessCellArray& U, int i, int j, int k, int m, Real& rhoaGuess)
 {
-    Real rhoa = rhoaGuess;
-    Real prefa = (first.pref + first.A*std::exp(-first.R1*first.rho0/rhoa) + first.B*std::exp(-first.R2*first.rho0/rhoa)) ;
 
-    Real rhob = rhobFunc(U,i,j,k,m,rhoaGuess);
-    Real prefb = (second.pref + second.A*std::exp(-second.R1*second.rho0/rhob) + second.B*std::exp(-second.R2*second.rho0/rhob)) ;
+    U(i,j,k,RHO_MIX,m,0) = rhoaGuess;
+    U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,rhoaGuess);
+
+
+    Real prefa = mixture_referencePressure(U,i,j,k,m,0);
+
+    Real prefb = mixture_referencePressure(U,i,j,k,m,0);
 
 
     return ((U(i,j,k,P)-prefa)/(rhoa*first.GruneisenGamma*first.CV))-((U(i,j,k,P)-prefb)/(rhob*second.GruneisenGamma*second.CV));
@@ -1096,6 +1099,8 @@ void JWLMixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, 
             vec.push_back(U(i,j,k,ALPHA,m));
             vec.push_back(U(i,j,k,LAMBDA,m));
             vec.push_back(U(i,j,k,P));
+            vec.push_back(i);
+            vec.push_back(j);
 
             customAbort(vec,err);
 
@@ -1118,7 +1123,7 @@ void JWLMixtureEOS::defineMixtureDensities(BoxAccessCellArray& U, int i, int j, 
             mid = 0.5*(A+B);
 
 
-            if(std::abs(A-B)/(A+B)<toleranceForConvergence)
+            if(std::abs((A-B)/(A+B))<toleranceForConvergence)
             {
                 U(i,j,k,RHO_MIX,m,0) = mid;
                 U(i,j,k,RHO_MIX,m,1) = rhobFunc(U,i,j,k,m,U(i,j,k,RHO_MIX,m,0));
