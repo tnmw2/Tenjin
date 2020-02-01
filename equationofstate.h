@@ -58,7 +58,10 @@ public:
 
     virtual void define(Vector<Real>& params);
             Real referencePressure              (BoxAccessCellArray& U, int i, int j, int k, int m);
-            Real dpcdrho                        (BoxAccessCellArray& U, int i, int j, int k, int m);
+            Real dprefdrho                      (BoxAccessCellArray& U, int i, int j, int k, int m);
+            Real derefdrho                      (BoxAccessCellArray& U, int i, int j, int k, int m);
+
+
     virtual Real coldCompressionInternalEnergy  (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real coldCompressionPressure        (BoxAccessCellArray& U, int i, int j, int k, int m);
     virtual Real shearInternalEnergy            (BoxAccessCellArray& U, int i, int j, int k, int m);
@@ -125,9 +128,13 @@ public:
     static Real toleranceForSinglePhaseTreatment;
     static Real toleranceForConvergence         ;
     static Real toleranceForBeingNearRoot       ;
+    static Real maximumAllowableDensity         ;
+
 
 
 };
+
+
 
 class MixtureEOS : public MieGruneisenEOS
 {

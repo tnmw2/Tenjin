@@ -87,13 +87,10 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
 {
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0)
     {
-        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
     }
 
-    /*if(U(i,j,k,LAMBDA,m) < 1E-6)
-    {
-        return;
-    }*/
+
 
     /*static Real rho0 = 1905.0;
     static Real I  = 4E12;
@@ -154,7 +151,7 @@ void IandG_UpdateMassFraction_single(BoxAccessCellArray& U, ParameterStruct& par
 
     if(U(i,j,k,ALPHARHOLAMBDA,m) < 0.0 || std::isnan(U(i,j,k,ALPHARHOLAMBDA,m)))
     {
-        U(i,j,k,ALPHARHOLAMBDA,m) = 1E-6;
+        U(i,j,k,ALPHARHOLAMBDA,m) = 0.0;
     }
 }
 

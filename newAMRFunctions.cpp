@@ -1312,16 +1312,16 @@ void C_state_error_grad(Array4<char> const& tagarr, const Box& box, BoxAccessCel
 
 }
 
-void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+void C_state_error_diff_preset(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
 {
     const auto lo = lbound(box);
     const auto hi = ubound(box);
 
-    Real tolerance = 1E-10;
+    Real ax,ay,diff;
 
     int m = 0;
 
-    for(auto n : accessPattern.refineVariables)
+    for(unsigned int n = 0; n < accessPattern.refineVariables.size(); n++)
     {
         for 		(int k = lo.z; k <= hi.z; ++k)
         {
@@ -1329,7 +1329,12 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
             {
                 for (int i = lo.x; i <= hi.x; ++i)
                 {
-                    if(grad(i,j,k,n) > levelGradientCoefficients[level] && grad(i,j,k,n) > tolerance)
+                    ax = (U(i+1,j,k,accessPattern.refineVariables[n])-U(i-1,j,k,accessPattern.refineVariables[n]));
+                    ay = (U(i,j+1,k,accessPattern.refineVariables[n])-U(i,j-1,k,accessPattern.refineVariables[n]));
+
+                    diff = sqrt(std::max(ax*ax,ay*ay));
+
+                    if(diff > accessPattern.refineCriterion(n)*levelGradientCoefficients[level])
                     {
                         tagarr(i,j,k) = TagBox::SET;
                     }
@@ -1338,6 +1343,65 @@ void C_state_error_diff(Array4<char> const& tagarr, const Box& box, BoxAccessCel
         }
 
         m++;
+    }
+
+    return;
+
+}
+
+void C_state_error_diff_with_max(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    for(unsigned int n = 0; n < accessPattern.refineVariables.size(); n++)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    if(grad(i,j,k,accessPattern.refineVariables[n]) > levelGradientCoefficients[level]*gradMax[n])
+                    {
+                        tagarr(i,j,k) = TagBox::SET;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+
+}
+
+void C_state_error_diff_relative(Array4<char> const& tagarr, const Box& box, BoxAccessCellArray& U, BoxAccessCellArray& grad, const Real* dx, Real time, Real level, Vector<Real>& gradMax, Vector<Real> levelGradientCoefficients, AccessPattern& accessPattern)
+{
+    const auto lo = lbound(box);
+    const auto hi = ubound(box);
+
+    Real ax,ay,diff;
+
+    for(unsigned int n = 0; n < accessPattern.refineVariables.size(); n++)
+    {
+        for 		(int k = lo.z; k <= hi.z; ++k)
+        {
+            for 	(int j = lo.y; j <= hi.y; ++j)
+            {
+                for (int i = lo.x; i <= hi.x; ++i)
+                {
+                    ax = (U(i+1,j,k,accessPattern.refineVariables[n])-U(i-1,j,k,accessPattern.refineVariables[n]));
+                    ay = (U(i,j+1,k,accessPattern.refineVariables[n])-U(i,j-1,k,accessPattern.refineVariables[n]));
+
+                    diff = (std::max(ax*ax,ay*ay))/(U(i,j,k,accessPattern.refineVariables[n])*U(i,j,k,accessPattern.refineVariables[n]));
+
+                    if(diff > levelGradientCoefficients[level])
+                    {
+                        tagarr(i,j,k) = TagBox::SET;
+                    }
+                }
+            }
+        }
     }
 
     return;
@@ -1370,7 +1434,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
 
     Vector<Real> gradMaxVec(parameters.Ncomp,0.0); //accessPattern.refineVariables.size()+1
 
-    int m = 0;
+    /*int m = 0;
 
     for(auto n : accessPattern.refineVariables)
     {
@@ -1398,7 +1462,7 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
         gradMaxVec[m] = gradMax;
 
         m++;
-    }
+    }*/
 	
 
 	
@@ -1417,9 +1481,9 @@ void AmrLevelAdv::errorEst (TagBoxArray& tags, int clearval, int tagval, Real ti
             
             Array4<char> const& tagarr 	= tagfab.array();
             
-            C_state_error_diff(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
-            //C_state_error_grad(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
-
+            //C_state_error_diff(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
+            //C_state_error_diff_with_max(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
+            C_state_error_diff_relative(tagarr,bx,Ubox,gradbox,dx,time,level,gradMaxVec,levelGradientCoefficients,accessPattern);
         }
 	}
 }

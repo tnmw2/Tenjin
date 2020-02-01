@@ -30,7 +30,8 @@ public:
     ParameterStruct& parameters;
 
     void define(ParameterStruct &parameters);
-    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Real lo, Real hi, Variable var, int materialNumber, int rowNumber, int colNumber);
+    void addVariable(int& position, std::string nameBase, Var_type type, Var_type INCELL, Var_type INREFINE, Real refineVal, Real lo, Real hi, Variable var, int materialNumber, int rowNumber, int colNumber);
+    Real refineCriterion(int m);
 
     int& operator[](Variable var);
 
@@ -49,6 +50,9 @@ public:
     Vector<MaterialDescriptor>&  materialInfo;
 
     Vector<MaterialSpecifier>   cellVariables;
+    Vector<Real>                refineValue;
+
+
 
 };
 
